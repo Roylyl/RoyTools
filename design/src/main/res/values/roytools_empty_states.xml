@@ -1,0 +1,8 @@
+<resources>
+    <string name="roytools_profiles_empty">还没有配置</string>
+    <string name="roytools_profiles_empty_hint">点击右上角添加配置或导入订阅。</string>
+    <string name="roytools_providers_empty">没有外部资源</string>
+    <string name="roytools_providers_empty_hint">当前配置暂无可显示的外部资源。</string>
+    <string name="roytools_files_empty">此文件夹为空</string>
+    <string name="roytools_files_empty_hint">当前目录没有文件。</string>
+</resources>

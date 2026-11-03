@@ -1,0 +1,4 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" style="@style/RoyTools.ToggleRow">
+    <TextView style="@style/RoyTools.ToggleLabel" android:text="每小时检查更新" android:labelFor="@id/roytools_auto_updates"/>
+    <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/roytools_auto_updates" style="@style/RoyTools.SettingSwitch" android:contentDescription="每小时检查更新"/>
+</LinearLayout>

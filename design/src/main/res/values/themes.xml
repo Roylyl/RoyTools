@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppBottomSheetStyle" parent="Widget.Design.BottomSheet.Modal">
+        <item name="android:background">@drawable/bg_bottom_sheet</item>
+    </style>
+
+    <style name="AppFullScreenDialogLightBase" parent="Theme.MaterialComponents.Light.Dialog">
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="paddingRightSystemWindowInsets">false</item>
+        <item name="paddingBottomSystemWindowInsets">false</item>
+        <item name="paddingLeftSystemWindowInsets">false</item>
+
+        <item name="colorPrimary">@color/color_clash_light</item>
+        <item name="colorAccent">@color/color_clash_light</item>
+        <item name="android:colorAccent">@color/color_clash_light</item>
+        <item name="materialButtonStyle">@style/RoyTools.MaterialButton</item>
+        <item name="textInputStyle">@style/RoyTools.TextInput</item>
+        <item name="materialSwitchStyle">@style/RoyTools.SettingSwitch</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="colorClashStopped">@color/color_light_clash_stopped</item>
+        <item name="colorControlDisabled">@color/color_light_control_disabled</item>
+
+        <item name="colorPrimaryDark">?attr/colorPrimary</item>
+        <item name="colorSecondary">?attr/colorPrimary</item>
+        <item name="colorOnSecondary">?attr/colorOnPrimary</item>
+        <item name="colorControlActivated">?attr/colorPrimary</item>
+        <item name="android:textColor">?attr/colorControlNormal</item>
+        <item name="android:windowBackground">@color/color_light_background</item>
+
+        <!-- RoyTools palette for system and manually selected themes. -->
+        <item name="glassCanvasStart">#F2F2F7</item>
+        <item name="glassCanvasEnd">#F2F2F7</item>
+        <item name="glassSurface">#FFFFFFFF</item>
+        <item name="glassSurfaceHighlight">#FFFFFFFF</item>
+        <item name="glassBorder">#FFFFFFFF</item>
+        <item name="glassIconSurface">#EBF4FF</item>
+        <item name="glassTextSecondary">#74747C</item>
+        <item name="glassSuccess">#16804F</item>
+        <item name="glassToolbarSurface">#FFFFFFFF</item>
+        <item name="colorSurface">#FFFFFF</item>
+        <item name="colorOnSurface">#000000</item>
+        <item name="colorControlNormal">#000000</item>
+        <item name="android:textColorPrimary">#000000</item>
+        <item name="android:textColorSecondary">#74747C</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="alertDialogTheme">@style/ThemeOverlay.RoyTools.Dialog</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.RoyTools.Dialog</item>
+    </style>
+
+    <style name="AppFullScreenDialogDarkBase" parent="Theme.MaterialComponents.Dialog">
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="paddingRightSystemWindowInsets">false</item>
+        <item name="paddingBottomSystemWindowInsets">false</item>
+        <item name="paddingLeftSystemWindowInsets">false</item>
+
+        <item name="colorPrimary">@color/color_clash_dark</item>
+        <item name="colorAccent">@color/color_clash_dark</item>
+        <item name="android:colorAccent">@color/color_clash_dark</item>
+        <item name="materialButtonStyle">@style/RoyTools.MaterialButton</item>
+        <item name="textInputStyle">@style/RoyTools.TextInput</item>
+        <item name="materialSwitchStyle">@style/RoyTools.SettingSwitch</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorControlDisabled">@color/color_dark_control_disabled</item>
+        <item name="android:windowBackground">@color/color_dark_background</item>
+
+        <item name="colorPrimaryDark">?attr/colorPrimary</item>
+        <item name="colorSecondary">?attr/colorPrimary</item>
+        <item name="colorOnSecondary">?attr/colorOnPrimary</item>
+        <item name="colorControlActivated">?attr/colorPrimary</item>
+        <item name="colorClashStopped">?attr/colorSurface</item>
+        <item name="android:textColor">?attr/colorControlNormal</item>
+
+        <!-- RoyTools palette for system and manually selected themes. -->
+        <item name="glassCanvasStart">#121214</item>
+        <item name="glassCanvasEnd">#121214</item>
+        <item name="glassSurface">#FF1C1C1E</item>
+        <item name="glassSurfaceHighlight">#FF2C2C2E</item>
+        <item name="glassBorder">#333A3A3C</item>
+        <item name="glassIconSurface">#2C2C2E</item>
+        <item name="glassTextSecondary">#A1A1AA</item>
+        <item name="glassSuccess">#30D158</item>
+        <item name="glassToolbarSurface">#FF1C1C1E</item>
+        <item name="colorSurface">#1C1C1E</item>
+        <item name="colorOnSurface">#F5F5F7</item>
+        <item name="colorControlNormal">#F5F5F7</item>
+        <item name="android:textColorPrimary">#F5F5F7</item>
+        <item name="android:textColorSecondary">#A1A1AA</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="alertDialogTheme">@style/ThemeOverlay.RoyTools.Dialog</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.RoyTools.Dialog</item>
+    </style>
+
+    <style name="AppFullScreenDialogLight" parent="AppFullScreenDialogLightBase">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/color_system_ui_overlay</item>
+    </style>
+
+    <style name="AppFullScreenDialogDark" parent="AppFullScreenDialogDarkBase">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="AppBottomSheetDialogLightBase" parent="Theme.MaterialComponents.Light.BottomSheetDialog">
+        <item name="android:windowIsFloating">false</item>
+        <item name="paddingRightSystemWindowInsets">false</item>
+        <item name="paddingBottomSystemWindowInsets">false</item>
+        <item name="paddingLeftSystemWindowInsets">false</item>
+
+        <item name="colorPrimary">@color/color_clash_light</item>
+        <item name="colorAccent">@color/color_clash_light</item>
+        <item name="android:colorAccent">@color/color_clash_light</item>
+        <item name="materialButtonStyle">@style/RoyTools.MaterialButton</item>
+        <item name="textInputStyle">@style/RoyTools.TextInput</item>
+        <item name="materialSwitchStyle">@style/RoyTools.SettingSwitch</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="colorClashStopped">@color/color_light_clash_stopped</item>
+        <item name="colorControlDisabled">@color/color_light_control_disabled</item>
+
+        <item name="colorPrimaryDark">?attr/colorPrimary</item>
+        <item name="colorSecondary">?attr/colorPrimary</item>
+        <item name="colorOnSecondary">?attr/colorOnPrimary</item>
+        <item name="colorControlActivated">?attr/colorPrimary</item>
+        <item name="android:textColor">?attr/colorControlNormal</item>
+
+        <item name="bottomSheetStyle">@style/AppBottomSheetStyle</item>
+
+        <!-- RoyTools palette for system and manually selected themes. -->
+        <item name="glassCanvasStart">#F2F2F7</item>
+        <item name="glassCanvasEnd">#F2F2F7</item>
+        <item name="glassSurface">#FFFFFFFF</item>
+        <item name="glassSurfaceHighlight">#FFFFFFFF</item>
+        <item name="glassBorder">#FFFFFFFF</item>
+        <item name="glassIconSurface">#EBF4FF</item>
+        <item name="glassTextSecondary">#74747C</item>
+        <item name="glassSuccess">#16804F</item>
+        <item name="glassToolbarSurface">#FFFFFFFF</item>
+        <item name="colorSurface">#FFFFFF</item>
+        <item name="colorOnSurface">#000000</item>
+        <item name="colorControlNormal">#000000</item>
+        <item name="android:textColorPrimary">#000000</item>
+        <item name="android:textColorSecondary">#74747C</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="alertDialogTheme">@style/ThemeOverlay.RoyTools.Dialog</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.RoyTools.Dialog</item>
+    </style>
+
+    <style name="AppBottomSheetDialogDarkBase" parent="Theme.MaterialComponents.BottomSheetDialog">
+        <item name="android:windowIsFloating">false</item>
+        <item name="paddingRightSystemWindowInsets">false</item>
+        <item name="paddingBottomSystemWindowInsets">false</item>
+        <item name="paddingLeftSystemWindowInsets">false</item>
+
+        <item name="colorPrimary">@color/color_clash_dark</item>
+        <item name="colorAccent">@color/color_clash_dark</item>
+        <item name="android:colorAccent">@color/color_clash_dark</item>
+        <item name="materialButtonStyle">@style/RoyTools.MaterialButton</item>
+        <item name="textInputStyle">@style/RoyTools.TextInput</item>
+        <item name="materialSwitchStyle">@style/RoyTools.SettingSwitch</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorControlDisabled">@color/color_dark_control_disabled</item>
+
+        <item name="colorPrimaryDark">?attr/colorPrimary</item>
+        <item name="colorSecondary">?attr/colorPrimary</item>
+        <item name="colorOnSecondary">?attr/colorOnPrimary</item>
+        <item name="colorControlActivated">?attr/colorPrimary</item>
+        <item name="colorClashStopped">?attr/colorSurface</item>
+        <item name="android:textColor">?attr/colorControlNormal</item>
+
+        <item name="bottomSheetStyle">@style/AppBottomSheetStyle</item>
+
+        <!-- RoyTools palette for system and manually selected themes. -->
+        <item name="glassCanvasStart">#121214</item>
+        <item name="glassCanvasEnd">#121214</item>
+        <item name="glassSurface">#FF1C1C1E</item>
+        <item name="glassSurfaceHighlight">#FF2C2C2E</item>
+        <item name="glassBorder">#333A3A3C</item>
+        <item name="glassIconSurface">#2C2C2E</item>
+        <item name="glassTextSecondary">#A1A1AA</item>
+        <item name="glassSuccess">#30D158</item>
+        <item name="glassToolbarSurface">#FF1C1C1E</item>
+        <item name="colorSurface">#1C1C1E</item>
+        <item name="colorOnSurface">#F5F5F7</item>
+        <item name="colorControlNormal">#F5F5F7</item>
+        <item name="android:textColorPrimary">#F5F5F7</item>
+        <item name="android:textColorSecondary">#A1A1AA</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="alertDialogTheme">@style/ThemeOverlay.RoyTools.Dialog</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.RoyTools.Dialog</item>
+    </style>
+
+    <style name="AppBottomSheetDialogLight" parent="AppBottomSheetDialogLightBase">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/color_system_ui_overlay</item>
+    </style>
+
+    <style name="AppBottomSheetDialogDark" parent="AppBottomSheetDialogDarkBase">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="AppThemeLightBase" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="android:windowBackground">@color/color_light_background</item>
+        <item name="android:ambientShadowAlpha">0.08</item>
+        <item name="android:spotShadowAlpha">0.08</item>
+
+        <item name="colorPrimary">@color/color_clash_light</item>
+        <item name="colorAccent">@color/color_clash_light</item>
+        <item name="android:colorAccent">@color/color_clash_light</item>
+        <item name="materialButtonStyle">@style/RoyTools.MaterialButton</item>
+        <item name="textInputStyle">@style/RoyTools.TextInput</item>
+        <item name="materialSwitchStyle">@style/RoyTools.SettingSwitch</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="colorClashStopped">@color/color_light_clash_stopped</item>
+        <item name="colorControlDisabled">@color/color_light_control_disabled</item>
+
+        <item name="colorPrimaryDark">?attr/colorPrimary</item>
+        <item name="colorSecondary">?attr/colorPrimary</item>
+        <item name="colorOnSecondary">?attr/colorOnPrimary</item>
+        <item name="colorControlActivated">?attr/colorPrimary</item>
+        <item name="colorLogo">?attr/colorControlActivated</item>
+        <item name="android:textColor">?attr/colorControlNormal</item>
+
+        <item name="bottomSheetDialogTheme">@style/AppBottomSheetDialogLight</item>
+        <item name="fullScreenDialogTheme">@style/AppFullScreenDialogLight</item>
+
+        <!-- RoyTools palette for system and manually selected themes. -->
+        <item name="glassCanvasStart">#F2F2F7</item>
+        <item name="glassCanvasEnd">#F2F2F7</item>
+        <item name="glassSurface">#FFFFFFFF</item>
+        <item name="glassSurfaceHighlight">#FFFFFFFF</item>
+        <item name="glassBorder">#FFFFFFFF</item>
+        <item name="glassIconSurface">#EBF4FF</item>
+        <item name="glassTextSecondary">#74747C</item>
+        <item name="glassSuccess">#16804F</item>
+        <item name="glassToolbarSurface">#FFFFFFFF</item>
+        <item name="colorSurface">#FFFFFF</item>
+        <item name="colorOnSurface">#000000</item>
+        <item name="colorControlNormal">#000000</item>
+        <item name="android:textColorPrimary">#000000</item>
+        <item name="android:textColorSecondary">#74747C</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="alertDialogTheme">@style/ThemeOverlay.RoyTools.Dialog</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.RoyTools.Dialog</item>
+    </style>
+
+    <style name="AppThemeDarkBase" parent="Theme.MaterialComponents.NoActionBar">
+        <item name="android:windowBackground">@color/color_dark_background</item>
+        <item name="android:ambientShadowAlpha">0.08</item>
+        <item name="android:spotShadowAlpha">0.08</item>
+
+        <item name="colorPrimary">@color/color_clash_dark</item>
+        <item name="colorAccent">@color/color_clash_dark</item>
+        <item name="android:colorAccent">@color/color_clash_dark</item>
+        <item name="materialButtonStyle">@style/RoyTools.MaterialButton</item>
+        <item name="textInputStyle">@style/RoyTools.TextInput</item>
+        <item name="materialSwitchStyle">@style/RoyTools.SettingSwitch</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorControlDisabled">@color/color_dark_control_disabled</item>
+
+        <item name="colorPrimaryDark">?attr/colorPrimary</item>
+        <item name="colorSecondary">?attr/colorPrimary</item>
+        <item name="colorOnSecondary">?attr/colorOnPrimary</item>
+        <item name="colorControlActivated">?attr/colorPrimary</item>
+        <item name="colorClashStopped">?attr/colorSurface</item>
+        <item name="colorLogo">?attr/colorControlNormal</item>
+        <item name="android:textColor">?attr/colorControlNormal</item>
+
+        <item name="bottomSheetDialogTheme">@style/AppBottomSheetDialogDark</item>
+        <item name="fullScreenDialogTheme">@style/AppFullScreenDialogDark</item>
+
+        <!-- RoyTools palette for system and manually selected themes. -->
+        <item name="glassCanvasStart">#121214</item>
+        <item name="glassCanvasEnd">#121214</item>
+        <item name="glassSurface">#FF1C1C1E</item>
+        <item name="glassSurfaceHighlight">#FF2C2C2E</item>
+        <item name="glassBorder">#333A3A3C</item>
+        <item name="glassIconSurface">#2C2C2E</item>
+        <item name="glassTextSecondary">#A1A1AA</item>
+        <item name="glassSuccess">#30D158</item>
+        <item name="glassToolbarSurface">#FF1C1C1E</item>
+        <item name="colorSurface">#1C1C1E</item>
+        <item name="colorOnSurface">#F5F5F7</item>
+        <item name="colorControlNormal">#F5F5F7</item>
+        <item name="android:textColorPrimary">#F5F5F7</item>
+        <item name="android:textColorSecondary">#A1A1AA</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="alertDialogTheme">@style/ThemeOverlay.RoyTools.Dialog</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.RoyTools.Dialog</item>
+    </style>
+
+    <style name="AppThemeLight" parent="AppThemeLightBase">
+        <item name="android:statusBarColor">@color/color_system_ui_overlay</item>
+        <item name="android:navigationBarColor">@color/color_system_ui_overlay</item>
+    </style>
+
+    <style name="AppThemeDark" parent="AppThemeDarkBase">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

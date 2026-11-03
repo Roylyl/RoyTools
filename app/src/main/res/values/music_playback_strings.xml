@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="music_notification_channel">音乐播放</string>
+    <string name="music_notification_channel_description">音乐后台播放、锁屏控制与播放进度</string>
+    <string name="music_notification_title">RoyTools音乐</string>
+    <string name="music_notification_open">打开音乐播放器</string>
+    <string name="music_notification_previous">上一首</string>
+    <string name="music_notification_next">下一首</string>
+    <string name="music_notification_play">播放</string>
+    <string name="music_notification_pause">暂停</string>
+</resources>

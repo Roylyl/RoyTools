@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/roytools_widget_background_light" android:padding="12dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="center_vertical" android:orientation="vertical">
+        <FrameLayout android:id="@+id/widget_header" android:layout_width="match_parent" android:layout_height="36dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
+                <TextView android:id="@+id/widget_node" android:layout_width="match_parent" android:layout_height="18dp" android:ellipsize="end" android:fontFamily="sans-serif-medium" android:gravity="center_vertical" android:includeFontPadding="false" android:maxLines="1" android:text="@string/roytools_widget_node_placeholder" android:textColor="#1C1C1E" android:textSize="14sp" />
+                <LinearLayout android:id="@+id/widget_usage_row" android:layout_width="match_parent" android:layout_height="16dp" android:layout_marginTop="2dp" android:gravity="center_vertical" android:orientation="horizontal">
+                    <ImageView android:id="@+id/widget_wifi_icon" android:layout_width="12dp" android:layout_height="12dp" android:layout_marginEnd="3dp" android:contentDescription="@null" android:src="@drawable/roytools_widget_wifi" />
+                    <TextView android:id="@+id/widget_wifi_label" style="@style/RoyTools.Widget.UsageLabel" android:text="@string/roytools_widget_wifi" />
+                    <TextView android:id="@+id/widget_wifi_usage" style="@style/RoyTools.Widget.UsageValue" android:layout_marginEnd="10dp" android:text="@string/roytools_widget_usage_placeholder" />
+                    <ImageView android:id="@+id/widget_mobile_icon" android:layout_width="12dp" android:layout_height="12dp" android:layout_marginEnd="3dp" android:contentDescription="@null" android:src="@drawable/roytools_widget_mobile" />
+                    <TextView android:id="@+id/widget_mobile_label" style="@style/RoyTools.Widget.UsageLabel" android:text="@string/roytools_widget_mobile" />
+                    <TextView android:id="@+id/widget_mobile_usage" style="@style/RoyTools.Widget.UsageValue" android:text="@string/roytools_widget_usage_placeholder" />
+                </LinearLayout>
+            </LinearLayout>
+        </FrameLayout>
+        <LinearLayout android:id="@+id/widget_proxy_row" android:layout_width="match_parent" android:layout_height="36dp" android:layout_marginTop="8dp" android:gravity="center_vertical" android:orientation="horizontal">
+            <TextView android:id="@+id/widget_proxy_label" style="@style/RoyTools.Widget.SectionLabel" android:text="@string/roytools_widget_proxy_label" />
+            <TextView android:id="@+id/widget_mode_default" style="@style/RoyTools.Widget.Mode" android:background="@drawable/roytools_widget_mode_selected_light" android:text="@string/roytools_widget_mode_default" android:textColor="@android:color/white" android:layout_height="30dp" />
+            <TextView android:id="@+id/widget_mode_rule" style="@style/RoyTools.Widget.Mode" android:text="@string/roytools_widget_mode_rule" android:layout_height="30dp" />
+            <TextView android:id="@+id/widget_mode_global" style="@style/RoyTools.Widget.Mode" android:text="@string/roytools_widget_mode_global" android:layout_height="30dp" />
+            <TextView android:id="@+id/widget_mode_direct" style="@style/RoyTools.Widget.Mode" android:text="@string/roytools_widget_mode_direct" android:layout_height="30dp" />
+            <ImageView android:id="@+id/widget_toggle" android:layout_width="36dp" android:layout_height="36dp" android:contentDescription="@string/roytools_widget_toggle" android:src="@drawable/roytools_widget_toggle" android:layout_marginStart="8dp" />
+        </LinearLayout>
+        <LinearLayout android:id="@+id/widget_refresh_row" android:layout_width="match_parent" android:layout_height="30dp" android:layout_marginTop="6dp" android:gravity="center_vertical" android:orientation="horizontal">
+            <TextView android:id="@+id/widget_refresh_label" style="@style/RoyTools.Widget.SectionLabel" android:text="@string/roytools_widget_refresh_label" />
+            <TextView android:id="@+id/widget_refresh_off" style="@style/RoyTools.Widget.Mode" android:background="@drawable/roytools_widget_mode_selected_light" android:text="@string/roytools_widget_refresh_off" android:textColor="@android:color/white" />
+            <TextView android:id="@+id/widget_refresh_60" style="@style/RoyTools.Widget.Mode" android:text="@string/roytools_widget_refresh_60" />
+            <TextView android:id="@+id/widget_refresh_120" style="@style/RoyTools.Widget.Mode" android:text="@string/roytools_widget_refresh_120" />
+            <TextView android:id="@+id/widget_refresh_adaptive" style="@style/RoyTools.Widget.Mode" android:text="@string/roytools_widget_refresh_adaptive" />
+        </LinearLayout>
+        <LinearLayout android:id="@+id/widget_music_row" android:layout_width="match_parent" android:layout_height="44dp" android:layout_marginTop="10dp" android:gravity="center_vertical" android:orientation="horizontal">
+            <ImageView android:id="@+id/widget_music_cover" android:layout_width="36dp" android:layout_height="36dp" android:layout_marginEnd="8dp" android:background="@drawable/roytools_widget_cover_background" android:clipToOutline="true" android:contentDescription="@null" android:scaleType="centerCrop" android:src="@drawable/widget_music_placeholder" />
+            <TextView android:id="@+id/widget_music_title" android:layout_width="0dp" android:layout_height="match_parent" android:layout_marginEnd="8dp" android:layout_weight="1" android:ellipsize="end" android:fontFamily="sans-serif-medium" android:gravity="center_vertical" android:includeFontPadding="false" android:maxLines="2" android:text="@string/roytools_widget_music_placeholder" android:textColor="#1C1C1E" android:textSize="14sp" />
+            <ImageView android:id="@+id/widget_music_previous" style="@style/RoyTools.Widget.MediaButton" android:contentDescription="@string/roytools_widget_music_previous" android:src="@drawable/widget_previous" />
+            <ImageView android:id="@+id/widget_music_toggle" style="@style/RoyTools.Widget.MediaButton" android:layout_marginHorizontal="4dp" android:background="@drawable/roytools_widget_media_button_primary" android:contentDescription="@string/roytools_widget_music_toggle" android:src="@drawable/widget_play" />
+            <ImageView android:id="@+id/widget_music_next" style="@style/RoyTools.Widget.MediaButton" android:contentDescription="@string/roytools_widget_music_next" android:src="@drawable/widget_next" />
+        </LinearLayout>
+    </LinearLayout>
+    <TextView android:id="@+id/widget_profile" android:layout_width="0dp" android:layout_height="0dp" android:importantForAccessibility="no" android:visibility="gone" />
+</FrameLayout>

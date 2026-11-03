@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Supply the M3 color roles only to the official MaterialSwitch inside the existing app theme. -->
+    <style name="ThemeOverlay.RoyTools.MaterialSwitch" parent="ThemeOverlay.Material3">
+        <item name="materialSwitchStyle">@style/RoyTools.SettingSwitch</item>
+        <item name="minTouchTargetSize">@dimen/roytools_touch_target</item>
+        <item name="textAppearanceBodyMedium">@style/TextAppearance.Material3.BodyMedium</item>
+        <item name="colorSurfaceVariant">?attr/glassCanvasStart</item>
+        <item name="colorSurfaceContainerHighest">?attr/glassCanvasStart</item>
+        <item name="colorOnSurfaceVariant">?attr/glassTextSecondary</item>
+        <item name="colorOutline">?attr/glassTextSecondary</item>
+        <item name="colorPrimaryContainer">?attr/glassIconSurface</item>
+        <item name="colorOnPrimaryContainer">?attr/colorPrimary</item>
+    </style>
+</resources>

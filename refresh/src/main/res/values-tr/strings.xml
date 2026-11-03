@@ -1,0 +1,390 @@
+<resources>
+  <string name="app_name">RoyTools</string>
+  <string name="home_title">RoyTools</string>
+  <string name="home_description">Accessibility olayları ve güvenli sistem ayarları (ADB) kullanarak adaptif yenileme hızı geçişi sağlar.</string>
+  <string name="setup_title">Kurulum</string>
+  <string name="setup_description">RoyTools\'in doğru çalışabilmesi için bazı sistem izinleri gereklidir. Tüm özellikleri etkinleştirmek için aşağıdaki adımları tamamlayın.</string>
+  <string name="setup_accessibility_title">Erişilebilirlik Servisi</string>
+  <string name="setup_accessibility_desc">Zorunlu. Sistem genelinde dokunma/kaydırma olaylarını algılar.</string>
+  <string name="setup_accessibility_button">Erişilebilirliği Aç</string>
+  <string name="setup_adb_title">ADB İzni (WRITE_SECURE_SETTINGS)</string>
+  <string name="setup_adb_desc">Zorunlu. ADB ile izin verin ve burada doğrulayın.</string>
+  <string name="setup_adb_verify">İzni Doğrula</string>
+  <string name="setup_adb_instruction">Bilgisayarınızda şu komutu çalıştırın:</string>
+  <string name="setup_battery_title">Pil Optimizasyonlarını Kapat</string>
+  <string name="setup_battery_desc">Önerilir. İşletim sisteminin uygulamayı arka planda sonlandırmasını engeller.</string>
+  <string name="open_battery_settings">Pil Ayarlarını Aç</string>
+  <string name="setup_stability_title">Stability Mode (Foreground Service)</string>
+  <string name="setup_stability_desc">Kalıcı bildirim ile sürecin aktif kalmasını sağlar.</string>
+  <string name="setup_notifications_button">Bildirimler</string>
+  <string name="enable">Etkinleştir</string>
+  <string name="disable">Devre Dışı</string>
+  <string name="dashboard_title">Panel</string>
+  <string name="dashboard_status_title">Durum</string>
+  <string name="status_current_display">Anlık ekran</string>
+  <string name="status_vendor">Üretici</string>
+  <string name="status_setting">Sistem Ayarı</string>
+  <string name="status_accessibility">Erişilebilirlik</string>
+  <string name="status_mode">Mod</string>
+  <string name="mode_adaptive">Adaptif</string>
+  <string name="mode_manual">Manuel</string>
+  <string name="minimum">Minimum</string>
+  <string name="maximum">Maksimum</string>
+  <string name="per_app_title">Uygulama Bazlı Yenileme Hızı</string>
+  <string name="per_app_desc">Her uygulama için Adaptive, Minimum, Maximum veya Respect davranışını ayarlayın.</string>
+  <string name="per_app_desc2">Bu özellik yüklü uygulamaların listelenmesini ve uygulama bazlı ayar saklanmasını gerektirir.</string>
+  <string name="footer_title">AlpWare Studio tarafından geliştirildi</string>
+  <string name="footer_desc">Bu açık kaynaklı bir projedir. Geri bildirim ve cihaz test raporlarınız memnuniyetle karşılanır.</string>
+  <string name="footer_github">GitHub</string>
+  <string name="footer_play">Google Play</string>
+  <string name="toast_adb_verified">ADB izni doğrulandı</string>
+  <string name="toast_adb_permission_missing">İzin eksik. Önce ADB ile izin verin.</string>
+  <string name="toast_adb_verify_unavailable">Bu ROM üzerinde doğrulama yapılamadı.</string>
+  <string name="label_ok">OK</string>
+  <string name="label_recommended">ÖNERİLİR</string>
+  <string name="toast_stability_enabled">Stability Mode etkinleştirildi</string>
+  <string name="toast_stability_disabled">Stability Mode devre dışı bırakıldı</string>
+  <string name="toast_open_notification_settings_failed">Bildirim ayarları açılamadı.</string>
+  <string name="toast_adaptive_applied">Adaptif uygulandı</string>
+  <string name="toast_minimum_applied">Minimum uygulandı</string>
+  <string name="toast_maximum_applied">Maksimum uygulandı</string>
+  <string name="toast_refresh_rate_apply_failed">Yenileme hızı uygulanamadı. WRITE_SECURE_SETTINGS iznini ve desteklenen özel değerler için Shizuku bağlantısını kontrol edin.</string>
+  <string name="toast_secure_settings_missing">WRITE_SECURE_SETTINGS izni eksik.</string>
+  <string name="toast_custom_rate_unavailable">Özel yenileme hızı uygulanamadı. Cihazın normal davranışı geri yüklendi. Shizuku bağlantısını ve özel değer desteğini kontrol edin.</string>
+  <string name="label_missing">EKSİK</string>
+  <string name="label_on">AÇIK</string>
+  <string name="label_off">KAPALI</string>
+  <string name="label_granted">VERİLDİ</string>
+  <string name="label_required">GEREKLİ</string>
+  <string name="label_notifications_status">Bildirimler: %1$s</string>
+  <string name="stability_notification_channel_name">RoyTools</string>
+  <string name="stability_notification_title">RoyTools</string>
+  <string name="stability_notification_text">Çalışıyor</string>
+  <string name="toast_open_accessibility_failed">Erişilebilirlik ayarları açılamadı. Lütfen Ayarlar &gt; Erişilebilirlik menüsünden manuel olarak aç.</string>
+  <string name="accessibility_service_description">Galaxy cihazını etkileşime göre otomatik olarak değiştirir.</string>
+  <string name="toast_battery_already_ignored">Pil optimizasyonu zaten devre dışı.</string>
+  <string name="toast_battery_settings_failed">Pil optimizasyon ayarları açılamadı.</string>
+  <string name="developer_signature">AlpWare Studio tarafından geliştirilmiştir</string>
+  <string name="label_idle">Boşta</string>
+  <string name="label_active">Aktif</string>
+  <string name="label_target_max_on_touch">Dokunmada maksimum</string>
+  <string name="label_target_minimum">Minimum</string>
+  <string name="label_target_maximum">Maksimum</string>
+  <string name="label_target_system_default">Sistem varsayılanı</string>
+  <string name="status_target">Hedef</string>
+  <string name="status_interaction">Etkileşim</string>
+  <string name="settings_enable_adaptive_hz">RoyTools\'i Etkinleştir</string>
+  <string name="settings_enable_adaptive_hz_desc">RoyTools motorunu açıp kapatır. Devre dışı bırakıldığında uygulama yenileme hızını kontrol etmeyi durdurur ve sistem varsayılan davranışına geri dönülür.</string>
+  <string name="setup_adb_desc_with_root">Gerekli ayrıcalıklı izni ADB ile verebilir veya cihazınız root erişimini destekliyorsa tek dokunuşla root kurulumu kullanabilirsiniz.</string>
+  <string name="setup_root_detected_desc">Bu cihazda root erişimi tespit edildi. ADB kullanmak yerine gerekli izni otomatik olarak vermeyi deneyebilirsiniz.</string>
+  <string name="setup_root_grant_button">Otomatik Ver</string>
+  <string name="root_grant_success">Gerekli izin başarıyla verildi.</string>
+  <string name="root_grant_denied">Root isteği reddedildi.</string>
+  <string name="root_not_available">Bu cihazda root erişimi bulunmuyor.</string>
+  <string name="root_grant_failed">Otomatik root kurulumu başarısız oldu.</string>
+  <string name="setup_shizuku_title">Shizuku</string>
+  <string name="setup_shizuku_desc">İsteğe bağlıdır. Shizuku dokunma algılamasını iyileştirir ve desteklenen cihazlarda özel yenileme hızı değerlerini güvenle etkinleştirir. RoyTools’in normal modları onsuz da çalışır.</string>
+  <string name="setup_shizuku_ready_message">Shizuku çalışıyor ve izin verildi.</string>
+  <string name="shizuku_recommendation_title">Shizuku öneriliyor</string>
+  <string name="shizuku_recommendation_message">Normal cihaz modları Shizuku olmadan çalışabilir. İzin vermek etkileşim algılamasını iyileştirir ve desteklenen özel yenileme hızı değerlerini güvenle uygulamak için gereklidir.</string>
+  <string name="shizuku_grant_permission">Shizuku izni ver</string>
+  <string name="shizuku_continue_without">Shizuku olmadan devam et</string>
+  <string name="toast_shizuku_not_running">Shizuku çalışmıyor. Önce Shizuku’yu başlatın veya Shizuku olmadan devam edin.</string>
+  <string name="settings_shizuku_ready_summary">Shizuku çalışıyor ve izin verildi</string>
+  <string name="settings_shizuku_recommended_summary">Doğru etkileşim algılama için isteğe bağlı ve önerilir; desteklenen özel değerleri güvenle uygulamak için gereklidir</string>
+  <!-- Common -->
+  <string name="cd_back">Geri</string>
+  <string name="action_close">Kapat</string>
+  <string name="cd_expand">Genişlet</string>
+  <string name="cd_collapse">Daralt</string>
+  <string name="error">Hata</string>
+  <!-- Settings -->
+  <string name="settings_accessibility_working_summary">Erişilebilirlik servisi aktif ve düzgün çalışıyor.</string>
+  <string name="settings_accessibility_required_summary">Dokunma ve kaydırma etkileşimlerini algılamak için gereklidir.</string>
+  <string name="settings_adb_granted_summary">WRITE_SECURE_SETTINGS izni verilmiş durumda.</string>
+  <string name="settings_adb_or_root_summary">ADB veya root erişimi kullanarak izin verin.</string>
+  <string name="settings_adb_required_summary">Yenileme hızı davranışını kontrol etmek için gereklidir.</string>
+  <string name="settings_usage_access_granted_summary">Son kullanılan uygulamalar artık doğru şekilde algılanabiliyor.</string>
+  <string name="settings_usage_access_recommended_summary">Gerçek son kullanılan uygulamaları Dashboard ekranında göstermek için önerilir.</string>
+  <string name="settings_battery_optimizations_disabled_summary">RoyTools için pil optimizasyonları devre dışı bırakıldı.</string>
+  <string name="settings_battery_optimization_recommended_summary">Arka plan kararlılığını artırmak için önerilir.</string>
+  <string name="settings_notifications_enabled_summary">Kararlılık Modu için bildirimler etkin.</string>
+  <string name="settings_notifications_required_summary">Ön plan kararlılık bildirimleri için gereklidir.</string>
+  <string name="settings_diagnostics_summary">Çalışma durumu ve hata ayıklama bilgilerini görüntüleyin.</string>
+  <string name="settings_event_inspector_summary">Son erişilebilirlik olaylarını ve kaydırma sinyallerini inceleyin.</string>
+  <!-- Settings - header -->
+  <string name="settings_title">Ayarlar</string>
+  <string name="settings_app_name">RoyTools</string>
+  <string name="settings_app_tagline">Adaptif Hz, kullanıcı etkileşimine göre ekran yenileme hızını otomatik olarak değiştirir.</string>
+  <!-- Settings - defaults (developer) -->
+  <string name="settings_developer_name">AlpWare Studio</string>
+  <string name="settings_developer_email">contact@alpwarestudio.com</string>
+  <string name="settings_website_url">https://alpwarestudio.com</string>
+  <!-- Settings - sections -->
+  <string name="settings_section_behavior">Davranış</string>
+  <string name="settings_section_updates">Güncellemeler</string>
+  <string name="settings_section_debug">Hata Ayıklama</string>
+  <string name="settings_section_about">Hakkında</string>
+  <string name="settings_section_developer">Geliştirici</string>
+  <string name="settings_section_other_apps">AlpWare Studio’dan diğer uygulamalar</string>
+  <string name="settings_section_support">Destek</string>
+  <string name="settings_section_legal">Yasal</string>
+  <!-- Settings - items -->
+  <string name="settings_item_stability_mode">Kararlılık Modu</string>
+  <string name="settings_item_automatic_update_checks">Otomatik güncelleme kontrolü</string>
+  <string name="settings_value_automatic_update_checks_summary">GitHub’daki kararlı sürümleri en fazla 24 saatte bir kontrol eder. Beta ve ön sürümler yok sayılır.</string>
+  <string name="settings_item_check_for_updates">Güncellemeleri kontrol et</string>
+  <string name="settings_value_stable_updates_summary">GitHub’daki en son kararlı sürümü elle kontrol edin.</string>
+  <string name="update_checking">GitHub kontrol ediliyor…</string>
+  <string name="update_up_to_date">En son kararlı sürümü kullanıyorsunuz.</string>
+  <string name="update_check_failed">Güncellemeler kontrol edilemedi. Bağlantınızı kontrol edip tekrar deneyin.</string>
+  <string name="update_invalid_release">En son sürümün geçerli bir sürüm numarası yok.</string>
+  <string name="update_consent_title">Güncel kalmak ister misiniz?</string>
+  <string name="update_consent_body">RoyTools, GitHub’daki yeni kararlı sürümleri en fazla 24 saatte bir kontrol edebilir. Beta ve ön sürümler yok sayılır. Hiçbir güncelleme otomatik olarak indirilmez veya kurulmaz.</string>
+  <string name="update_consent_enable">Kontrolü etkinleştir</string>
+  <string name="update_consent_not_now">Şimdi değil</string>
+  <string name="update_available_title">Güncelleme mevcut</string>
+  <string name="update_available_body">%1$s kullanıma hazır. İndirmeden önce sürümü GitHub’da inceleyin.</string>
+  <string name="update_view_release">Sürümü görüntüle</string>
+  <string name="update_later">Daha sonra</string>
+  <string name="settings_section_appearance">Görünüm</string>
+  <string name="settings_item_version">Sürüm</string>
+  <string name="settings_item_repository">Depo (GitHub)</string>
+  <string name="settings_item_email">E-posta</string>
+  <string name="settings_item_website">Web Sitesi</string>
+  <string name="settings_item_report_issue">Hata Bildir</string>
+  <string name="settings_item_share_app">Uygulamayı Paylaş</string>
+  <string name="settings_item_star_github">GitHub’da yıldız ver</string>
+  <string name="settings_value_star_github">Bu açık kaynak projenin daha fazla kişiye ulaşmasına yardımcı olun.</string>
+  <string name="settings_item_all_apps">Tüm uygulamaları görüntüle</string>
+  <string name="other_app_password_book_title">Password Book</string>
+  <string name="other_app_password_book_summary">Çevrimdışı çalışan, AES-256 şifreli parola yöneticisi.</string>
+  <string name="other_app_kodex_title">Kodex</string>
+  <string name="other_app_kodex_summary">QR kodları oluşturun, özelleştirin ve tarayın.</string>
+  <string name="other_app_score_book_title">Score Book</string>
+  <string name="other_app_score_book_summary">Skorları sade ve anlaşılır biçimde takip edin.</string>
+  <string name="support_prompt_title">RoyTools işinize yaradı mı?</string>
+  <string name="support_prompt_body">GitHub’da vereceğiniz bir yıldız veya paylaşımınız, bu açık kaynak projenin daha fazla kişiye ulaşmasına yardımcı olur. Bağımsız geliştirmeyi desteklediğiniz için teşekkürler.</string>
+  <string name="support_prompt_not_now">Şimdi değil</string>
+  <string name="settings_item_privacy_policy">Gizlilik Politikası</string>
+  <string name="settings_item_open_source_notices">Açık Kaynak Bildirimleri</string>
+  <string name="settings_item_battery_optimization">Pil optimizasyonu</string>
+  <string name="settings_value_battery_optimization_ok">Daha iyi kararlılık için pil kısıtlamaları devre dışı.</string>
+  <string name="settings_value_battery_optimization_recommended">Agresif cihazlarda daha iyi arka plan kararlılığı için önerilir.</string>
+  <string name="settings_item_notification_permission">Bildirim izni</string>
+  <string name="settings_value_notification_permission_ok">Bildirim izni verilmiş.</string>
+  <string name="settings_value_notification_permission_required">Android 13 ve üzeri cihazlarda Stability Mode için gereklidir.</string>
+  <string name="settings_toast_notification_required_for_stability">Stability Mode’u etkinleştirmek için bildirim izni gereklidir.</string>
+  <string name="settings_item_keep_active_during_battery_saver">Pil tasarrufu sırasında RoyTools aktif kalsın</string>
+  <string name="settings_value_keep_active_during_battery_saver_summary">Etkinleştirildiğinde RoyTools, Pil Tasarrufu açıkken de seçili yenileme hızı davranışını uygulamaya devam eder. Bazı cihazlar yine de sistem seviyesinde 60Hz sınırı uygulayabilir.</string>
+  <string name="settings_item_drop_delay">Dokunma sonrası düşüş gecikmesi</string>
+  <string name="settings_value_drop_delay_summary">Dokunma bittikten %1$s sonra minimum yenileme hızına geri döner. (Varsayılan: 2s)</string>
+  <string name="settings_dialog_battery_saver_override_title">Pil Tasarrufu uyumluluğu</string>
+  <string name="settings_dialog_battery_saver_override_body">RoyTools, Pil Tasarrufu açıkken de seçili yenileme hızı davranışını uygulamaya çalışır. Ancak bazı cihazlar Pil Tasarrufu sırasında yüksek yenileme hızını sistem seviyesinde engeller. Bu nedenle bu seçenek her telefonda çalışmayabilir. Cihazınız hâlâ 60Hz’de kalıyorsa, sınır sistem tarafından uygulanıyor demektir.</string>
+  <string name="settings_item_theme">Tema</string>
+  <string name="settings_item_language">Dil</string>
+  <string name="settings_value_theme_system">Sistem varsayılanı</string>
+  <string name="settings_value_theme_light">Açık</string>
+  <string name="settings_value_theme_dark">Koyu</string>
+  <string name="settings_value_language_system">Sistem varsayılanı</string>
+  <string name="settings_value_language_english">English</string>
+  <string name="settings_value_language_turkish">Türkçe</string>
+  <string name="settings_value_language_spanish">Español</string>
+  <string name="settings_value_language_portuguese_brazil">Português (Brasil)</string>
+  <string name="settings_dialog_theme_title">Tema seç</string>
+  <string name="settings_dialog_language_title">Dil seç</string>
+  <!-- Settings - values -->
+  <string name="settings_value_stability_mode_summary">RoyTools\'in arka planda daha kararlı çalışmasını sağlar ve kalıcı bir bildirim kullanır. Devre dışı bırakıldığında bildirim kaldırılır ancak bazı cihazlarda kararlılık azalabilir.</string>
+  <string name="settings_value_version">%1$s (%2$d)</string>
+  <string name="settings_value_other_apps">Diğer uygulamalar ve yayıncı sayfası</string>
+  <string name="settings_value_github_issues">GitHub Issues</string>
+  <string name="settings_value_send_github_link">Açık kaynak projeyi paylaşın</string>
+  <string name="settings_value_privacy_short">Analitik ve veri toplama yoktur. İsteğe bağlı güncelleme kontrolü GitHub’a bağlanır.</string>
+  <string name="settings_value_third_party_licenses">Üçüncü taraf lisansları</string>
+  <!-- Settings - share -->
+  <string name="settings_share_title">%1$s paylaş</string>
+  <string name="settings_share_text">%1$s; uygulama profilleri ve Hızlı Ayarlar desteği sunan açık kaynaklı bir Android yenileme hızı yöneticisidir.\n%2$s</string>
+  <!-- Settings - email -->
+  <string name="settings_email_subject">%1$s geri bildirim</string>
+  <!-- Settings - footer -->
+  <string name="settings_footer_tip">İpucu: Uygulamayı çevrimdışı dostu tut—bağlantıları yalnızca gerektiğinde aç.</string>
+  <!-- Settings - dialog actions -->
+  <string name="settings_action_view_on_github">GitHub’da görüntüle</string>
+  <!-- Settings - dialog: Privacy -->
+  <string name="settings_dialog_privacy_title">Gizlilik Politikası</string>
+  <string name="settings_dialog_privacy_body">
+        Öne çıkanlar
+        • Temel özellikler çevrimdışı çalışır.
+        • Kişisel veri toplanmaz.
+        • Analitik, reklam veya takipçi kullanılmaz.
+        • Veri toplamak için izin istenmez.
+
+        Detaylar
+        Bu uygulama kişisel bilgilerinizi toplamaz, saklamaz veya paylaşmaz. Otomatik güncelleme kontrolü etkinleştirildiğinde veya elle kontrol yaptığınızda uygulama GitHub Releases API’sine standart bir HTTPS isteği gönderir. GitHub, kendi gizlilik politikası kapsamında IP adresiniz gibi normal ağ meta verilerini alabilir. RoyTools herhangi bir uygulama verisi veya hesap tanımlayıcısı göndermez. Güncellemeler hiçbir zaman otomatik olarak indirilmez veya kurulmaz.
+
+        Sorularınız için Ayarlar bölümündeki e-posta üzerinden geliştiriciye ulaşabilirsiniz.
+    </string>
+  <!-- Settings - dialog: Notices -->
+  <string name="settings_dialog_notices_title">Açık kaynak bildirimleri</string>
+  <string name="settings_dialog_notices_body">
+        Bu uygulama açık kaynaklıdır ve üçüncü taraf kütüphaneler içerebilir.
+
+        Şunları eklemeniz gerekebilir:
+        • Depoya bağlantı (Ayarlar → Depo)
+        • Proje lisansı (örn. MIT/Apache-2.0)
+        • Bağımlılıklar için gerekli NOTICE dosyaları
+
+        İpucu
+        Tüm lisans metinlerini uygulama içinde göstermek isterseniz res/raw veya assets altına koyup burada görüntüleyebilirsiniz.
+    </string>
+  <string name="accessibility_broken_adaptive_disabled">Accessibility Service yanıt vermediği için Adaptive modu geçici olarak kullanılamıyor. Manuel modlar kullanılmaya devam edebilir.</string>
+  <string name="recovery_title">Servis yanıt vermiyor</string>
+  <string name="recovery_desc">
+        Accessibility Service açık görünüyor ancak yanıt vermiyor.
+        Bu durum sistem kısıtlamaları veya arka plan sınırlamaları nedeniyle oluşabilir.
+        Servisi yeniden başlatmayı veya pil ayarlarını değiştirmeyi deneyebilirsiniz.
+    </string>
+  <string name="retry">Tekrar dene</string>
+  <string name="setup_continue_button">Devam et</string>
+  <string name="setup_continue_required_hint">Devam etmek için yukarıdaki zorunlu adımları tamamlayın. Önerilen adımlar isteğe bağlıdır.</string>
+  <string name="setup_usage_access_title">Kullanım Erişimi</string>
+  <string name="setup_usage_access_desc">Önerilir. RoyTools’in son kullanılan uygulamaları Dashboard ekranında gösterebilmesini sağlar.</string>
+  <string name="setup_usage_access_button">Kullanım Erişimini Aç</string>
+  <string name="setup_accessibility_enabled_message">Erişilebilirlik Servisi etkin. Yenile simgesi ile ayarları istediğiniz zaman tekrar açabilirsiniz.</string>
+  <string name="setup_adb_granted_message">ADB izni verilmiş ve düzgün çalışıyor. Yenile simgesi ile tekrar doğrulayabilirsiniz.</string>
+  <string name="setup_battery_ok_message">Pil optimizasyonu devre dışı bırakıldı. RoyTools artık arka planda daha kararlı çalışabilir.</string>
+  <string name="setup_usage_access_ok_message">Kullanım Erişimi etkin. Son kullanılan uygulamalar artık Dashboard ekranında görünebilir.</string>
+  <string name="adaptive_hz_enabled">RoyTools Etkin</string>
+  <string name="enable_recent_apps_access">Son kullanılan uygulama erişimini etkinleştir</string>
+  <string name="no_recent_apps_found">Henüz son kullanılan uygulama bulunamadı.</string>
+  <string name="view_all_apps">Tüm uygulamaları görüntüle</string>
+  <string name="per_app_profiles_title">Uygulama bazlı profiller</string>
+  <string name="back">Geri</string>
+  <string name="per_app_profiles_description">Belirli uygulamalar için yenileme davranışını ayarlayın veya tüm uygulamalara tek profil uygulayın.</string>
+  <string name="search_apps">Uygulama ara</string>
+  <string name="show_system_apps">Sistem uygulamalarını göster</string>
+  <string name="show_system_apps_description">Launcher, tarayıcı, video oynatıcı ve üretici sistem uygulamalarını dahil et.</string>
+  <string name="loading_apps">Uygulamalar yükleniyor…</string>
+  <string name="loading_more_apps">Daha fazla uygulama yükleniyor…</string>
+  <string name="close">Kapat</string>
+  <string name="apply_profile_to_all">Profili tümüne uygula</string>
+  <string name="bulk_profile_dialog_message_including_system">Bu işlem sistem uygulamaları dahil %1$d uygulamayı güncelleyecek.</string>
+  <string name="bulk_profile_dialog_message_user_apps">Bu işlem %1$d kullanıcı uygulamasını güncelleyecek.</string>
+  <string name="all_listed_apps">Tüm listelenen uygulamalar</string>
+  <string name="app_count_including_system_apps">Sistem uygulamaları dahil %1$d uygulama</string>
+  <string name="user_app_count">%1$d kullanıcı uygulaması</string>
+  <string name="apply_profile">Profil uygula</string>
+  <string name="all">Tümü</string>
+  <string name="xiaomi_stability_title">Xiaomi / HyperOS kararlılığı</string>
+  <string name="xiaomi_stability_desc">Xiaomi, ek izinler açılmadığında arka plan servislerini durdurabilir.</string>
+  <string name="xiaomi_stability_steps_intro">En iyi kararlılık için:</string>
+  <string name="xiaomi_stability_steps">• Uygulama pil tasarrufu: Kısıtlama yok\n• Otomatik başlatma: Açık\n• Son uygulamalar: RoyTools kilitli\n• Bildirimler: İzinli\n• Erişilebilirlik: Açık</string>
+  <string name="xiaomi_stability_settings_summary">Daha kararlı arka plan çalışması için Kısıtlama yok, Otomatik başlatma, Son uygulamalarda kilitleme, bildirimler ve erişilebilirliği açın.</string>
+  <string name="stability_notification_recovery_title">RoyTools dikkat gerektiriyor</string>
+  <string name="stability_notification_recovery_text">Erişilebilirlik Servisi durmuş olabilir. Kurtarmak için dokunun.</string>
+  <string name="stability_notification_recovery_action">Kurtar</string>
+  <string name="action_enable">Etkinleştir</string>
+  <string name="action_cancel">İptal</string>
+  <string name="setup_adb_command_copied">ADB komutu kopyalandı</string>
+  <string name="event_inspector_title">Olay İnceleyici</string>
+  <string name="accessibility_event_inspector_title">Erişilebilirlik Olay İnceleyici</string>
+  <string name="accessibility_event_inspector_description">Gürültülü uygulamaları, kaydırma davranışlarını ve üreticiye özel erişilebilirlik olaylarını inceleyin.</string>
+  <string name="paused">Duraklatıldı</string>
+  <string name="live">Canlı</string>
+  <string name="scroll_only">Sadece kaydırma</string>
+  <string name="adaptive_hz_events_clip_label">RoyTools olayları</string>
+  <string name="events_copied">Olaylar kopyalandı</string>
+  <string name="copy">Kopyala</string>
+  <string name="clear">Temizle</string>
+  <string name="events_captured">%1$d olay yakalandı</string>
+  <string name="no_events_captured_yet">Henüz olay yakalanmadı.</string>
+  <string name="event_scroll_delta_x">ΔX</string>
+  <string name="event_scroll_delta_y">ΔY</string>
+  <string name="event_content_change">içerikDeğişimi</string>
+  <string name="accessibility_event_report_title">RoyTools Erişilebilirlik Olayları</string>
+  <string name="accessibility_event_report_separator">--------------------------------</string>
+  <string name="accessibility_event_report_row">%1$s | %2$s | %3$s | ΔX=%4$d ΔY=%5$d | içerikDeğişimi=%6$d</string>
+  <string name="empty_value_dash">-</string>
+  <string name="diagnostics_title">Tanılama</string>
+  <string name="diagnostics_description">Çalışma durumu, yenileme motoru etkinliği ve hata ayıklama bilgilerini inceleyin.</string>
+  <string name="adaptive_hz_diagnostics_clip_label">RoyTools tanılama</string>
+  <string name="diagnostics_copied">Tanılama kopyalandı</string>
+  <string name="copy_report">Raporu kopyala</string>
+  <string name="refresh">Yenile</string>
+  <string name="diagnostics_system_title">Sistem</string>
+  <string name="diagnostics_vendor">Üretici</string>
+  <string name="diagnostics_current_display">Mevcut ekran</string>
+  <string name="diagnostics_setting_key">Ayar anahtarı</string>
+  <string name="diagnostics_setting_value">Ayar değeri</string>
+  <string name="diagnostics_battery_saver">Pil tasarrufu</string>
+  <string name="refresh_rate_hz">%1$d Hz</string>
+  <string name="diagnostics_current_mode">Mevcut mod</string>
+  <string name="diagnostics_adb_granted">ADB izni</string>
+  <string name="diagnostics_keep_alive">Arka plan kararlılığı</string>
+  <string name="diagnostics_accessibility">Erişilebilirlik</string>
+  <string name="diagnostics_last_heartbeat">Son heartbeat</string>
+  <string name="diagnostics_engine_debug_title">Motor hata ayıklama</string>
+  <string name="diagnostics_foreground_package">Ön plandaki paket</string>
+  <string name="diagnostics_last_event">Son olay</string>
+  <string name="diagnostics_last_write">Son yazım</string>
+  <string name="diagnostics_last_write_success">Son yazım başarılı</string>
+  <string name="diagnostics_updated_at">Güncellenme zamanı</string>
+  <string name="diagnostics_report_title">RoyTools Tanılama</string>
+  <string name="diagnostics_report_separator">----------------------</string>
+  <string name="diagnostics_report_app_version">Uygulama sürümü: %1$s (%2$d)</string>
+  <string name="diagnostics_report_vendor">Üretici: %1$s</string>
+  <string name="diagnostics_report_current_display">Mevcut ekran: %1$d Hz</string>
+  <string name="diagnostics_report_setting_key">Ayar anahtarı: %1$s</string>
+  <string name="diagnostics_report_setting_value">Ayar değeri: %1$s</string>
+  <string name="diagnostics_report_battery_saver">Pil tasarrufu: %1$s</string>
+  <string name="diagnostics_report_current_mode">Mevcut mod: %1$s</string>
+  <string name="diagnostics_report_adb_granted">ADB izni: %1$s</string>
+  <string name="diagnostics_report_keep_alive">Arka plan kararlılığı: %1$s</string>
+  <string name="diagnostics_report_accessibility">Erişilebilirlik: %1$s</string>
+  <string name="diagnostics_report_last_heartbeat">Son heartbeat: %1$s</string>
+  <string name="diagnostics_report_foreground_package">Ön plandaki paket: %1$s</string>
+  <string name="diagnostics_report_last_event">Son olay: %1$s</string>
+  <string name="diagnostics_report_last_write">Son yazım: %1$s</string>
+  <string name="diagnostics_report_last_write_success">Son yazım başarılı: %1$s</string>
+  <string name="diagnostics_report_debug_updated_at">Hata ayıklama güncelleme zamanı: %1$s</string>
+  <string name="profile_mode_respect_app">Sistem Kontrolünde</string>
+  <string name="profile_mode_default_description">Genel RoyTools davranışını kullan.</string>
+  <string name="profile_mode_adaptive_description">RoyTools bu uygulamayı kontrol eder.</string>
+  <string name="profile_mode_minimum_description">Bu uygulamayı minimum yenileme hızında tut.</string>
+  <string name="profile_mode_maximum_description">Bu uygulamayı maksimum yenileme hızında tut.</string>
+  <string name="profile_mode_respect_app_description">RoyTools bu uygulamayı kontrol etmez. Yenileme hızı sistem veya üretici davranışına bırakılır.</string>
+  <string name="profile_mode_disabled_description">Bu uygulamayı yok say ve güvenli düşük moda dön.</string>
+  <string name="profile_mode_default">Varsayılan</string>
+  <string name="profile_mode_adaptive">Adaptive</string>
+  <string name="profile_mode_minimum">Minimum</string>
+  <string name="profile_mode_maximum">Maksimum</string>
+  <string name="profile_mode_respect">Saygı göster</string>
+  <string name="profile_mode_disabled">Devre dışı</string>
+  <string name="accessibility_health_notification_channel_name">RoyTools sağlık durumu</string>
+  <string name="accessibility_health_notification_title">RoyTools dikkat gerektiriyor</string>
+  <string name="accessibility_health_notification_broken_text">Erişilebilirlik Servisi yanıt vermiyor. RoyTools yenileme hızını değiştirmeyi durdurabilir. Erişilebilirlik Ayarları’nı yeniden açmak için dokunun.</string>
+  <string name="accessibility_health_notification_disabled_text">Erişilebilirlik Servisi kapalı. RoyTools, etkileşimleri algılamak ve yenileme hızını değiştirmek için bu servise ihtiyaç duyar. Yeniden etkinleştirmek için dokunun.</string>
+  <string name="accessibility_health_notification_action">Erişilebilirlik Ayarları’nı aç</string>
+  <!-- Hızlı erişim keşfi -->
+  <string name="quick_access_section">Hızlı erişim</string>
+  <string name="quick_access_discovery_title">RoyTools’i daha hızlı kontrol edin</string>
+  <string name="quick_access_discovery_description">Uygulamayı açmadan RoyTools’i kontrol etmek için kısayollar ekleyin. Bunları daha sonra Ayarlar’dan değiştirebilirsiniz.</string>
+  <string name="quick_access_tile_title">Hızlı Ayarlar</string>
+  <string name="quick_access_tile_description">Bildirim panelinden RoyTools’i açın veya kapatın.</string>
+  <string name="quick_access_status_added">Eklendi</string>
+  <string name="quick_access_action_add">Ekle</string>
+  <string name="quick_access_action_done">Bitti</string>
+  <string name="quick_access_action_not_now">Şimdi değil</string>
+  <string name="quick_access_manual_title">Elle ekleyin</string>
+  <string name="quick_access_tile_manual_instructions">Hızlı Ayarlar’ı açın, Düzenle’ye dokunun ve RoyTools’i etkin kutucuklarınızın arasına sürükleyin.</string>
+  <string name="quick_access_request_failed">Sistem ekleme isteğini açamadı. Bu kısayolu elle ekleyebilirsiniz.</string>
+  <string name="quick_access_request_dismissed">Kısayol eklenmedi.</string>
+  <string name="custom_refresh_rate_title">Özel yenileme hızı</string>
+  <string name="custom_refresh_rate_description">Etkin modun kullanacağı hızı hassas biçimde ayarlayın.</string>
+  <string name="custom_refresh_profile_title">Yenileme davranışı</string>
+  <string name="custom_refresh_rate_label">Yenileme hızı</string>
+  <string name="custom_refresh_rate_default">Varsayılan</string>
+  <string name="custom_refresh_rate_hz">%1$d Hz</string>
+  <string name="custom_adaptive_target_label">Dokunma yenileme hızı</string>
+  <string name="custom_refresh_rate_unsupported">Bu cihaz özel yenileme hızı seçimini desteklemiyor.</string>
+</resources>

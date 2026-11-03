@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="roytools_card_radius">20dp</dimen>
+    <dimen name="roytools_control_radius">16dp</dimen>
+    <dimen name="roytools_dialog_radius">24dp</dimen>
+    <dimen name="roytools_menu_radius">20dp</dimen>
+    <dimen name="roytools_icon_radius">12dp</dimen>
+    <dimen name="roytools_page_margin">16dp</dimen>
+    <dimen name="roytools_card_padding">18dp</dimen>
+    <dimen name="roytools_section_spacing">12dp</dimen>
+    <dimen name="roytools_touch_target">48dp</dimen>
+</resources>

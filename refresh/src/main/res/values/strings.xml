@@ -1,0 +1,413 @@
+<resources>
+  <string name="app_name">RoyTools</string>
+  <string name="home_title">RoyTools</string>
+  <string name="home_description">Adaptive refresh-rate switching using accessibility events + secure settings (ADB).</string>
+  <string name="setup_title">Setup</string>
+  <string name="setup_description">To work properly, RoyTools needs several system permissions. Please complete the steps below to enable all features.</string>
+  <string name="setup_accessibility_title">Accessibility Service</string>
+  <string name="setup_accessibility_desc">Required. Enables detecting touch/scroll events system-wide.</string>
+  <string name="setup_accessibility_button">Open Accessibility</string>
+  <string name="setup_adb_title">ADB Permission (WRITE_SECURE_SETTINGS)</string>
+  <string name="setup_adb_desc">Required. Grant via ADB, then verify here.</string>
+  <string name="setup_adb_verify">Verify Permission</string>
+  <string name="setup_adb_instruction">Run this on your computer:</string>
+  <string name="setup_battery_title">Disable Battery Optimizations</string>
+  <string name="setup_battery_desc">Recommended. Prevents the OS from killing the app/service in the background.</string>
+  <string name="open_battery_settings">Open Battery Settings</string>
+  <string name="setup_stability_title">Stability Mode (Foreground Service)</string>
+  <string name="setup_stability_desc">Keeps the process alive using a persistent notification.</string>
+  <string name="setup_notifications_button">Notifications</string>
+  <string name="enable">Enable</string>
+  <string name="disable">Disable</string>
+  <string name="dashboard_title">Dashboard</string>
+  <string name="dashboard_status_title">Status</string>
+  <string name="status_current_display">Current display</string>
+  <string name="status_vendor">Vendor</string>
+  <string name="status_setting">Setting</string>
+  <string name="status_accessibility">Accessibility</string>
+  <string name="status_mode">Mode</string>
+  <string name="mode_adaptive">Adaptive</string>
+  <string name="mode_manual">Manual</string>
+  <string name="minimum">Minimum</string>
+  <string name="maximum">Maximum</string>
+  <string name="per_app_title">Per-app refresh rate</string>
+  <string name="per_app_desc">Set the behavior to Adaptive, Minimum, Maximum, or Respect for each application.</string>
+  <string name="per_app_desc2">This requires listing installed apps and storing per-app preferences.</string>
+  <string name="footer_title">Developed by AlpWare Studio</string>
+  <string name="footer_desc">This is an open-source project. Your feedback and device test reports are welcome.</string>
+  <string name="footer_github">GitHub</string>
+  <string name="footer_play">Google Play</string>
+  <string name="toast_adb_verified">ADB permission verified</string>
+  <string name="toast_adb_permission_missing">Permission missing. Grant via ADB first.</string>
+  <string name="toast_adb_verify_unavailable">Unable to verify on this ROM.</string>
+  <string name="label_ok">OK</string>
+  <string name="label_recommended">RECOMMENDED</string>
+  <string name="toast_stability_enabled">Stability Mode enabled</string>
+  <string name="toast_stability_disabled">Stability Mode disabled</string>
+  <string name="toast_open_notification_settings_failed">Unable to open notification settings.</string>
+  <string name="toast_adaptive_applied">Adaptive applied</string>
+  <string name="toast_minimum_applied">Minimum applied</string>
+  <string name="toast_maximum_applied">Maximum applied</string>
+  <string name="toast_refresh_rate_apply_failed">The refresh rate could not be applied. Check WRITE_SECURE_SETTINGS and, for supported custom values, the Shizuku connection.</string>
+  <string name="toast_secure_settings_missing">WRITE_SECURE_SETTINGS permission is missing.</string>
+  <string name="toast_custom_rate_unavailable">The custom refresh rate could not be applied. The normal device behavior was restored. Check the Shizuku connection and custom-rate support.</string>
+  <string name="label_missing">MISSING</string>
+  <string name="label_on">ON</string>
+  <string name="label_off">OFF</string>
+  <string name="label_granted">GRANTED</string>
+  <string name="label_required">REQUIRED</string>
+  <string name="label_notifications_status">Notifications: %1$s</string>
+  <string name="stability_notification_channel_name">RoyTools</string>
+  <string name="stability_notification_title">RoyTools</string>
+  <string name="stability_notification_text">Running</string>
+  <string name="toast_open_accessibility_failed">Could not open accessibility settings. Please enable it manually from Settings &gt; Accessibility.</string>
+  <string name="accessibility_service_description">Automatically switches Galaxy device based on interaction.</string>
+  <string name="toast_battery_already_ignored">Battery optimizations are already disabled.</string>
+  <string name="toast_battery_settings_failed">Unable to open battery optimization settings.</string>
+  <string name="developer_signature">Developed by AlpWare Studio</string>
+  <string name="label_idle">Idle</string>
+  <string name="label_active">Active</string>
+  <string name="label_target_max_on_touch">Max on touch</string>
+  <string name="label_target_minimum">Minimum</string>
+  <string name="label_target_maximum">Maximum</string>
+  <string name="label_target_system_default">System default</string>
+  <string name="status_target">Target</string>
+  <string name="status_interaction">Interaction</string>
+  <string name="settings_enable_adaptive_hz">Enable RoyTools</string>
+  <string name="settings_enable_adaptive_hz_desc">Turns the RoyTools engine on or off. When disabled, the app stops controlling the refresh rate and the system default behavior is restored.</string>
+  <string name="setup_adb_desc_with_root">Grant the required privileged permission with ADB, or use one-tap root setup if your device supports root access.</string>
+  <string name="setup_root_detected_desc">Root access was detected on this device. You can try granting the required permission automatically instead of using ADB.</string>
+  <string name="setup_root_grant_button">Grant Automatically</string>
+  <string name="root_grant_success">Required permission granted successfully.</string>
+  <string name="root_grant_denied">Root request was denied.</string>
+  <string name="root_not_available">Root is not available on this device.</string>
+  <string name="root_grant_failed">Automatic root setup failed.</string>
+  <string name="setup_shizuku_title">Shizuku</string>
+  <string name="setup_shizuku_desc">Optional. Shizuku improves touch detection and enables safe custom refresh-rate values on supported devices. Normal RoyTools modes continue to work without it.</string>
+  <string name="setup_shizuku_ready_message">Shizuku is running and permission is granted.</string>
+  <string name="shizuku_recommendation_title">Shizuku is recommended</string>
+  <string name="shizuku_recommendation_message">Normal device modes can work without Shizuku. Granting permission improves interaction detection and is required to apply supported custom refresh-rate values safely.</string>
+  <string name="shizuku_grant_permission">Grant Shizuku permission</string>
+  <string name="shizuku_continue_without">Continue without Shizuku</string>
+  <string name="toast_shizuku_not_running">Shizuku is not running. Start it first, or continue without Shizuku.</string>
+  <string name="settings_shizuku_ready_summary">Shizuku is running and permission is granted</string>
+  <string name="settings_shizuku_recommended_summary">Optional but recommended for accurate interaction detection; required for safe custom values on supported devices</string>
+  <!-- Common -->
+  <string name="cd_back">Back</string>
+  <string name="action_close">Close</string>
+  <string name="cd_expand">Expand</string>
+  <string name="cd_collapse">Collapse</string>
+  <string name="error">Error</string>
+  <!-- Settings -->
+  <string name="settings_accessibility_working_summary">Accessibility service is active and working properly.</string>
+  <string name="settings_accessibility_required_summary">Required for detecting touch and scroll interactions.</string>
+  <string name="settings_adb_granted_summary">WRITE_SECURE_SETTINGS permission has been granted.</string>
+  <string name="settings_adb_or_root_summary">Grant permission using ADB or root access.</string>
+  <string name="settings_adb_required_summary">Required for controlling refresh rate behavior.</string>
+  <string name="settings_usage_access_granted_summary">Recently used apps can now be detected correctly.</string>
+  <string name="settings_usage_access_recommended_summary">Recommended for showing real recent apps on Dashboard.</string>
+  <string name="settings_battery_optimizations_disabled_summary">Battery optimizations are disabled for RoyTools.</string>
+  <string name="settings_battery_optimization_recommended_summary">Recommended to improve background stability.</string>
+  <string name="settings_notifications_enabled_summary">Notifications are enabled for Stability Mode.</string>
+  <string name="settings_notifications_required_summary">Required for foreground stability notifications.</string>
+  <string name="settings_diagnostics_summary">View runtime state and debug information.</string>
+  <string name="settings_event_inspector_summary">Inspect recent accessibility events and scroll signals.</string>
+  <!-- Settings - header -->
+  <string name="settings_title">Settings</string>
+  <string name="settings_app_name">RoyTools</string>
+  <string name="settings_app_tagline">RoyTools automatically switches the display refresh rate based on user interaction.</string>
+  <!-- Settings - defaults (developer) -->
+  <string name="settings_developer_name">AlpWare Studio</string>
+  <string name="settings_developer_email">contact@alpwarestudio.com</string>
+  <string name="settings_website_url">https://alpwarestudio.com</string>
+  <!-- Settings - sections -->
+  <string name="settings_section_behavior">Behavior</string>
+  <string name="settings_section_updates">Updates</string>
+  <string name="settings_section_appearance">Appearance</string>
+  <string name="settings_section_debug">Debug</string>
+  <string name="settings_section_about">About</string>
+  <string name="settings_section_developer">Developer</string>
+  <string name="settings_section_other_apps">More from AlpWare Studio</string>
+  <string name="settings_section_support">Support</string>
+  <string name="settings_section_legal">Legal</string>
+  <!-- Settings - items -->
+  <string name="settings_item_stability_mode">Stability Mode</string>
+  <string name="settings_item_automatic_update_checks">Automatic update checks</string>
+  <string name="settings_value_automatic_update_checks_summary">Checks GitHub for stable releases at most once every 24 hours. Beta and pre-release versions are ignored.</string>
+  <string name="settings_item_check_for_updates">Check for updates</string>
+  <string name="settings_value_stable_updates_summary">Manually check the latest stable GitHub release.</string>
+  <string name="update_checking">Checking GitHub…</string>
+  <string name="update_up_to_date">You’re using the latest stable version.</string>
+  <string name="update_check_failed">Couldn’t check for updates. Check your connection and try again.</string>
+  <string name="update_invalid_release">The latest release does not have a valid version number.</string>
+  <string name="update_consent_title">Stay up to date?</string>
+  <string name="update_consent_body">RoyTools can check GitHub for new stable releases at most once every 24 hours. Beta and pre-release versions are ignored. No update is downloaded or installed automatically.</string>
+  <string name="update_consent_enable">Enable checks</string>
+  <string name="update_consent_not_now">Not now</string>
+  <string name="update_available_title">Update available</string>
+  <string name="update_available_body">%1$s is available. Review the release on GitHub before downloading.</string>
+  <string name="update_view_release">View release</string>
+  <string name="update_later">Later</string>
+  <string name="settings_item_version">Version</string>
+  <string name="settings_item_repository">Repository</string>
+  <string name="settings_item_email">Email</string>
+  <string name="settings_item_website">Website</string>
+  <string name="settings_item_report_issue">Report an Issue</string>
+  <string name="settings_item_share_app">Share App</string>
+  <string name="settings_item_star_github">Star on GitHub</string>
+  <string name="settings_value_star_github">Help more people discover this open-source project.</string>
+  <string name="settings_item_all_apps">View all apps</string>
+  <string name="other_app_password_book_title">Password Book</string>
+  <string name="other_app_password_book_summary">An offline, AES-256 encrypted password manager.</string>
+  <string name="other_app_kodex_title">Kodex</string>
+  <string name="other_app_kodex_summary">Create, customize and scan QR codes.</string>
+  <string name="other_app_score_book_title">Score Book</string>
+  <string name="other_app_score_book_summary">Keep scores simply and clearly.</string>
+  <string name="support_prompt_title">Enjoying RoyTools?</string>
+  <string name="support_prompt_body">A GitHub star or a share helps this open-source project reach more people. Thank you for supporting independent development.</string>
+  <string name="support_prompt_not_now">Not now</string>
+  <string name="settings_item_privacy_policy">Privacy Policy</string>
+  <string name="settings_item_open_source_notices">Open source notices</string>
+  <string name="settings_item_battery_optimization">Battery optimization</string>
+  <string name="settings_value_battery_optimization_ok">Battery restrictions are disabled for better stability.</string>
+  <string name="settings_value_battery_optimization_recommended">Recommended for better background stability on aggressive devices.</string>
+  <string name="settings_item_notification_permission">Notification permission</string>
+  <string name="settings_value_notification_permission_ok">Notification permission is granted.</string>
+  <string name="settings_value_notification_permission_required">Required to enable Stability Mode on Android 13 and above.</string>
+  <string name="settings_toast_notification_required_for_stability">Notification permission is required to enable Stability Mode.</string>
+  <string name="settings_item_keep_active_during_battery_saver">Keep RoyTools active during Battery Saver</string>
+  <string name="settings_value_keep_active_during_battery_saver_summary">When enabled, RoyTools will continue applying your selected refresh rate behavior while Battery Saver is on. Some devices may still force 60Hz at system level.</string>
+  <string name="settings_item_drop_delay">Drop delay after touch</string>
+  <string name="settings_value_drop_delay_summary">Switch back to minimum refresh rate after %1$s when touch interaction ends. (Default: 2s)</string>
+  <string name="settings_dialog_battery_saver_override_title">Battery Saver compatibility</string>
+  <string name="settings_dialog_battery_saver_override_body">RoyTools will keep trying to apply your selected refresh rate behavior while Battery Saver is enabled. However, some devices block high refresh rates at system level during Battery Saver, so this option may not work on every phone. If your device still stays at 60Hz, it means the system is enforcing the limit.</string>
+  <string name="settings_item_theme">Theme</string>
+  <string name="settings_item_language">Language</string>
+  <string name="settings_value_theme_system">System default</string>
+  <string name="settings_value_theme_light">Light</string>
+  <string name="settings_value_theme_dark">Dark</string>
+  <string name="settings_value_language_system">System default</string>
+  <string name="settings_value_language_english">English</string>
+  <string name="settings_value_language_turkish">Türkçe</string>
+  <string name="settings_value_language_spanish">Español</string>
+  <string name="settings_value_language_portuguese_brazil">Português (Brasil)</string>
+  <string name="settings_dialog_theme_title">Choose theme</string>
+  <string name="settings_dialog_language_title">Choose language</string>
+  <!-- Settings - values -->
+  <string name="settings_value_stability_mode_summary">Keeps RoyTools more reliable in the background using a persistent notification. Disabling this removes the notification but may reduce stability on some devices.</string>
+  <string name="settings_value_version">%1$s (%2$d)</string>
+  <string name="settings_value_other_apps">Other apps &amp; publisher page</string>
+  <string name="settings_value_github_issues">GitHub Issues</string>
+  <string name="settings_value_send_github_link">Share the open-source project</string>
+  <string name="settings_value_privacy_short">No analytics or data collection. Optional update checks contact GitHub.</string>
+  <string name="settings_value_third_party_licenses">Third-party licenses</string>
+  <!-- Settings - share -->
+  <string name="settings_share_title">Share %1$s</string>
+  <string name="settings_share_text">%1$s is an open-source Android refresh-rate controller with per-app profiles and Quick Settings.\n%2$s</string>
+  <!-- Settings - email -->
+  <string name="settings_email_subject">%1$s feedback</string>
+  <!-- Settings - footer -->
+  <string name="settings_footer_tip">Tip: Keep this app offline-friendly—open links only when needed.</string>
+  <!-- Settings - dialog actions -->
+  <string name="settings_action_view_on_github">View on GitHub</string>
+  <!-- Settings - dialog: Privacy -->
+  <string name="settings_dialog_privacy_title">Privacy Policy</string>
+  <string name="settings_dialog_privacy_body">
+        Key points
+        • Core features work offline.
+        • No personal data is collected.
+        • No analytics, ads, or trackers are used.
+        • No permissions are requested for data collection.
+
+        Details
+        This application does not collect, store, or share personal information. When automatic update checks are enabled, or when you manually check, the app sends a standard HTTPS request to the GitHub Releases API. GitHub may receive normal network metadata such as your IP address under its own privacy policy. RoyTools sends no app data or account identifier. Updates are never downloaded or installed automatically.
+
+        If you have questions, contact the developer via the email in Settings.
+    </string>
+  <!-- Settings - dialog: Notices -->
+  <string name="settings_dialog_notices_title">Open source notices</string>
+  <string name="settings_dialog_notices_body">
+        This app is open source and may include third-party libraries.
+
+        You may need to include:
+        • A link to the repository (Settings → Repository)
+        • The project LICENSE (e.g., MIT/Apache-2.0)
+        • Any required NOTICE files for dependencies
+
+        Tip
+        If you want to show full license texts in-app, place them under res/raw or assets and render them here.
+    </string>
+  <string name="accessibility_broken_adaptive_disabled">Adaptive mode is temporarily unavailable because the Accessibility Service is not responding. Manual modes can still be used.</string>
+  <string name="recovery_title">Service not responding</string>
+  <string name="recovery_desc">
+        The Accessibility Service appears to be enabled but is not responding.
+        This may happen due to system restrictions or background limits.
+        You can try restarting the service or adjusting battery settings.
+    </string>
+  <string name="retry">Retry</string>
+  <string name="setup_continue_button">Continue</string>
+  <string name="setup_continue_required_hint">Complete the required steps above to continue. Recommended steps are optional.</string>
+  <string name="setup_usage_access_title">Usage Access</string>
+  <string name="setup_usage_access_desc">Recommended. Allows RoyTools to show your recently used apps on the dashboard.</string>
+  <string name="setup_usage_access_button">Open Usage Access</string>
+  <string name="setup_accessibility_enabled_message">Accessibility Service is enabled. You can reopen settings anytime using the refresh icon.</string>
+  <string name="setup_adb_granted_message">ADB permission is granted and working correctly. You can verify it again using the refresh icon.</string>
+  <string name="setup_battery_ok_message">Battery optimization is disabled. RoyTools can continue running more reliably in the background.</string>
+  <string name="setup_usage_access_ok_message">Usage Access is enabled. Recently used apps can now appear on the dashboard.</string>
+  <string name="adaptive_hz_enabled">RoyTools Enabled</string>
+  <string name="enable_recent_apps_access">Enable recent apps access</string>
+  <string name="no_recent_apps_found">No recent apps found yet.</string>
+  <string name="view_all_apps">View all apps</string>
+  <string name="per_app_profiles_title">Per-app profiles</string>
+  <string name="back">Back</string>
+  <string name="per_app_profiles_description">Set refresh behavior for individual apps or apply one profile to all listed apps.</string>
+  <string name="search_apps">Search apps</string>
+  <string name="show_system_apps">Show system apps</string>
+  <string name="show_system_apps_description">Include launcher, browser, video player and OEM system apps.</string>
+  <string name="loading_apps">Loading apps…</string>
+  <string name="loading_more_apps">Loading more apps…</string>
+  <string name="close">Close</string>
+  <string name="apply_profile_to_all">Apply profile to all</string>
+  <string name="bulk_profile_dialog_message_including_system">This will update %1$d listed apps, including system apps.</string>
+  <string name="bulk_profile_dialog_message_user_apps">This will update %1$d listed user apps.</string>
+  <string name="all_listed_apps">All listed apps</string>
+  <string name="app_count_including_system_apps">%1$d apps including system apps</string>
+  <string name="user_app_count">%1$d user apps</string>
+  <string name="apply_profile">Apply profile</string>
+  <string name="all">All</string>
+  <string name="event_inspector_title">Event Inspector</string>
+  <string name="accessibility_event_inspector_title">Accessibility Event Inspector</string>
+  <string name="accessibility_event_inspector_description">Inspect noisy apps, scroll behavior and vendor-specific accessibility events.</string>
+  <string name="paused">Paused</string>
+  <string name="live">Live</string>
+  <string name="scroll_only">Scroll only</string>
+  <string name="adaptive_hz_events_clip_label">RoyTools events</string>
+  <string name="events_copied">Events copied</string>
+  <string name="copy">Copy</string>
+  <string name="clear">Clear</string>
+  <string name="events_captured">%1$d events captured</string>
+  <string name="no_events_captured_yet">No events captured yet.</string>
+  <string name="event_scroll_delta_x">ΔX</string>
+  <string name="event_scroll_delta_y">ΔY</string>
+  <string name="event_content_change">contentChange</string>
+  <string name="accessibility_event_report_title">RoyTools Accessibility Events</string>
+  <string name="accessibility_event_report_separator">--------------------------------</string>
+  <string name="accessibility_event_report_row">%1$s | %2$s | %3$s | ΔX=%4$d ΔY=%5$d | contentChange=%6$d</string>
+  <string name="empty_value_dash">-</string>
+  <string name="diagnostics_title">Diagnostics</string>
+  <string name="diagnostics_description">Inspect runtime state, refresh engine activity and debug information.</string>
+  <string name="adaptive_hz_diagnostics_clip_label">RoyTools diagnostics</string>
+  <string name="diagnostics_copied">Diagnostics copied</string>
+  <string name="copy_report">Copy report</string>
+  <string name="refresh">Refresh</string>
+  <string name="xiaomi_stability_title">Xiaomi / HyperOS stability</string>
+  <string name="xiaomi_stability_desc">Xiaomi may stop background services unless extra permissions are enabled.</string>
+  <string name="xiaomi_stability_steps_intro">For best reliability:</string>
+  <string name="xiaomi_stability_steps">• App battery saver: No restrictions\n• Autostart: Enabled\n• Recent apps: Lock RoyTools\n• Notifications: Allowed\n• Accessibility: Enabled</string>
+  <string name="xiaomi_stability_settings_summary">For better background reliability, enable No restrictions, Autostart, Recent apps lock, notifications and accessibility.</string>
+  <string name="stability_notification_recovery_title">RoyTools needs attention</string>
+  <string name="stability_notification_recovery_text">Accessibility Service may have stopped. Tap to recover.</string>
+  <string name="stability_notification_recovery_action">Recover</string>
+  <string name="action_enable">Enable</string>
+  <string name="action_cancel">Cancel</string>
+  <string name="setup_adb_command_copied">ADB command copied</string>
+  <string name="diagnostics_system_title">System</string>
+  <string name="diagnostics_vendor">Vendor</string>
+  <string name="diagnostics_current_display">Current display</string>
+  <string name="diagnostics_setting_key">Setting key</string>
+  <string name="diagnostics_setting_value">Setting value</string>
+  <string name="diagnostics_battery_saver">Battery saver</string>
+  <string name="refresh_rate_hz">%1$d Hz</string>
+  <string name="diagnostics_current_mode">Current mode</string>
+  <string name="diagnostics_adb_granted">ADB granted</string>
+  <string name="diagnostics_keep_alive">Keep alive</string>
+  <string name="diagnostics_accessibility">Accessibility</string>
+  <string name="diagnostics_last_heartbeat">Last heartbeat</string>
+  <string name="diagnostics_engine_debug_title">Engine debug</string>
+  <string name="diagnostics_foreground_package">Foreground package</string>
+  <string name="diagnostics_last_event">Last event</string>
+  <string name="diagnostics_last_write">Last write</string>
+  <string name="diagnostics_last_write_success">Last write success</string>
+  <string name="diagnostics_updated_at">Updated at</string>
+  <string name="diagnostics_report_title">RoyTools Diagnostics</string>
+  <string name="diagnostics_report_separator">----------------------</string>
+  <string name="diagnostics_report_app_version">App version: %1$s (%2$d)</string>
+  <string name="diagnostics_report_vendor">Vendor: %1$s</string>
+  <string name="diagnostics_report_current_display">Current display: %1$d Hz</string>
+  <string name="diagnostics_report_setting_key">Setting key: %1$s</string>
+  <string name="diagnostics_report_setting_value">Setting value: %1$s</string>
+  <string name="diagnostics_report_battery_saver">Battery saver: %1$s</string>
+  <string name="diagnostics_report_current_mode">Current mode: %1$s</string>
+  <string name="diagnostics_report_adb_granted">ADB granted: %1$s</string>
+  <string name="diagnostics_report_keep_alive">Keep alive: %1$s</string>
+  <string name="diagnostics_report_accessibility">Accessibility: %1$s</string>
+  <string name="diagnostics_report_last_heartbeat">Last heartbeat: %1$s</string>
+  <string name="diagnostics_report_foreground_package">Foreground package: %1$s</string>
+  <string name="diagnostics_report_last_event">Last event: %1$s</string>
+  <string name="diagnostics_report_last_write">Last write: %1$s</string>
+  <string name="diagnostics_report_last_write_success">Last write success: %1$s</string>
+  <string name="diagnostics_report_debug_updated_at">Debug updated at: %1$s</string>
+  <string name="profile_mode_respect_app">System Controlled</string>
+  <string name="profile_mode_default_description">Use global RoyTools behavior.</string>
+  <string name="profile_mode_adaptive_description">RoyTools controls this app.</string>
+  <string name="profile_mode_minimum_description">Keep this app at minimum refresh rate.</string>
+  <string name="profile_mode_maximum_description">Keep this app at maximum refresh rate.</string>
+  <string name="profile_mode_respect_app_description">RoyTools will not control this app. The system or vendor refresh-rate behavior will be used.</string>
+  <string name="profile_mode_disabled_description">Ignore this app and return to a safe low state.</string>
+  <string name="profile_mode_default">Default</string>
+  <string name="profile_mode_adaptive">Adaptive</string>
+  <string name="profile_mode_minimum">Minimum</string>
+  <string name="profile_mode_maximum">Maximum</string>
+  <string name="profile_mode_respect">Respect</string>
+  <string name="profile_mode_disabled">Disabled</string>
+  <string name="accessibility_health_notification_channel_name">RoyTools health</string>
+  <string name="accessibility_health_notification_title">RoyTools needs attention</string>
+  <string name="accessibility_health_notification_broken_text">Accessibility Service is not responding. RoyTools may stop switching refresh rates. Tap to reopen Accessibility Settings.</string>
+  <string name="accessibility_health_notification_disabled_text">Accessibility Service is disabled. RoyTools needs it to detect interactions and switch refresh rates. Tap to enable it again.</string>
+  <string name="accessibility_health_notification_action">Open Accessibility Settings</string>
+  <!-- Quick access discovery -->
+  <string name="quick_access_section">Quick access</string>
+  <string name="quick_access_discovery_title">Control RoyTools faster</string>
+  <string name="quick_access_discovery_description">Add shortcuts to control RoyTools without opening the app. You can change these later in Settings.</string>
+  <string name="quick_access_tile_title">Quick Settings</string>
+  <string name="quick_access_tile_description">Turn RoyTools on or off from the notification panel.</string>
+  <string name="quick_access_status_added">Added</string>
+  <string name="quick_access_action_add">Add</string>
+  <string name="quick_access_action_done">Done</string>
+  <string name="quick_access_action_not_now">Not now</string>
+  <string name="quick_access_manual_title">Add manually</string>
+  <string name="quick_access_tile_manual_instructions">Open Quick Settings, tap Edit, then drag RoyTools into your active tiles.</string>
+  <string name="quick_access_request_failed">The system could not open the add request. You can add this shortcut manually.</string>
+  <string name="quick_access_request_dismissed">Shortcut was not added.</string>
+  <string name="custom_refresh_rate_title">Custom refresh rate</string>
+  <string name="custom_refresh_rate_description">Fine-tune the rate used by the active mode.</string>
+  <string name="custom_refresh_profile_title">Refresh behavior</string>
+  <string name="custom_refresh_rate_label">Refresh rate</string>
+  <string name="custom_refresh_rate_default">Default</string>
+  <string name="custom_refresh_rate_hz">%1$d Hz</string>
+  <string name="custom_adaptive_target_label">Touch refresh rate</string>
+  <string name="custom_refresh_rate_unsupported">This device does not support custom refresh-rate selection.</string>
+  <string name="language_zh">简体中文</string>
+  <string name="ui_yes">Yes</string>
+  <string name="ui_no">No</string>
+  <string name="ui_instant">Immediately</string>
+  <string name="ui_millis">%1$dms</string>
+  <string name="ui_seconds">%1$ss</string>
+  <string name="ui_adb_command">ADB command</string>
+  <string name="ui_samsung">SAMSUNG</string>
+  <string name="ui_xiaomi">XIAOMI</string>
+  <string name="ui_other">OTHER</string>
+  <string name="ui_working">WORKING</string>
+  <string name="ui_broken">BROKEN</string>
+  <string name="ui_disabled">DISABLED</string>
+  <string name="ui_touch_start">TOUCH_START</string>
+  <string name="ui_touch_end">TOUCH_END</string>
+  <string name="ui_view_clicked">VIEW_CLICKED</string>
+  <string name="ui_view_selected">VIEW_SELECTED</string>
+  <string name="ui_view_scrolled">VIEW_SCROLLED</string>
+  <string name="ui_window_content_changed">WINDOW_CONTENT_CHANGED</string>
+  <string name="ui_window_state_changed">WINDOW_STATE_CHANGED</string>
+  <string name="ui_notification_state_changed">NOTIFICATION_STATE_CHANGED</string>
+  <string name="ui_announcement">ANNOUNCEMENT</string>
+  <string name="ui_view_accessibility_focus_cleared">VIEW_ACCESSIBILITY_FOCUS_CLEARED</string>
+</resources>

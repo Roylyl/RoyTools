@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Keep the official M3 container roles while supplying typography to the existing app theme. -->
+    <style name="ThemeOverlay.RoyTools.MaterialButton" parent="ThemeOverlay.Material3.Button">
+        <item name="textAppearanceLabelLarge">@style/TextAppearance.Material3.LabelLarge</item>
+        <item name="colorContainer">@color/roytools_action_blue</item>
+        <item name="colorOnContainer">@android:color/white</item>
+    </style>
+</resources>

@@ -1,0 +1,30 @@
+/* Local CSS only: image placeholders do not request another image or font. */
+.image-loading-host { position: relative; }
+img[data-image-state="loading"], img[data-image-state="error"] { opacity: 0 !important; }
+.image-placeholder {
+  position: absolute; z-index: 2; overflow: hidden; display: grid; place-items: center;
+  border-radius: 12px; pointer-events: none;
+  background: radial-gradient(ellipse at 25% 25%, rgba(105,201,255,.14), transparent 65%), rgba(130,150,174,.08);
+}
+.image-placeholder[hidden] { display: none; }
+.image-placeholder::before {
+  content: ""; position: absolute; inset: -100%;
+  background: linear-gradient(110deg, transparent 40%, rgba(173,220,255,.12) 50%, transparent 60%);
+  animation: image-shimmer 3s ease-in-out infinite;
+}
+.image-placeholder-orbit {
+  width: clamp(18px, 4vw, 34px); aspect-ratio: 1; border-radius: 50%;
+  border: 1px solid rgba(105,201,255,.24); border-top: 2px solid #69c9ff;
+  box-shadow: 0 0 18px rgba(105,201,255,.12);
+  animation: image-orbit 1.5s linear infinite;
+}
+.image-placeholder-message { position: relative; padding: 8px; color: #8acff7; font: 500 12px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; text-align: center; }
+.image-placeholder button { border: 1px solid rgba(105,201,255,.35); border-radius: 18px; background: #142334; color: #d9efff; min-height: 44px; padding: 8px 14px; cursor: pointer; pointer-events: auto; font: inherit; }
+.image-placeholder[data-error]::before { display: none; }
+.image-placeholder:not([data-visible])::before,
+.image-placeholder:not([data-visible]) .image-placeholder-orbit { animation-play-state: paused; }
+@keyframes image-orbit { to { transform: rotate(360deg); } }
+@keyframes image-shimmer { from { transform: translateX(-25%); } to { transform: translateX(25%); } }
+@media (prefers-reduced-motion: reduce) {
+  .image-placeholder::before, .image-placeholder-orbit { animation: none; }
+}

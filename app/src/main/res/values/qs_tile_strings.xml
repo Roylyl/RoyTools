@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="qs_proxy_label">代理开关</string>
+    <string name="qs_proxy_on">已开启</string>
+    <string name="qs_proxy_off">已关闭</string>
+    <string name="qs_proxy_status_unavailable">暂时无法读取代理状态</string>
+    <string name="qs_proxy_action_failed">代理操作失败，请打开RoyTools检查设置</string>
+</resources>

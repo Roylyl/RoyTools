@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?><ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:clipToPadding="false" android:paddingHorizontal="16dp" android:paddingVertical="8dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+        <LinearLayout style="@style/RoyTools.Card">
+            <TextView style="@style/RoyTools.CardTitle" android:text="外观" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/roytools_choose_theme" style="@style/RoyTools.SecondaryButton" />
+        </LinearLayout>
+        <LinearLayout style="@style/RoyTools.Card">
+            <TextView style="@style/RoyTools.CardTitle" android:text="后台运行" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/roytools_open_background" style="@style/RoyTools.SecondaryButton" android:text="后台运行设置" />
+        </LinearLayout>
+        <LinearLayout style="@style/RoyTools.Card">
+            <TextView style="@style/RoyTools.CardTitle" android:text="快捷控制" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/roytools_add_proxy_tile" style="@style/RoyTools.SecondaryButton" android:text="添加控制中心代理开关" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/roytools_add_proxy_widget" style="@style/RoyTools.SecondaryButton" android:text="添加桌面小组件" />
+        </LinearLayout>
+        <LinearLayout style="@style/RoyTools.Card">
+            <TextView style="@style/RoyTools.CardTitle" android:text="应用信息" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/roytools_check_updates" style="@style/RoyTools.SecondaryButton" android:text="应用更新" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/roytools_open_about" style="@style/RoyTools.SecondaryButton" android:text="关于RoyTools" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

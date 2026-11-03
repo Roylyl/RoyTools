@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?><ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:paddingHorizontal="16dp" android:paddingVertical="8dp" android:clipToPadding="false">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+        <LinearLayout style="@style/RoyTools.Card">
+            <TextView style="@style/RoyTools.CardTitle" android:text="应用可见性" />
+            <LinearLayout style="@style/RoyTools.ToggleRow">
+                <TextView style="@style/RoyTools.ToggleLabel" android:text="隐藏应用图标" android:labelFor="@id/roytools_hide_icon" />
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/roytools_hide_icon" style="@style/RoyTools.SettingSwitch" android:contentDescription="隐藏应用图标" />
+            </LinearLayout>
+            <TextView style="@style/RoyTools.Caption" android:text="开启后，RoyTools不再显示在桌面应用列表。" />
+            <LinearLayout style="@style/RoyTools.ToggleRow">
+                <TextView style="@style/RoyTools.ToggleLabel" android:text="从最近任务隐藏" android:labelFor="@id/roytools_hide_recents" />
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/roytools_hide_recents" style="@style/RoyTools.SettingSwitch" android:contentDescription="从最近任务隐藏" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout style="@style/RoyTools.Card">
+            <TextView style="@style/RoyTools.CardTitle" android:text="后台保活与恢复" />
+            <LinearLayout style="@style/RoyTools.ToggleRow">
+                <TextView style="@style/RoyTools.ToggleLabel" android:text="后台保活" android:labelFor="@id/roytools_keep_alive" />
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/roytools_keep_alive" style="@style/RoyTools.SettingSwitch" android:contentDescription="后台保活" />
+            </LinearLayout>
+            <TextView style="@style/RoyTools.Caption" android:text="维持代理和刷新率辅助服务，异常退出时尝试恢复。" />
+            <LinearLayout style="@style/RoyTools.ToggleRow">
+                <TextView style="@style/RoyTools.ToggleLabel" android:text="自动恢复代理" android:labelFor="@id/roytools_auto_restart" />
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/roytools_auto_restart" style="@style/RoyTools.SettingSwitch" android:contentDescription="自动恢复代理" />
+            </LinearLayout>
+            <TextView style="@style/RoyTools.Caption" android:text="重启手机或更新应用后，尝试恢复此前运行的代理。" />
+        </LinearLayout>
+        <LinearLayout style="@style/RoyTools.Card">
+            <TextView style="@style/RoyTools.CardTitle" android:text="系统后台权限" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/roytools_battery" style="@style/RoyTools.SecondaryButton" android:text="解除电池限制" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/roytools_app_background" style="@style/RoyTools.SecondaryButton" android:text="系统后台设置" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/roytools_always_vpn" style="@style/RoyTools.SecondaryButton" android:text="始终开启VPN" />
+            <TextView style="@style/RoyTools.Caption" android:layout_marginTop="12dp" android:text="请允许后台运行，并在最近任务中锁定RoyTools。无root设备重启后，刷新率辅助服务需要重新激活。" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

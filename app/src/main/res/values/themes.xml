@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="BootstrapTheme" parent="AppThemeLight" />
+    <style name="RoyToolsLaunchThemeBase" parent="BootstrapTheme">
+        <item name="android:windowSplashScreenBackground">@color/roytools_blue</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/roytools_splash_wordmark</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+        <item name="android:windowSplashScreenBrandingImage">@null</item>
+        <item name="android:windowBackground">@color/roytools_blue</item>
+        <item name="android:statusBarColor">@color/roytools_blue</item>
+        <item name="android:navigationBarColor">@color/roytools_blue</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+        <item name="android:enforceStatusBarContrast">false</item>
+        <item name="android:enforceNavigationBarContrast">false</item>
+    </style>
+    <style name="RoyToolsLaunchTheme" parent="RoyToolsLaunchThemeBase" />
+</resources>

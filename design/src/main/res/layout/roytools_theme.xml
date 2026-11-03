@@ -1,0 +1,12 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:clipToPadding="false" android:paddingHorizontal="16dp" android:paddingVertical="8dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+        <LinearLayout style="@style/RoyTools.Card">
+            <TextView style="@style/RoyTools.CardTitle" android:text="显示模式"/>
+            <RadioGroup android:id="@+id/roytools_theme_options" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp">
+                <RadioButton android:id="@+id/roytools_theme_system" style="@style/RoyTools.ThemeChoice" android:text="跟随系统"/>
+                <RadioButton android:id="@+id/roytools_theme_light" style="@style/RoyTools.ThemeChoice" android:text="浅色模式"/>
+                <RadioButton android:id="@+id/roytools_theme_dark" style="@style/RoyTools.ThemeChoice" android:text="深色模式"/>
+            </RadioGroup>
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

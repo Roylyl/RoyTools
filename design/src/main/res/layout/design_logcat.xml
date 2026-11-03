@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
+  <data>
+    <variable name="self" type="com.github.kr328.clash.design.LogcatDesign" />
+    <variable name="streaming" type="boolean" />
+    <variable name="unified" type="boolean" />
+    <import type="android.view.View" />
+    <import type="com.github.kr328.clash.design.LogcatDesign.Request" />
+  </data>
+  <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_glass_canvas" android:orientation="vertical" android:paddingStart="@{self.surface.insets.start}" android:paddingEnd="@{self.surface.insets.end}">
+    <com.github.kr328.clash.design.view.ActivityBarLayout android:id="@+id/activity_bar_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingTop="@{self.surface.insets.top}">
+      <RelativeLayout android:layout_width="match_parent" android:layout_height="wrap_content">
+        <include layout="@layout/common_activity_bar" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_alignParentStart="true" android:layout_toStartOf="@id/action_layout" />
+        <LinearLayout android:id="@+id/action_layout" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_alignParentEnd="true" android:layout_centerVertical="true" android:layout_marginEnd="12dp" android:gravity="center_vertical">
+          <com.google.android.material.button.MaterialButton style="@style/RoyTools.MaterialButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/roytools_logs_history" android:visibility="@{streaming &amp;&amp; !unified ? View.VISIBLE : View.GONE}" android:onClick="@{() -&gt; self.requests.offer(Request.History)}" />
+          <ImageView android:layout_width="48dp" android:layout_height="48dp" android:background="?attr/selectableItemBackgroundBorderless" android:clickable="true" android:focusable="true" android:padding="12dp" android:contentDescription="@string/export" android:src="@drawable/ic_baseline_publish" android:visibility="@{streaming &amp;&amp; !unified ? View.GONE : View.VISIBLE}" android:onClick="@{() -&gt; self.requests.offer(Request.Export)}" />
+          <ImageView android:layout_width="48dp" android:layout_height="48dp" android:background="?attr/selectableItemBackgroundBorderless" android:clickable="true" android:focusable="true" android:padding="12dp" android:contentDescription="@string/delete" android:src="@drawable/ic_baseline_delete" android:visibility="@{streaming || unified ? View.GONE : View.VISIBLE}" android:onClick="@{() -&gt; self.requests.offer(Request.Delete)}" />
+        </LinearLayout>
+      </RelativeLayout>
+    </com.github.kr328.clash.design.view.ActivityBarLayout>
+    <LinearLayout style="@style/RoyTools.Card" android:layout_marginHorizontal="16dp" android:layout_marginTop="10dp" android:padding="16dp">
+      <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+        <View android:id="@+id/status_dot" android:layout_width="8dp" android:layout_height="8dp" android:layout_marginEnd="8dp" android:background="@drawable/roytools_log_status" android:visibility="@{streaming ? View.VISIBLE : View.GONE}" />
+        <TextView android:id="@+id/capture_status" style="@style/RoyTools.Caption" android:layout_width="0dp" android:layout_weight="1" />
+      </LinearLayout>
+      <TextView android:id="@+id/file_description" style="@style/RoyTools.Caption" android:layout_marginTop="6dp" android:maxLines="1" android:ellipsize="middle" android:visibility="@{streaming &amp;&amp; !unified ? View.GONE : View.VISIBLE}" />
+      <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:visibility="@{streaming ? View.VISIBLE : View.GONE}" android:baselineAligned="false" android:layout_marginTop="10dp">
+        <com.google.android.material.button.MaterialButton android:id="@+id/pause_button" style="@style/RoyTools.PrimaryButton" android:layout_width="0dp" android:layout_weight="1" android:layout_marginEnd="10dp" android:text="@string/roytools_logs_pause" android:layout_marginTop="0dp" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/stop_button" style="@style/RoyTools.SecondaryButton" android:visibility="@{unified ? View.GONE : View.VISIBLE}" android:layout_width="0dp" android:layout_weight="1" android:text="@string/roytools_logs_stop" android:onClick="@{() -&gt; self.requests.offer(Request.Close)}" android:layout_marginTop="0dp" />
+      </LinearLayout>
+      <LinearLayout android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="12dp" android:gravity="center_vertical" android:background="@drawable/roytools_log_search" android:orientation="horizontal">
+        <EditText android:id="@+id/search_input" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:paddingStart="12dp" android:paddingEnd="4dp" android:background="@null" android:hint="@string/roytools_logs_search" android:textSize="15sp" android:textColor="?attr/colorOnSurface" android:textColorHint="?attr/glassTextSecondary" android:inputType="text" android:imeOptions="actionSearch" android:maxLines="1" android:singleLine="true" android:importantForAutofill="no" />
+        <ImageView android:id="@+id/clear_search" android:layout_width="48dp" android:layout_height="48dp" android:padding="15dp" android:src="@drawable/ic_baseline_close" android:background="?attr/selectableItemBackgroundBorderless" android:contentDescription="@string/roytools_logs_clear_search" android:clickable="true" android:focusable="true" android:visibility="gone" />
+      </LinearLayout>
+      <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:scrollbars="none" android:fillViewport="false">
+        <com.google.android.material.chip.ChipGroup android:id="@+id/level_filters" android:layout_width="wrap_content" android:layout_height="wrap_content" app:singleLine="true" app:singleSelection="true" app:selectionRequired="true" app:checkedChip="@id/level_all" app:chipSpacingHorizontal="6dp">
+          <com.google.android.material.chip.Chip android:id="@+id/level_all" style="@style/RoyTools.Logs.Filter" android:text="@string/roytools_logs_all" />
+          <com.google.android.material.chip.Chip android:id="@+id/level_error" style="@style/RoyTools.Logs.Filter" android:text="@string/roytools_logs_error" />
+          <com.google.android.material.chip.Chip android:id="@+id/level_warning" style="@style/RoyTools.Logs.Filter" android:text="@string/roytools_logs_warning" />
+          <com.google.android.material.chip.Chip android:id="@+id/level_info" style="@style/RoyTools.Logs.Filter" android:text="@string/roytools_logs_info" />
+          <com.google.android.material.chip.Chip android:id="@+id/level_debug" style="@style/RoyTools.Logs.Filter" android:text="@string/roytools_logs_debug" />
+          <com.google.android.material.chip.Chip android:id="@+id/level_other" style="@style/RoyTools.Logs.Filter" android:text="@string/roytools_logs_other" />
+        </com.google.android.material.chip.ChipGroup>
+      </HorizontalScrollView>
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginHorizontal="22dp" android:gravity="center_vertical" android:orientation="horizontal">
+      <TextView android:id="@+id/result_count" style="@style/RoyTools.Caption" android:layout_width="0dp" android:layout_weight="1" />
+      <com.google.android.material.button.MaterialButton style="@style/RoyTools.MaterialButton" android:id="@+id/latest_button" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/roytools_logs_latest" android:visibility="gone" />
+    </LinearLayout>
+    <TextView style="@style/RoyTools.Caption" android:layout_marginHorizontal="22dp" android:layout_marginTop="4dp" android:layout_marginBottom="10dp" android:textSize="12sp" android:text="@string/roytools_logs_order_hint" />
+    <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:paddingBottom="@{self.surface.insets.bottom}">
+      <com.github.kr328.clash.design.view.AppRecyclerView android:id="@+id/recycler_list" android:layout_width="match_parent" android:layout_height="match_parent" android:clipToPadding="false" android:paddingHorizontal="16dp" android:paddingBottom="16dp" />
+      <LinearLayout android:id="@+id/empty_view" style="@style/RoyTools.Card" android:layout_marginHorizontal="16dp" android:padding="28dp" android:gravity="center">
+        <TextView android:id="@+id/empty_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textSize="16sp" android:textColor="?attr/colorOnSurface" />
+        <TextView android:id="@+id/empty_hint" style="@style/RoyTools.Caption" android:layout_marginTop="10dp" android:gravity="center" />
+      </LinearLayout>
+    </FrameLayout>
+  </LinearLayout>
+</layout>

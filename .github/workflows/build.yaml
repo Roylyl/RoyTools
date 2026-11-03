@@ -1,0 +1,103 @@
+# Builds validation artifacts only. Releases and signing remain local and explicit.
+name: Build RoyTools
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (major.minor.patch)'
+        required: true
+        default: '1.0.0'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: manual-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      ROYTOOLS_VERSION: ${{ inputs.version }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out selected source
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          submodules: false
+
+      - name: Set up JDK21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Set up Android SDK tools
+        uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+
+      - name: Install Android SDK35
+        run: sdkmanager 'platform-tools' 'platforms;android-35' 'build-tools;35.0.0'
+
+      - name: Build ARM64 Debug validation APK
+        # Native libraries correspond to the included modified source.
+        # To regenerate them, follow docs/BUILDING.md; this workflow never
+        # accesses a release keystore or falls back from Release to Debug.
+        run: |
+          [[ "$ROYTOOLS_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          test -f core/src/main/jniLibs/arm64-v8a/libclash.so
+          test -f core/src/main/jniLibs/arm64-v8a/libbridge.so
+          test ! -e signing.properties
+          chmod +x gradlew
+          ./gradlew :app:assembleMetaDebug \
+            "-ProytoolsVersion=$ROYTOOLS_VERSION" \
+            --no-daemon --max-workers=4 --console=plain
+
+      - name: Package validation output and matching source
+        run: |
+          mkdir -p dist
+          git archive --format=tar.gz --prefix=RoyTools/ --output=dist/RoyTools-source.tar.gz HEAD
+          cp LICENSE NOTICE dist/
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import shutil
+
+          root = pathlib.Path.cwd()
+          version = os.environ['ROYTOOLS_VERSION']
+          apks = list((root / 'app/build/outputs/apk/meta/debug').glob(f'RoyTools-{version}-meta-arm64-v8a-debug.apk'))
+          if len(apks) != 1:
+              raise SystemExit(f'Expected one ARM64 Debug APK, found {len(apks)}')
+          shutil.copy2(apks[0], root / 'dist' / f'RoyTools-{version}-arm64-v8a-ci-debug.apk')
+          details = [
+              f'Project: RoyTools {version}',
+              f'Source revision: {os.environ["GITHUB_SHA"]}',
+              f'Repository: {os.environ["GITHUB_REPOSITORY"]}',
+              f'Run: {os.environ["GITHUB_SERVER_URL"]}/{os.environ["GITHUB_REPOSITORY"]}/actions/runs/{os.environ["GITHUB_RUN_ID"]}',
+              'APK signature: temporary runner Debug key; validation artifact only.',
+              'Android minimum: 31; target SDK: 35; Java: 21; ABI: arm64-v8a.',
+              'Native libraries: included modified-source builds; see docs/BUILDING.md.',
+              'Geo inputs: downloaded to app/build/generated/geoAssets during the build.',
+              'No release publication, signing secrets, device data or subscriptions are used.',
+          ]
+          (root / 'dist/BUILD-INFO.txt').write_text('\n'.join(details) + '\n', encoding='utf-8')
+          PY
+
+      - name: Upload validation artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: RoyTools-${{ inputs.version }}-arm64-v8a-validation
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30

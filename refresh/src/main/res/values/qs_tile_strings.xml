@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="qs_refresh_label">自适应刷新率</string>
+    <string name="qs_refresh_on">已开启</string>
+    <string name="qs_refresh_system_default">系统默认</string>
+    <string name="qs_refresh_manual">当前为手动模式</string>
+    <string name="qs_refresh_changing">正在切换</string>
+    <string name="qs_refresh_setup_required">需要配置辅助服务</string>
+    <string name="qs_refresh_setup_hint">请先在刷新率页面完成授权和辅助服务配置</string>
+    <string name="qs_refresh_action_failed">切换失败，请打开RoyTools检查设置</string>
+</resources>

@@ -1,0 +1,6 @@
+# Copy this file to the ignored local signing.properties and fill it locally.
+# Prefer a keystore outside the repository. Do not commit real credentials.
+keystore.file=/path/outside/repository/roytools.keystore
+keystore.password=YOUR_KEYSTORE_PASSWORD
+key.alias=YOUR_KEY_ALIAS
+key.password=YOUR_KEY_PASSWORD

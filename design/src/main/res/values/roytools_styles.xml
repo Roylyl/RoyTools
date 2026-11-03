@@ -1,0 +1,139 @@
+<resources>
+    <style name="RoyTools.Card" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginBottom">@dimen/roytools_section_spacing</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:padding">@dimen/roytools_card_padding</item>
+        <item name="android:background">@drawable/roytools_card</item>
+        <item name="android:clipToOutline">true</item>
+    </style>
+    <style name="RoyTools.CardTitle" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+        <item name="android:letterSpacing">0</item>
+    </style>
+    <style name="RoyTools.Caption" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">?attr/glassTextSecondary</item>
+        <item name="android:lineSpacingExtra">3dp</item>
+    </style>
+    <style name="RoyTools.PrimaryButton" parent="RoyTools.MaterialButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">10dp</item>
+    </style>
+    <style name="RoyTools.SecondaryButton" parent="RoyTools.MaterialButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">10dp</item>
+    </style>
+    <style name="ShapeAppearanceOverlay.RoyTools" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/roytools_dialog_radius</item>
+    </style>
+    <style name="ThemeOverlay.RoyTools.Dialog" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.RoyTools</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="alertDialogStyle">@style/RoyTools.AlertDialog</item>
+        <item name="materialAlertDialogTitleTextStyle">@style/RoyTools.DialogTitle</item>
+        <item name="materialAlertDialogBodyTextStyle">@style/RoyTools.DialogBody</item>
+        <item name="buttonBarButtonStyle">@style/RoyTools.DialogSecondaryButton</item>
+        <item name="buttonBarPositiveButtonStyle">@style/RoyTools.DialogPrimaryButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/RoyTools.DialogSecondaryButton</item>
+        <item name="buttonBarNeutralButtonStyle">@style/RoyTools.DialogSecondaryButton</item>
+        <item name="materialButtonStyle">@style/RoyTools.MaterialButton</item>
+        <item name="textInputStyle">@style/RoyTools.TextInput</item>
+        <item name="android:backgroundDimAmount">0.32</item>
+    </style>
+    <style name="RoyTools.AlertDialog" parent="MaterialAlertDialog.MaterialComponents">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.RoyTools</item>
+    </style>
+    <style name="RoyTools.DialogTitle" parent="MaterialAlertDialog.MaterialComponents.Title.Text">
+        <item name="android:textSize">20sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+    <style name="RoyTools.DialogBody" parent="MaterialAlertDialog.MaterialComponents.Body.Text">
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">?attr/glassTextSecondary</item>
+    </style>
+    <style name="RoyTools.ThemeChoice" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+    <style name="RoyTools.SettingSwitch" parent="Widget.Material3.CompoundButton.MaterialSwitch">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">@dimen/roytools_touch_target</item>
+        <item name="materialThemeOverlay">@style/ThemeOverlay.RoyTools.MaterialSwitch</item>
+    </style>
+    <style name="RoyTools.ToggleRow" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">8dp</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+    <style name="RoyTools.ToggleLabel" parent="">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_marginEnd">16dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+    <style name="RoyTools.DialogSecondaryButton" parent="RoyTools.MaterialButton">
+        <item name="android:singleLine">true</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:layout_marginStart">4dp</item>
+        <item name="android:layout_marginEnd">4dp</item>
+        <item name="android:layout_marginLeft">4dp</item>
+        <item name="android:layout_marginRight">4dp</item>
+        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:layout_marginBottom">4dp</item>
+    </style>
+    <style name="RoyTools.DialogPrimaryButton" parent="RoyTools.DialogSecondaryButton" />
+    <style name="RoyTools.MaterialButton" parent="Widget.Material3.Button">
+        <item name="materialThemeOverlay">@style/ThemeOverlay.RoyTools.MaterialButton</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.RoyTools.Action</item>
+        <item name="android:minHeight">@dimen/roytools_touch_target</item>
+        <item name="android:minWidth">64dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:paddingLeft">16dp</item>
+        <item name="android:paddingRight">16dp</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">8dp</item>
+        <item name="android:insetLeft">0dp</item>
+        <item name="android:insetRight">0dp</item>
+        <item name="android:insetTop">4dp</item>
+        <item name="android:insetBottom">4dp</item>
+    </style>
+    <style name="ShapeAppearanceOverlay.RoyTools.Action" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+    <style name="RoyTools.TextInput" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">@dimen/roytools_control_radius</item>
+        <item name="boxCornerRadiusTopEnd">@dimen/roytools_control_radius</item>
+        <item name="boxCornerRadiusBottomStart">@dimen/roytools_control_radius</item>
+        <item name="boxCornerRadiusBottomEnd">@dimen/roytools_control_radius</item>
+        <item name="boxBackgroundColor">?attr/glassCanvasStart</item>
+    </style>
+</resources>
+
+

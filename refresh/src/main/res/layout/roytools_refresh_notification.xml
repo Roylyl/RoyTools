@@ -1,0 +1,11 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingVertical="4dp">
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="刷新率控制" android:textSize="17sp" android:textStyle="bold" android:textColor="@color/roytools_notification_text"/>
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="RoyTools" android:textSize="12sp" android:layout_marginTop="2dp" android:textColor="@color/roytools_notification_secondary"/>
+    <TextView android:id="@+id/refresh_notification_warning" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="辅助服务待恢复，请打开RoyTools配置" android:textSize="12sp" android:textColor="@color/roytools_notification_secondary" android:visibility="gone"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="44dp" android:layout_marginTop="8dp" android:orientation="horizontal">
+        <TextView android:id="@+id/refresh_notification_off" style="@style/RoyToolsNotificationButton" android:text="关闭"/>
+        <TextView android:id="@+id/refresh_notification_60" style="@style/RoyToolsNotificationButton" android:text="60Hz"/>
+        <TextView android:id="@+id/refresh_notification_120" style="@style/RoyToolsNotificationButton" android:text="120Hz"/>
+        <TextView android:id="@+id/refresh_notification_adaptive" style="@style/RoyToolsNotificationButton" android:text="自适应刷新率"/>
+    </LinearLayout>
+</LinearLayout>

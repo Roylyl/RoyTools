@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:clipToPadding="false" android:paddingHorizontal="16dp" android:paddingVertical="8dp">
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+    <LinearLayout style="@style/RoyTools.Card">
+      <TextView style="@style/RoyTools.CardTitle" android:text="RoyTools" />
+      <TextView android:id="@+id/roytools_version" style="@style/RoyTools.Caption" android:layout_marginTop="10dp" android:textIsSelectable="true" />
+    </LinearLayout>
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" style="@style/RoyTools.Card">
+      <TextView style="@style/RoyTools.CardTitle" android:text="运行日志" />
+      <TextView style="@style/RoyTools.Caption" android:layout_marginTop="8dp" android:text="默认自动采集，按模块保存在本机" />
+      <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:baselineAligned="false" android:layout_marginTop="10dp">
+        <com.google.android.material.button.MaterialButton android:id="@+id/roytools_music_logs" style="@style/RoyTools.SecondaryButton" android:layout_width="0dp" android:layout_weight="1" android:gravity="start|center_vertical" android:paddingStart="16dp" android:text="音乐日志" android:contentDescription="查看音乐日志" android:layout_marginTop="0dp" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/roytools_music_logs_export" style="@style/RoyTools.SecondaryButton" android:layout_width="wrap_content" android:layout_marginStart="8dp" android:text="导出" android:contentDescription="导出音乐日志" android:layout_marginTop="0dp" />
+      </LinearLayout>
+      <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:baselineAligned="false" android:layout_marginTop="10dp">
+        <com.google.android.material.button.MaterialButton android:id="@+id/roytools_proxy_logs" style="@style/RoyTools.SecondaryButton" android:layout_width="0dp" android:layout_weight="1" android:gravity="start|center_vertical" android:paddingStart="16dp" android:text="代理日志" android:contentDescription="查看代理日志" android:layout_marginTop="0dp" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/roytools_proxy_logs_export" style="@style/RoyTools.SecondaryButton" android:layout_width="wrap_content" android:layout_marginStart="8dp" android:text="导出" android:contentDescription="导出代理日志" android:layout_marginTop="0dp" />
+      </LinearLayout>
+      <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:baselineAligned="false" android:layout_marginTop="10dp">
+        <com.google.android.material.button.MaterialButton android:id="@+id/roytools_refresh_logs" style="@style/RoyTools.SecondaryButton" android:layout_width="0dp" android:layout_weight="1" android:gravity="start|center_vertical" android:paddingStart="16dp" android:text="刷新率日志" android:contentDescription="查看刷新率日志" android:layout_marginTop="0dp" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/roytools_refresh_logs_export" style="@style/RoyTools.SecondaryButton" android:layout_width="wrap_content" android:layout_marginStart="8dp" android:text="导出" android:contentDescription="导出刷新率日志" android:layout_marginTop="0dp" />
+      </LinearLayout>
+      <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:baselineAligned="false" android:layout_marginTop="10dp">
+        <com.google.android.material.button.MaterialButton android:id="@+id/roytools_app_logs" style="@style/RoyTools.SecondaryButton" android:layout_width="0dp" android:layout_weight="1" android:gravity="start|center_vertical" android:paddingStart="16dp" android:text="应用日志" android:contentDescription="查看应用日志" android:layout_marginTop="0dp" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/roytools_app_logs_export" style="@style/RoyTools.SecondaryButton" android:layout_width="wrap_content" android:layout_marginStart="8dp" android:text="导出" android:contentDescription="导出应用日志" android:layout_marginTop="0dp" />
+      </LinearLayout>
+      <com.google.android.material.button.MaterialButton android:id="@+id/roytools_clear_logs" style="@style/RoyTools.SecondaryButton" android:text="清空所有日志" />
+    </LinearLayout>
+    <LinearLayout style="@style/RoyTools.Card">
+      <TextView style="@style/RoyTools.CardTitle" android:text="开源项目" />
+      <TextView style="@style/RoyTools.Caption" android:layout_marginTop="10dp" android:text="RoyTools整合Roylyl Music、Clash-Meta-Plus、Adaptive-Hz和Shizuku。" />
+      <com.google.android.material.button.MaterialButton android:id="@+id/roytools_open_licenses" style="@style/RoyTools.SecondaryButton" android:text="开源许可" />
+    </LinearLayout>
+  </LinearLayout>
+</ScrollView>
