@@ -7,12 +7,19 @@
 <p align="center">把音乐播放、网络代理和自适应刷新率放进一个Android应用。</p>
 
 <p align="center">
-  <a href="build.gradle.kts"><img src="https://img.shields.io/badge/version-1.0.0-007AFF?style=flat-square" alt="版本1.0.0"></a>
+  <a href="https://github.com/Roylyl/RoyTools/releases/latest"><img src="https://img.shields.io/github/v/release/Roylyl/RoyTools?style=flat-square&amp;display_name=tag&amp;label=%E7%89%88%E6%9C%AC&amp;color=007AFF" alt="最新发行版本"></a>
   <a href="#运行要求"><img src="https://img.shields.io/badge/Android-12%2B-007AFF?style=flat-square" alt="Android12及以上"></a>
   <a href="#运行要求"><img src="https://img.shields.io/badge/ABI-arm64--v8a-555555?style=flat-square" alt="arm64-v8a架构"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPLv3-555555?style=flat-square" alt="GNU GPLv3许可证"></a>
-  <a href="https://github.com/Roylyl/RoyTools/releases"><img src="https://img.shields.io/badge/下载-APK-007AFF?style=flat-square" alt="下载APK"></a>
-  <a href="https://github.com/Roylyl/RoyTools/issues"><img src="https://img.shields.io/badge/反馈-Issues-555555?style=flat-square" alt="问题反馈"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Roylyl/RoyTools?style=flat-square&amp;label=%E8%AE%B8%E5%8F%AF&amp;color=555555" alt="开源许可证"></a>
+  <a href="https://github.com/Roylyl/RoyTools/releases"><img src="https://img.shields.io/github/downloads/Roylyl/RoyTools/total?style=flat-square&amp;label=%E7%B4%AF%E8%AE%A1%E4%B8%8B%E8%BD%BD&amp;color=007AFF" alt="发行附件累计下载量"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Roylyl/RoyTools/stargazers"><img src="https://img.shields.io/github/stars/Roylyl/RoyTools?style=flat-square&amp;label=Stars&amp;color=007AFF" alt="GitHub Stars数量"></a>
+  <a href="https://github.com/Roylyl/RoyTools/forks"><img src="https://img.shields.io/github/forks/Roylyl/RoyTools?style=flat-square&amp;label=Forks&amp;color=555555" alt="GitHub Forks数量"></a>
+  <a href="https://github.com/Roylyl/RoyTools/issues"><img src="https://img.shields.io/github/issues/Roylyl/RoyTools?style=flat-square&amp;label=Issues&amp;color=555555" alt="待处理Issues数量"></a>
+  <a href="https://github.com/Roylyl/RoyTools/graphs/contributors"><img src="https://img.shields.io/github/contributors/Roylyl/RoyTools?style=flat-square&amp;label=%E8%B4%A1%E7%8C%AE%E8%80%85&amp;color=555555" alt="贡献者数量"></a>
+  <a href="https://github.com/Roylyl/RoyTools/commits/main"><img src="https://img.shields.io/github/last-commit/Roylyl/RoyTools?style=flat-square&amp;label=%E6%9C%80%E8%BF%91%E6%9B%B4%E6%96%B0&amp;color=007AFF" alt="最近提交时间"></a>
 </p>
 
 <p align="center">
