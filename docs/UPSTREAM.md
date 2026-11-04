@@ -1,6 +1,6 @@
 # 上游来源与修改记录
 
-更新日期：2026-11-04。本文记录RoyTools1.0.0的来源、改动与证据边界。项目计划以[Roylyl/RoyTools](https://github.com/Roylyl/RoyTools)发布；本地整理不表示已经推送或发行。根[LICENSE](../LICENSE)保留GNU GPLv3第3版原文，衍生组合项目整体按该版提供，第三方既有条款继续保留。
+更新日期：2026-11-04。本文记录RoyTools1.1.0的来源、改动与证据边界。项目计划以[Roylyl/RoyTools](https://github.com/Roylyl/RoyTools)发布；本地整理不表示已经推送或发行。根[LICENSE](../LICENSE)保留GNU GPLv3第3版原文，衍生组合项目整体按该版提供，第三方既有条款继续保留。
 
 ## Android代理工程
 
@@ -28,7 +28,7 @@ RoyTools做了应用身份、包名、服务接入及配对配置修改，用于
 
 音乐模块代码来自[Roylyl/roylyl.github.io的music目录](https://github.com/Roylyl/roylyl.github.io/tree/main/music)，仓库[许可证](https://github.com/Roylyl/roylyl.github.io/blob/main/LICENSE)为GPLv3。本地网站仓库最近提交记录为`455005d`，RoyTools副本在接入后继续修改；该记录不表示音乐副本逐文件等同于这一提交。
 
-RoyTools保留网页音频和缓存引擎，增加Android桥、媒体通知、统一设置及批量离线下载交互，并修改页面、手势、主题和导航。音源与关联曲库资源来自另一个仓库[Roylyl/Music](https://github.com/Roylyl/Music)。按维护者要求打包音乐模块、曲库索引与歌单，音频、歌词和专辑封面从云端按需加载，不内置媒体文件。封面入口为`https://roylyl.github.io/music/share-covers/`。这不表示媒体取得GPL许可或已获得额外商用、再分发授权；原`redistributionAllowed=false`字段和权利边界见[THIRD_PARTY.md](../THIRD_PARTY.md#音乐网页音源仓库与媒体内容)。
+RoyTools保留网页音频和缓存引擎，增加Android桥、媒体通知、统一设置及批量离线下载交互，并修改页面、手势、主题和导航。音源与关联曲库资源来自另一个仓库[Roylyl/Music](https://github.com/Roylyl/Music)。按维护者要求打包音乐模块、曲库索引与歌单，音频、歌词和专辑封面从云端按需加载，不内置媒体文件。曲库目录及原始封面统一从`https://raw.githubusercontent.com/Roylyl/Music/main/`加载。这不表示媒体取得GPL许可或已获得额外商用、再分发授权；原`redistributionAllowed=false`字段和权利边界见[THIRD_PARTY.md](../THIRD_PARTY.md#音乐网页音源仓库与媒体内容)。
 
 ## 设计参考与图形
 

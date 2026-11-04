@@ -7,10 +7,10 @@
 安装JDK21与Android SDK35，将`JAVA_HOME`指向JDK目录、`ANDROID_HOME`指向SDK目录。也可向构建脚本传入`-JavaHome`和`-AndroidSdk`。脚本可在Android Studio和Gradle常见安装目录中查找JDK21，不依赖项目原作者的用户名或桌面路径。
 
 ```powershell
-.\构建.ps1 -Version 1.0.0 -BuildType Debug
+.\构建.ps1 -Version 1.1.0 -BuildType Debug
 ```
 
-输出为工程目录下的`RoyTools-1.0.0.apk`。传入`-OutputDirectory`可改变导出目录。构建脚本不会自动安装或操作手机。
+输出为工程目录下的`RoyTools-1.1.0.apk`。传入`-OutputDirectory`可改变导出目录。构建脚本不会自动安装或操作手机。
 
 `app:downloadGeoFiles`在首次构建时下载Geo数据库至`app/build/generated/geoAssets`；后续构建复用已有文件。`clean`只清理生成文件，不会删除`app/src/main/assets/music`中的音乐页面和资源。
 
@@ -18,7 +18,7 @@
 
 ```powershell
 $env:ROYTOOLS_GEO_DIR = 'D:\BuildInputs\RoyToolsGeo'
-.\构建.ps1 -Version 1.0.0 -BuildType Release
+.\构建.ps1 -Version 1.1.0 -BuildType Release
 ```
 
 这个目录是只读构建输入，Gradle会将文件复制到生成目录。迁移工程后，不要只把缓存放进`build/generated`：Gradle可能在首次执行任务前清除旧输出。不要将`ROYTOOLS_GEO_DIR`设为当前工程的`app/build/generated/geoAssets`；仓库外输入不会被本工程`clean`删除。未配置本地输入时仍使用默认网络下载。
@@ -39,7 +39,7 @@ $env:ROYTOOLS_GEO_DIR = 'D:\BuildInputs\RoyToolsGeo'
 也可复制根目录`signing.properties.example`为本机`signing.properties`，填写`keystore.file`、`keystore.password`、`key.alias`、`key.password`。环境变量优先于同名配置文件；`keystore.file`支持仓库外的绝对路径。配置文件和密钥均不得提交。
 
 ```powershell
-.\构建.ps1 -Version 1.0.0 -BuildType Release
+.\构建.ps1 -Version 1.1.0 -BuildType Release
 ```
 
 脚本要求配置签名才导出Release。直接运行`gradlew :app:assembleMetaRelease`且未配置签名时会生成unsigned包，不会悄悄回退为Debug签名。Debug构建使用本机Android调试密钥；CI手动验证构建也仅使用临时Debug签名，不能用于替换另一个签名的现有安装。
@@ -57,8 +57,8 @@ if runtime.GOOS == "android" {
 ```
 
 ```powershell
-.\scripts\build-native.ps1 -GoRoot 'D:\Toolchains\go' -AndroidSdk $env:ANDROID_HOME -Api 24 -Version 1.0.0 -BuildDate 20261104
-.\构建.ps1 -Version 1.0.0 -BuildType Release
+.\scripts\build-native.ps1 -GoRoot 'D:\Toolchains\go' -AndroidSdk $env:ANDROID_HOME -Api 24 -Version 1.1.0 -BuildDate 20261104
+.\构建.ps1 -Version 1.1.0 -BuildType Release
 ```
 
 脚本从`core/src/foss/golang`模块编译`cfa/native`，通过本地replace引用仓库中的Mihomo修改源码，再构建JNI桥。`-BuildDate`固定版本标记中的日期；生成物先写入`core/build/native/meta/arm64-v8a`，两库均成功才更新`core/src/main/jniLibs/arm64-v8a`，替换失败会回滚。脚本使用`-trimpath`、关闭VCS自动嵌入、移除调试符号并映射本机源码路径，避免将个人绝对路径写入二进制；不要求文件哈希一致。

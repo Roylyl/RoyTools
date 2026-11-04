@@ -1,6 +1,6 @@
 'use strict';
 (() => {
-  const APP_VERSION='20261104-android-15', SHELL_VERSION='roylyl-music-shell-20261104-15';
+  const APP_VERSION='20261104-android-17', SHELL_VERSION='roylyl-music-shell-20261104-17';
   const ROOT = 'https://raw.githubusercontent.com/Roylyl/Music/main/';
   const $ = id => document.getElementById(id);
   const musicSelectTitles={artist:'歌手','sort-primary':'第一顺序','sort-secondary':'第二顺序','sort-direction':'方向'};
@@ -98,7 +98,7 @@
   }
   async function downloadAll(list,scope,kind='audio') {
     if(allCacheBusy){showSystemMessage('正在清理下载与缓存，请稍后再试');return;}
-    if(downloadBatch?.active){nativeCall('showMusicDownload');return;}
+    if(downloadBatch?.active){showSystemMessage('已有下载任务正在进行，请完成或取消后再下载');nativeCall('showMusicDownload');return;}
     if(!nativeCatalogReady){showSystemMessage('音乐库尚未加载完成，请稍后再试');return;}
     if(!('caches' in window)||!navigator.serviceWorker?.controller){showSystemMessage('离线缓存尚未就绪，请稍后再试');return;}
     if(kind==='audio'&&!audioBudget()){showSystemMessage('音乐缓存已关闭，请先在音乐设置中调整缓存上限');return;}
@@ -269,7 +269,7 @@
   const setIcon = (id,name) => { const node=$(id);if(node._iconName!==name){node.innerHTML=icon(name);node._iconName=name;} };
   function setMarkup(id,markup){const node=$(id);if(node._markup!==markup){node.innerHTML=markup;node._markup=markup;}}
   for(const [id,name] of Object.entries({play:'play',prev:'prev',next:'next',repeat:'repeat','now-like':'heart','queue-toggle':'list','mobile-queue-toggle':'list','full-more':'more','close-sleep-timer':'close','close-settings':'back','close-queue':'close','close-full':'back','full-play':'play','full-prev':'prev','full-next':'next','full-like':'heart','full-like-mobile':'heart','full-queue-toggle':'list','full-queue-close':'close'}))setIcon(id,name);
-  for(const [id,name] of Object.entries({'share-track':'share','menu-album':'album','full-share-action':'share','open-sleep-timer':'timer','full-menu-album':'album','cancel-insertion':'remove','clear-insertions':'clear','full-clear-insertions':'clear'})){
+  for(const [id,name] of Object.entries({'share-track':'share','download-track':'download','menu-album':'album','full-share-action':'share','full-download-action':'download','open-sleep-timer':'timer','full-menu-album':'album','cancel-insertion':'remove','clear-insertions':'clear','full-clear-insertions':'clear'})){
     const button=$(id);button.innerHTML=icon(name)+'<span>'+button.textContent+'</span>';
   }
 
@@ -349,13 +349,14 @@
   }
   const normalize = s => String(s).normalize('NFKC').toLocaleLowerCase();
   const safePath = p => typeof p === 'string' && !p.startsWith('/') && !p.includes('\\') && !p.split('/').some(x => x === '..') && !/^[a-z]+:/i.test(p);
-  const coverSource = path => 'https://roylyl.github.io/music/share-covers/' + path.replace(/\.[^/.]+$/, '.jpg').split('/').map(encodeURIComponent).join('/');
+  const coverRevisions=new Map();
+  const coverSource = path => url(path)+(coverRevisions.has(path)?'?v='+encodeURIComponent(coverRevisions.get(path)):'');
   const picture = t => coverSource(t.cover);
   const coverUrls = new Map(), coverRequests = new Map();
   async function cachedCover(path) {
-    if (coverUrls.has(path)) return coverUrls.get(path);
-    if (coverRequests.has(path)) return coverRequests.get(path);
-    const source = coverSource(path), generation = coverCacheGeneration;
+    const source=coverSource(path),generation=coverCacheGeneration;
+    if(coverUrls.has(source))return coverUrls.get(source);
+    if(coverRequests.has(source))return coverRequests.get(source);
     const request = (async () => {
       try {
         const cache = 'caches' in window ? await caches.open(COVER_CACHE) : null;
@@ -373,18 +374,18 @@
         const blob=await response.blob();
         if(generation!==coverCacheGeneration)return './placeholder.svg';
         const local = URL.createObjectURL(blob);
-        coverUrls.set(path,local);
+        coverUrls.set(source,local);
         document.querySelectorAll('img[data-cover-bound]').forEach(img => {
-          if (img.dataset.coverBound === path && img.getAttribute('src') !== local) {
+          if (img.dataset.coverBound === path && img.dataset.coverSource === source && img.getAttribute('src') !== local) {
             coverObserver?.unobserve(img);observedCovers.delete(img);
             img.src = local;
           }
         });
         return local;
       } catch { return source; }
-      finally { if(coverRequests.get(path)===request)coverRequests.delete(path); }
+      finally { if(coverRequests.get(source)===request)coverRequests.delete(source); }
     })();
-    coverRequests.set(path,request);
+    coverRequests.set(source,request);
     return request;
   }
   const observedCovers=new Set();
@@ -392,17 +393,19 @@
     observedCovers.delete(img);
     coverObserver?.unobserve(img);
     if(!img.isConnected)return;
-    const source = await cachedCover(path);
-    if (img.dataset.coverBound === path) img.src = source;
+    const address=coverSource(path),source=await cachedCover(path);
+    if(img.dataset.coverBound===path&&img.dataset.coverSource===address)img.src=source;
   }
   const coverObserver = 'IntersectionObserver' in window ? new IntersectionObserver(entries => {
     for (const {target,isIntersecting} of entries) if (isIntersecting) loadCoverInto(target,target.dataset.coverBound);
   },{rootMargin:'300px'}) : null;
   function bindCover(img,path,eager=false) {
-    if (!img || img.dataset.coverBound === path) return;
-    img.dataset.coverBound = path;
+    if(!img)return;
+    const source=coverSource(path);
+    if(img.dataset.coverBound===path&&img.dataset.coverSource===source)return;
+    img.dataset.coverBound=path;img.dataset.coverSource=source;
     img.src = './placeholder.svg';
-    if (coverUrls.has(path)) img.src = coverUrls.get(path);
+    if (coverUrls.has(source)) img.src = coverUrls.get(source);
     else if (eager || !coverObserver) loadCoverInto(img,path);
     else {observedCovers.add(img);coverObserver.observe(img);}
   }
@@ -640,6 +643,7 @@
     moreMenu.hidden = false;
     const track=get(moreTrackId);$('menu-album').dataset.trackAlbum=moreTrackId;
     $('menu-album').disabled=!track?.albumKey;
+    $('download-track').disabled=!canPlay(track);
     artistMenu(track,$('menu-artists'));
     $('cancel-insertion').hidden=button.closest('.track-row')?.dataset.queueInserted!=='true';
     $('cancel-insertion').dataset.cancelInsertion=moreTrackId;
@@ -649,7 +653,7 @@
   }
   async function shareTrack(t,notify=message=>status(message)) {
     if (!t) return;
-    const link = `https://roylyl.github.io/music/share/${encodeURIComponent(t.id)}.html`;
+    const link = `https://roylyl.github.io/music/?track=${encodeURIComponent(t.id)}&full=1`;
     const data = {title:`${t.title} - ${t.artist}`,text:'来自Roylyl的私人音乐仓库。',url:link};
     if(nativeCall('share',link,data.title))return;
     if (navigator.share) {
@@ -671,6 +675,11 @@
     }
   }
   const canPlay = t => !!t?.src;
+  $('download-track').onclick=()=>{
+    const track=get(moreTrackId);
+    closeTrackMenu();
+    if(canPlay(track))return downloadAll([track],'歌曲《'+track.title+'》');
+  };
   function playlistTracks(ids) {
     return ids.map(id=>{const e=appleMusic.entries[id],t=get(e.trackId);return {...(t||{}),id:t?.id||'apple:'+id,appleId:id,title:e.title,artist:e.artist,album:e.album,year:t?.year||e.year||0,duration:t?.duration||e.duration,src:t?.src||'',sourceStatus:e.sourceStatus,sourceUrl:e.sourceUrl};});
   }
@@ -1839,6 +1848,7 @@
     closeTrackMenu();$('full-more-menu').hidden=!open;$('full-more').setAttribute('aria-expanded',String(open));
     if(open){
       $('full-menu-album').dataset.trackAlbum=current?.id||'';$('full-menu-album').disabled=!current?.albumKey;
+      $('full-download-action').disabled=!canPlay(current);
       artistMenu(current,$('full-menu-artists'));$('full-clear-insertions').hidden=!nextUp.length;
       $('full-share-action').focus({preventScroll:true});
     }
@@ -1849,6 +1859,11 @@
     if(e.key==='Tab')closeFullMore();
   });
   document.addEventListener('click',e=>{if(!e.target.closest('#full-more,#full-more-menu'))closeFullMore();});
+  $('full-download-action').onclick=()=>{
+    const track=current;
+    closeFullMore();
+    if(canPlay(track))return downloadAll([track],'歌曲《'+track.title+'》');
+  };
   $('open-sleep-timer').onclick=()=>{closeFullMore();renderSleepTimer();$('sleep-dialog').showModal();};
   $('close-sleep-timer').onclick=()=>$('sleep-dialog').close();
   $('sleep-dialog').addEventListener('cancel',e=>e.stopPropagation());
@@ -1939,26 +1954,18 @@
   for(const [button,target] of [['full-play','play'],['full-prev','prev'],['full-next','next'],['full-like','now-like'],['full-like-mobile','now-like'],['full-repeat','repeat']])$(button).onclick=()=>$(target).click();
   $('full-seek').oninput=()=>{paintSeekProgress();seekPlayback(Number($('full-seek').value)/100*audio.duration);};
 
-  async function load() {
-    $('retry').hidden=true; $('notice').hidden=false; $('notice').textContent='正在载入音乐收藏…';let data;
-    const catalogController=new AbortController(),catalogTimer=setTimeout(()=>catalogController.abort(),15000);
-    try {
-      const response=await fetch('./data/catalog.json?v='+APP_VERSION,{cache:'no-cache',signal:catalogController.signal});
-      if(!response.ok)throw Error('目录加载失败');
-      const catalog=await response.json();
-      if(!catalog.version || !Array.isArray(catalog.tracks) || !catalog.appleMusic?.entries || !Array.isArray(catalog.appleMusic.playlists) || !Array.isArray(catalog.appleMusic.favorites))throw Error('目录格式不正确');
-      data=catalog.tracks;appleMusic=catalog.appleMusic;audioProperties=catalog.audioProperties||{};
-      const ids=new Set(data.map(t=>t.id));
-      for(const id of [...appleMusic.favorites,...appleMusic.playlists.flatMap(p=>p.entries)]){
-        const entry=appleMusic.entries[id];if(!entry || entry.trackId&&!ids.has(entry.trackId))throw Error('目录版本不一致');
-      }
-      for(const entry of Object.values(appleMusic.entries))if(entry.sourceUrl&&!/^https:\/\//.test(entry.sourceUrl))entry.sourceUrl='';
-    } catch {
-      $('notice').textContent=location.protocol==='file:'?'请通过网站地址或本地HTTP预览打开音乐页，文件预览无法读取完整曲库和缓存。':'音乐库加载失败，请检查网络后重试。';$('retry').hidden=location.protocol==='file:';return;
-    } finally {clearTimeout(catalogTimer);}
+  let catalogVersion='',catalogStatus='尚未检查曲库更新',catalogChecking=false,catalogCheckPromise=null;
+  const catalogSync=RoylylCatalogSync.create({fallbackUrl:'./data/catalog.json?v='+APP_VERSION,onState:state=>{
+    catalogStatus=state.message;catalogChecking=state.checking;
+    notifyNativeSettings(true);
+  }});
+  function applyCatalog(catalog) {
+    const data=catalog.tracks;appleMusic=catalog.appleMusic;audioProperties=catalog.audioProperties||{};
+    coverRevisions.clear();
+    for(const track of data)if(track.coverRevision)coverRevisions.set(track.cover,String(track.coverRevision));
     tracks=data.filter(t=>t&&typeof t.id==='string'&&typeof t.title==='string'&&safePath(t.src)&&/\.mp3$/i.test(t.src)&&safePath(t.cover)).map(t=>({...t,year:Number(t.albumYear ?? t.src.match(/\/(\d{4}) - /)?.[1])||0}));
     trackIndex.clear();for(const track of tracks)trackIndex.set(track.id,track);
-    if(!tracks.length){$('notice').textContent='索引里暂时没有可播放的MP3。';$('retry').hidden=false;return;}
+    if(!tracks.length)throw Error('索引里暂时没有可播放的MP3');
     // Album ownership is independent of guest performers on individual songs.
     const releaseKey=t=>t.src.split('/')[0]+'/'+t.year+'/'+normalize(t.album).trim().replace(/\s+/g,' ')+'/'+(t.releaseEdition||'');
     const owners=new Map();
@@ -1978,8 +1985,44 @@
     }
     albums=[...grouped.values()];albums.forEach(a=>a.tracks.sort((a,b)=>a.discNumber-b.discNumber||a.trackNumber-b.trackNumber));
     $('artist').innerHTML='<option value="">全部歌手</option>'+[...new Set(tracks.flatMap(t=>[t.albumArtist,...artistNames(t.artist)]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-CN')).map(a=>`<option>${esc(a)}</option>`).join('');
-    $('notice').hidden=true;$('notice').textContent='';
     if(appleMusic)applyAppleMusic();
+    catalogVersion=catalog.version;
+  }
+  function refreshCatalog(catalog) {
+    const albumKey=selected?.key,playlistId=activePlaylist?.id,artist=$('artist').value,scroll=window.scrollY;
+    applyCatalog(catalog);
+    selected=albumKey?albums.find(album=>album.key===albumKey)||null:null;
+    if(albumKey&&!selected)view='albums';
+    activePlaylist=playlistId?appleMusic.playlists.find(playlist=>playlist.id===playlistId)||null:null;
+    if(view==='playlist'&&!activePlaylist)view='playlists';
+    $('artist').value=[...$('artist').options].some(option=>option.value===artist)?artist:'';
+    // Keep the audio source, playback position and queue while replacing library metadata.
+    const updated=current&&get(current.id);
+    if(updated)current={...current,title:updated.title,artist:updated.artist,album:updated.album,cover:updated.cover,albumKey:updated.albumKey};
+    closeTrackMenu();closeFullMore();render();
+    if(current){
+      bindCover($('now-cover'),current.cover,true);
+      $('now-title').textContent=current.title;$('now-artist').textContent=current.artist+' · '+current.album;
+    }
+    window.scrollTo({top:scroll,behavior:'instant'});
+    notifyNativeNavigation();notifyNativePlayback(true);notifyNativeSettings(true);
+  }
+  async function checkCatalogUpdates(manual=false) {
+    if(!nativeCatalogReady)return null;
+    if(!catalogCheckPromise)catalogCheckPromise=(async()=>{
+      const result=await catalogSync.check();
+      if(result.catalog&&result.catalog.version!==catalogVersion)refreshCatalog(result.catalog);
+      return result;
+    })().finally(()=>{catalogCheckPromise=null;});
+    const result=await catalogCheckPromise;
+    if(manual)showSystemMessage(result.message+(result.status==='updated'?'，版本'+result.version:''));
+    return result;
+  }
+  async function load() {
+    $('retry').hidden=true;$('notice').hidden=false;$('notice').textContent='正在载入音乐收藏…';
+    try {applyCatalog(await catalogSync.load());}
+    catch { $('notice').textContent='音乐库加载失败，请联网后重试';$('retry').hidden=false;return; }
+    $('notice').hidden=true;$('notice').textContent='';
     const shareParams = new URLSearchParams(location.search);
     const sharedId = shareParams.get('track');
     if(!current && sharedId) {
@@ -1998,6 +2041,7 @@
     nativeCatalogReady=true;
     for(const [action,position] of nativePendingCommands.splice(0))nativeCommand(action,position);
     notifyNativeNavigation();notifyNativePlayback(true);
+    checkCatalogUpdates();
   }
   function applyAppleMusic() {
     favorites.clear();for(const id of appleMusic.favorites){const e=appleMusic.entries[id];favorites.add(e.trackId||'apple:'+id);}
@@ -2012,6 +2056,7 @@
     const visible=id=>{const node=$(id);return !!node&&!node.hidden;};
     return {
       budget:Number(audioBudget()),preload:preloadAllowed(),
+      catalogVersion,catalogStatus,catalogChecking,
       audioStatus:$('audio-cache-status').textContent||'',lyricStatus:$('lyric-cache-status').textContent||'',coverStatus:$('cover-cache-status').textContent||'',
       audioBusy:!!$('clear-audio-cache').disabled,lyricBusy:!!$('clear-lyric-cache').disabled,coverBusy:!!$('clear-cover-cache').disabled,
       allBusy:allCacheBusy,
@@ -2041,6 +2086,7 @@
       case 'clearAudio':$('clear-audio-cache').click();break;
       case 'clearLyrics':$('clear-lyric-cache').click();break;
       case 'clearCovers':$('clear-cover-cache').click();break;
+      case 'checkCatalog':checkCatalogUpdates(true);break;
       case 'downloadAll':downloadAll(tracks,'全部曲库');break;
       case 'downloadLyrics':downloadAll(tracks,'所有歌词','lyrics');break;
       case 'downloadCovers':downloadAll(tracks,'所有专辑封面','covers');break;
@@ -2189,7 +2235,7 @@
     select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));return true;
   }
   installMusicSelects();
-  window.RoyToolsMusicApp={handleBack:nativeHandleBack,goHome:nativeGoHome,setTheme:applyTheme,command:nativeCommand,pulse:nativePulse,clearLogs:clearPlaybackLogs,settings:nativeSettings,chooseOption:nativeChooseOption};
+  window.RoyToolsMusicApp={checkCatalog:()=>checkCatalogUpdates(false),handleBack:nativeHandleBack,goHome:nativeGoHome,setTheme:applyTheme,command:nativeCommand,pulse:nativePulse,clearLogs:clearPlaybackLogs,settings:nativeSettings,chooseOption:nativeChooseOption};
   for(const name of ['play','pause','playing','ended','seeked','error','loadedmetadata','durationchange'])audio.addEventListener(name,()=>notifyNativePlayback(true));
   audio.addEventListener('timeupdate',()=>notifyNativePlayback());
   document.addEventListener('visibilitychange',()=>{nativePulse();notifyNativePlayback(true);});

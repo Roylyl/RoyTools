@@ -1,7 +1,7 @@
 'use strict';
 importScripts('./lyric-parser.js');
-const AUDIO='roylyl-music-audio-v2',META='roylyl-music-audio-meta-v1',SHELL='roylyl-music-shell-20261104-15';
-const FILES=['/music/','/music/index.html','/music/music.css?v=20261104-android-15','/music/roytools.css?v=20261104-android-15','/music/app.js?v=20261104-android-15','/music/playback-feedback.js?v=20261104-android-15','/music/lyric-parser.js?v=20261104-android-15','/music/image-loading.css?v=20260927-1','/music/image-loading.js?v=20260927-1','/music/region-notice.css?v=20260928-1','/music/region-notice.js?v=20261104-android-15','/music/data/catalog.json?v=20261104-android-15','/music/favicon.svg','/music/placeholder.svg'];
+const AUDIO='roylyl-music-audio-v2',META='roylyl-music-audio-meta-v1',SHELL='roylyl-music-shell-20261104-17';
+const FILES=['/music/','/music/index.html','/music/music.css?v=20261104-android-17','/music/roytools.css?v=20261104-android-17','/music/app.js?v=20261104-android-17','/music/playback-feedback.js?v=20261104-android-17','/music/lyric-parser.js?v=20261104-android-17','/music/image-loading.css?v=20260927-1','/music/image-loading.js?v=20260927-1','/music/region-notice.css?v=20260928-1','/music/region-notice.js?v=20261104-android-17','/music/catalog-sync.js?v=20261104-android-17','/music/data/catalog.json?v=20261104-android-17','/music/favicon.svg','/music/placeholder.svg'];
 const metaKey='/music/__audio_index__',configKey='/music/__audio_config__',freshKey='/music/__audio_recovery__';
 let generation=0,budget=-1,preloadEnabled=true,writeQueue=Promise.resolve(),configRevision=0,configRead,freshRead,optionalEpoch=0,lastKeptSource='';
 const inflight=new Map(),playingRequests=new Map(),protectedSources=new Map();
@@ -19,7 +19,7 @@ const audioSource=source=>{try{const u=new URL(source);return u.origin==='https:
 const assetSource=(kind,source)=>{try{
   const u=new URL(source);if(u.pathname.split('/').some(part=>{try{const decoded=decodeURIComponent(part);return ['.','..'].includes(decoded)||decoded.includes('/')||decoded.includes('\\')||decoded.includes('\u0000');}catch{return true;}}))return false;
   return kind==='lyrics'?u.origin==='https://raw.githubusercontent.com'&&u.pathname.startsWith('/Roylyl/Music/main/')&&u.pathname.endsWith('.lrc'):
-    kind==='covers'&&u.origin==='https://roylyl.github.io'&&u.pathname.startsWith('/music/share-covers/')&&u.pathname.endsWith('.jpg');
+    kind==='covers'&&u.origin==='https://raw.githubusercontent.com'&&u.pathname.startsWith('/Roylyl/Music/main/')&&/\.(?:jpe?g|png|webp)$/i.test(u.pathname);
 }catch{return false;}};
 const musicClient=client=>{try{return new URL(client.url).pathname.startsWith('/music/');}catch{return false;}};
 async function cleanShells(){

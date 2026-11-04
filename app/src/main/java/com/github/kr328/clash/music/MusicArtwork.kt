@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -25,8 +26,10 @@ import java.util.concurrent.atomic.AtomicLong
 
 /** Notification/widget artwork uses only the configured public cover host, off the main thread. */
 internal object MusicArtwork {
-    private const val COVER_PATH = "/music/share-covers/"
-    private const val COVER_HOST = "roylyl.github.io"
+    private const val COVER_PATH = "/Roylyl/Music/main/"
+    private const val COVER_HOST = "raw.githubusercontent.com"
+    private const val LEGACY_COVER_PATH = "/music/share-covers/"
+    private const val LEGACY_COVER_HOST = "roylyl.github.io"
     private const val MAX_BYTES = 2L * 1024 * 1024
     private const val MAX_CACHE_BYTES = 32L * 1024 * 1024
     private const val MAX_CACHE_FILES = 256
@@ -34,18 +37,33 @@ internal object MusicArtwork {
     private val commitLock = Any()
     private val cacheGeneration = AtomicLong(0)
     private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var legacyCoverPaths: Map<String, String>? = null
+    private data class Source(val relative: String, val revision: String?, val legacy: Boolean) {
+        val cachePath: String get() = if (revision == null) relative else "$relative.rev-$revision"
+    }
 
     // Kept for existing callers as a validated relative cache identity, not an AssetManager path.
-    fun assetPath(url: String): String? {
+    fun assetPath(url: String): String? = parseSource(url)?.cachePath
+
+    private fun parseSource(url: String): Source? {
         if (url.length > 4096 || runCatching { URI(url) }.isFailure) return null
         val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return null
-        val cloud = uri.scheme.equals("https", true) && uri.host.equals(COVER_HOST, true) &&
+        val cloud = uri.scheme.equals("https", true) &&
+            (uri.host.equals(COVER_HOST, true) || uri.host.equals(LEGACY_COVER_HOST, true)) &&
             (uri.port == -1 || uri.port == 443) && uri.userInfo == null
-        // Existing saved appassets cover URLs map to the same cloud-relative image.
-        if ((!cloud && !MusicAssets.isOrigin(uri)) || uri.encodedQuery != null || uri.encodedFragment != null) return null
+        if ((!cloud && !MusicAssets.isOrigin(uri)) || uri.encodedFragment != null) return null
+        val query = uri.encodedQuery
+        val revision = if (query == null) null
+            else Regex("v=([A-Za-z0-9._-]{1,128})").matchEntire(query)?.groupValues?.get(1) ?: return null
         val encoded = uri.encodedPath ?: return null
-        if (!encoded.startsWith(COVER_PATH)) return null
-        val relative = Uri.decode(encoded.removePrefix(COVER_PATH))
+        val legacy = !uri.host.equals(COVER_HOST, true)
+        val prefix = if (legacy) LEGACY_COVER_PATH else COVER_PATH
+        if (!encoded.startsWith(prefix)) return null
+        val relative = validRelativePath(Uri.decode(encoded.removePrefix(prefix))) ?: return null
+        return Source(relative, revision, legacy)
+    }
+
+    private fun validRelativePath(relative: String): String? {
         if (relative.isBlank() || relative.length > 1024 ||
             relative.any { it == '\\' || it.code < 32 || it.code == 127 } ||
             relative.split('/').any { it.isEmpty() || it == "." || it == ".." }) return null
@@ -55,7 +73,8 @@ internal object MusicArtwork {
 
     fun decode(context: Context, url: String, size: Int): Bitmap? {
         if (Looper.myLooper() == Looper.getMainLooper()) return null
-        val relative = assetPath(url) ?: return null
+        val request = parseSource(url) ?: return null
+        val relative = request.cachePath
         val generation = cacheGeneration.get()
         return synchronized(cacheLock) {
             if (generation != cacheGeneration.get()) return@synchronized null
@@ -71,11 +90,15 @@ internal object MusicArtwork {
                     }
                 }
                 cached.delete()
+                // Old saved notifications contain the website's derived JPG URL. Resolve
+                // those covers through the bundled track metadata, then fetch the original.
+                val source = if (!request.legacy) request.relative
+                    else originalCoverPaths(context)[request.relative] ?: request.relative
                 val parent = cached.parentFile ?: return@runCatching null
                 if (!parent.isDirectory && !parent.mkdirs()) return@runCatching null
                 val temporary = File.createTempFile("cover-", ".part", parent)
                 try {
-                    if (!download(relative, temporary, generation)) return@runCatching null
+                    if (!download(source, request.revision, temporary, generation)) return@runCatching null
                     val bitmap = decodeFile(temporary, size) ?: return@runCatching null
                     val stored = synchronized(commitLock) {
                         if (generation != cacheGeneration.get()) return@runCatching null
@@ -88,6 +111,24 @@ internal object MusicArtwork {
                 }
             }.getOrNull()
         }
+    }
+
+    /** Called only by the artwork IO worker while holding cacheLock. */
+    private fun originalCoverPaths(context: Context): Map<String, String> {
+        legacyCoverPaths?.let { return it }
+        val paths = runCatching {
+            val catalog = context.applicationContext.assets.open("music/data/catalog.json")
+                .bufferedReader(Charsets.UTF_8).use { JSONObject(it.readText()) }
+            val tracks = catalog.getJSONArray("tracks")
+            buildMap {
+                for (index in 0 until tracks.length()) {
+                    val cover = validRelativePath(tracks.getJSONObject(index).optString("cover")) ?: continue
+                    put(cover.substringBeforeLast('.') + ".jpg", cover)
+                }
+            }
+        }.getOrDefault(emptyMap())
+        legacyCoverPaths = paths
+        return paths
     }
 
     /** Invalidates pending writes immediately; file deletion stays on the shared IO dispatcher. */
@@ -121,9 +162,10 @@ internal object MusicArtwork {
         }
     }
 
-    private fun download(relative: String, destination: File, generation: Long): Boolean {
+    private fun download(relative: String, revision: String?, destination: File, generation: Long): Boolean {
         val address = Uri.Builder().scheme("https").authority(COVER_HOST).path(COVER_PATH).apply {
             relative.split('/').forEach { appendPath(it) }
+            revision?.let { appendQueryParameter("v", it) }
         }.build().toString()
         val connection = URL(address).openConnection() as HttpURLConnection
         val startedAt = SystemClock.elapsedRealtime()

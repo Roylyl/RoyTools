@@ -33,6 +33,9 @@ internal data class MusicSettingsState(
     val hasCurrent: Boolean,
     val downloadBatch: MusicDownloadState,
     val allBusy: Boolean,
+    val catalogVersion: String,
+    val catalogStatus: String,
+    val catalogChecking: Boolean,
 ) {
     companion object {
         val budgets = longArrayOf(0, 256_000_000, 512_000_000, 1_000_000_000, 2_000_000_000,
@@ -55,6 +58,9 @@ internal data class MusicSettingsState(
                 hasCurrent = json.optBoolean("hasCurrent"),
                 downloadBatch = MusicDownloadState.parse(json.optJSONObject("downloadBatch")),
                 allBusy = json.optBoolean("allBusy"),
+                catalogVersion = json.optString("catalogVersion").take(160),
+                catalogStatus = json.optString("catalogStatus", "进入音乐模块时自动检查曲库与歌单更新").take(512),
+                catalogChecking = json.optBoolean("catalogChecking"),
             )
         }.getOrNull()
     }
@@ -103,6 +109,9 @@ internal class NativeMusicSettingsPanel(
     private val audioStatus = label("正在检查缓存…", 13f, muted)
     private val lyricStatus = label("正在检查缓存…", 13f, muted)
     private val coverStatus = label("正在检查缓存…", 13f, muted)
+    private val catalogVersion = label("当前曲库版本：读取中…", 14f, textColor)
+    private val catalogStatus = label("进入音乐模块时自动检查曲库与歌单更新", 13f, muted)
+    private val checkCatalog = button("检查曲库更新", "检查曲库更新") { command("checkCatalog", null) }
     private val downloadAll = button("下载全部歌曲", "下载全部歌曲") {
         if (state?.downloadBatch?.active == true) MusicDownloadCoordinator.show(activity)
         else command("downloadAll", null)
@@ -153,6 +162,11 @@ internal class NativeMusicSettingsPanel(
             addView(downloadCovers, rowParams())
             addView(row(coverStatus, clearCovers), rowParams())
         }
+        card("曲库更新").apply {
+            addView(catalogVersion, rowParams())
+            addView(catalogStatus, rowParams())
+            addView(checkCatalog, rowParams())
+        }
         render(null)
     }
 
@@ -169,6 +183,12 @@ internal class NativeMusicSettingsPanel(
         audioStatus.text = next?.audioStatus?.takeIf { it.isNotBlank() } ?: "正在检查缓存…"
         lyricStatus.text = next?.lyricStatus?.takeIf { it.isNotBlank() } ?: "正在检查缓存…"
         coverStatus.text = next?.coverStatus?.takeIf { it.isNotBlank() } ?: "正在检查缓存…"
+        catalogVersion.text = "当前曲库版本：" + (next?.catalogVersion?.takeIf { it.isNotBlank() } ?: "读取中…")
+        catalogStatus.text = next?.catalogStatus?.takeIf { it.isNotBlank() }
+            ?: "进入音乐模块时自动检查曲库与歌单更新"
+        checkCatalog.text = if (next?.catalogChecking == true) "检查中…" else "检查曲库更新"
+        checkCatalog.contentDescription = checkCatalog.text
+        checkCatalog.isEnabled = next != null && !next.catalogChecking
         downloadAll.text = if (next?.downloadBatch?.active == true) "查看下载进度" else "下载全部歌曲"
         downloadAll.contentDescription = downloadAll.text
         downloadAll.isEnabled = next?.available == true && !next.audioBusy && !next.allBusy

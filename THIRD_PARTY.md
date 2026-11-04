@@ -48,7 +48,7 @@ meta-rules-dat的[许可证](https://github.com/MetaCubeX/meta-rules-dat/blob/ma
 
 ## 音乐网页、音源仓库与媒体内容
 
-按维护者的打包要求，音乐模块、曲库索引和歌单随工程保留；音频、歌词与专辑封面从云端按需加载，不内置于安装包。音乐网页代码来自[Roylyl/roylyl.github.io/music](https://github.com/Roylyl/roylyl.github.io/tree/main/music)，音源与曲库关联资源位于另一个仓库[Roylyl/Music](https://github.com/Roylyl/Music)，封面入口为`https://roylyl.github.io/music/share-covers/`。这几个来源需要分别理解；源码仓库公开不表示其中所有媒体已经取得开放内容许可。
+按维护者的打包要求，音乐模块、曲库索引和歌单随工程保留；音频、歌词与专辑封面从云端按需加载，不内置于安装包。音乐网页代码来自[Roylyl/roylyl.github.io/music](https://github.com/Roylyl/roylyl.github.io/tree/main/music)，音源与曲库关联资源位于另一个仓库[Roylyl/Music](https://github.com/Roylyl/Music)，曲库目录及原始封面统一从`https://raw.githubusercontent.com/Roylyl/Music/main/`加载。这几个来源需要分别理解；源码仓库公开不表示其中所有媒体已经取得开放内容许可。
 
 网页[许可说明](https://github.com/Roylyl/roylyl.github.io/tree/main/music#许可与资源)明确：代码遵循GPLv3，歌曲、歌词和专辑封面具有各自权利，不因代码许可取得再分发授权。原资源字段中的`redistributionAllowed=false`不能被根GPL文件、开源声明或打包要求替代为允许再分发。
 

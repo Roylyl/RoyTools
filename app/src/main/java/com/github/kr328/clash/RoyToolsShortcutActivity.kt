@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -16,6 +17,7 @@ import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
 import com.github.kr328.clash.util.withProfile
 import com.mahmutalperenunal.adaptivehz.core.engine.AdaptiveHzRuntimeState
+import com.mahmutalperenunal.adaptivehz.OneSetup
 import com.mahmutalperenunal.adaptivehz.core.engine.model.AdaptiveHzMode
 import com.mahmutalperenunal.adaptivehz.core.engine.model.RefreshRateApplyResult
 import com.mahmutalperenunal.adaptivehz.core.service.AdaptiveHzActionHandler
@@ -24,6 +26,7 @@ import com.mahmutalperenunal.adaptivehz.core.shizuku.ShizukuAccessState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.github.kr328.clash.design.R as DesignR
 
@@ -141,16 +144,64 @@ class RoyToolsShortcutActivity : ComponentActivity() {
     }
 
     private fun applyRefreshMode(mode: AdaptiveHzMode) {
-        val ready = checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) ==
-            PackageManager.PERMISSION_GRANTED &&
-            ShizukuAccess.readState() == ShizukuAccessState.READY &&
-            AdaptiveHzRuntimeState.getAccessibilityState(this) ==
-                AdaptiveHzRuntimeState.AccessibilityState.WORKING
-        if (!ready) {
-            openRefreshPage("请先在刷新率页面配置辅助服务")
-            return
-        }
+        val requestId = ++latestRefreshRequestId
+        scope.launch {
+            if (requestId != latestRefreshRequestId) {
+                finish()
+                return@launch
+            }
+            // Match the in-app controls: stopping remains available, and fixed rates
+            // only need the persisted settings permission, not a live input monitor.
+            if (mode != AdaptiveHzMode.OFF) {
+                if (checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) !=
+                    PackageManager.PERMISSION_GRANTED) {
+                    openRefreshPage("缺少系统设置权限，请在刷新率页面配置辅助服务")
+                    return@launch
+                }
+                runCatching { OneSetup.configure(this@RoyToolsShortcutActivity) }
+                    .onFailure { Log.w(TAG, "Unable to restore refresh service configuration", it) }
 
+                val ready = mode != AdaptiveHzMode.ADAPTIVE || awaitAdaptiveReady(requestId)
+                if (requestId != latestRefreshRequestId) {
+                    finish()
+                    return@launch
+                }
+                if (!ready) {
+                    val access = ShizukuAccess.readState()
+                    val message = when (access) {
+                        ShizukuAccessState.PERMISSION_REQUIRED ->
+                            "辅助服务尚未授权，请在刷新率页面检查授权"
+                        ShizukuAccessState.NOT_RUNNING ->
+                            "辅助服务正在连接，请稍后重试"
+                        ShizukuAccessState.READY ->
+                            "辅助功能正在连接，请稍后重试"
+                    }
+                    Log.w(TAG, "Refresh entry waiting for service: access=$access " +
+                        "accessibility=${AdaptiveHzRuntimeState.getAccessibilityState(this@RoyToolsShortcutActivity)}")
+                    // A process-local binder or heartbeat can arrive after this entry starts.
+                    // Do not turn that transient state into another wireless-pairing flow.
+                    Toast.makeText(this@RoyToolsShortcutActivity, message, Toast.LENGTH_LONG).show()
+                    finish()
+                    return@launch
+                }
+            }
+            executeRefreshMode(mode)
+        }
+    }
+
+    private suspend fun awaitAdaptiveReady(requestId: Long): Boolean {
+        val deadline = SystemClock.elapsedRealtime() + REFRESH_CONNECTION_TIMEOUT_MS
+        while (requestId == latestRefreshRequestId) {
+            if (ShizukuAccess.readState() == ShizukuAccessState.READY &&
+                AdaptiveHzRuntimeState.getAccessibilityState(this) ==
+                AdaptiveHzRuntimeState.AccessibilityState.WORKING) return true
+            if (SystemClock.elapsedRealtime() >= deadline) return false
+            delay(100)
+        }
+        return false
+    }
+
+    private fun executeRefreshMode(mode: AdaptiveHzMode) {
         AdaptiveHzActionHandler.applyModeAsync(this, mode, onComplete = { result ->
             if (!isFinishing && !isDestroyed) {
                 when (result) {
@@ -201,5 +252,8 @@ class RoyToolsShortcutActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "RoyToolsShortcut"
+        private const val REFRESH_CONNECTION_TIMEOUT_MS = 5_000L
+        // Activity entry points and their coroutine continuations run on the main thread.
+        private var latestRefreshRequestId = 0L
     }
 }

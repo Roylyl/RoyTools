@@ -77,9 +77,11 @@ class MusicPanel(activity: Activity) {
 
     fun onStart() {
         val activity = hostActivity ?: return
+        val entering = !started
         started = true
         engine.bind(this, activity)
         engine.refresh()
+        if (entering) engine.checkCatalog()
         updateKeepScreenOn()
     }
 
@@ -241,11 +243,13 @@ private class MusicEngine(context: Context) {
 
     fun goHome() = enqueue("home", null)
 
+    fun checkCatalog() = evaluate("window.RoyToolsMusicApp.checkCatalog?.()")
+
     fun settingsCommand(action: String, value: Any?) {
         when (action) {
             "preload" -> if (value !is Boolean) return
             "budget" -> if (value !is Long || value !in MusicSettingsState.budgets) return
-            "sync", "clearAudio", "clearLyrics", "clearCovers", "downloadAll", "cancelDownload", "openDownloads", "clearAll", "downloadLyrics", "downloadCovers" -> Unit
+            "sync", "clearAudio", "clearLyrics", "clearCovers", "downloadAll", "cancelDownload", "openDownloads", "clearAll", "downloadLyrics", "downloadCovers", "checkCatalog" -> Unit
             else -> return
         }
         if (!ready) {
