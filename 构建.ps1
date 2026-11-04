@@ -2,14 +2,14 @@
 .SYNOPSIS
 使用JDK21与Android SDK35构建RoyTools，不安装或操作手机。
 .EXAMPLE
-.\构建.ps1 -Version 1.1.0 -BuildType Release -OutputDirectory ([Environment]::GetFolderPath('Desktop'))
+.\构建.ps1 -Version 1.1.1 -BuildType Release -OutputDirectory ([Environment]::GetFolderPath('Desktop'))
 .NOTES
 Release需要仓库外密钥，使用signing.properties或ROYTOOLS_KEYSTORE_* / ROYTOOLS_KEY_*环境变量。
 Debug沿用本机Android调试密钥，请勿将其误认为新生成的正式发行密钥。
 #>
 [CmdletBinding()]
 param(
-    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '1.1.0',
+    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '1.1.1',
     [ValidateSet('Debug', 'Release')][string]$BuildType = 'Debug',
     [string]$OutputDirectory = $PSScriptRoot,
     [string]$JavaHome = $env:JAVA_HOME,

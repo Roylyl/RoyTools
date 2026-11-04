@@ -15,6 +15,7 @@ import android.os.SystemClock
 import com.github.kr328.clash.MainActivity
 import com.github.kr328.clash.R
 import com.github.kr328.clash.common.log.Log
+import com.github.kr328.clash.common.util.NotificationGroups
 import java.util.Locale
 
 /** Keeps the existing WebView download queue foregrounded without owning a second downloader. */
@@ -70,6 +71,7 @@ class MusicDownloadService : Service() {
                     buildNotification(current, MusicDownloadCoordinator.speedBytesPerSecond),
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
                 foreground = true
+                NotificationGroups.refresh(this, NotificationGroups.RUNTIME)
                 lastPublishedAt = SystemClock.elapsedRealtime()
             } catch (error: RuntimeException) {
                 Log.w("无法启动音乐下载前台服务", error)
@@ -113,6 +115,7 @@ class MusicDownloadService : Service() {
         main.removeCallbacks(publishPending)
         if (!state.active) {
             stopForeground(STOP_FOREGROUND_REMOVE)
+            NotificationGroups.refresh(this, NotificationGroups.RUNTIME)
             foreground = false
             stopSelf()
             return
@@ -169,6 +172,8 @@ class MusicDownloadService : Service() {
             Intent(this, MusicDownloadService::class.java).setAction(ACTION_CANCEL)
                 .putExtra(EXTRA_DOWNLOAD_ID, state.id), PENDING_FLAGS)
         return Notification.Builder(this, CHANNEL)
+            .setGroup(NotificationGroups.RUNTIME)
+            .setGroupAlertBehavior(Notification.GROUP_ALERT_CHILDREN)
             .setSmallIcon(R.drawable.ic_music_notification)
             .setContentTitle(getString(R.string.music_download_title))
             .setContentText(summary)
@@ -199,6 +204,7 @@ class MusicDownloadService : Service() {
             main.removeCallbacks(publishPending)
             releaseWakeLock()
             stopForeground(STOP_FOREGROUND_REMOVE)
+            NotificationGroups.refresh(this, NotificationGroups.RUNTIME)
             foreground = false
             stopSelf()
         }
@@ -213,6 +219,7 @@ class MusicDownloadService : Service() {
             releaseWakeLock()
             stopForeground(STOP_FOREGROUND_REMOVE)
             notifications.cancel(NOTIFICATION_ID)
+            NotificationGroups.refresh(this, NotificationGroups.RUNTIME)
             super.onDestroy()
         }
     }

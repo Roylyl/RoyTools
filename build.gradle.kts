@@ -47,7 +47,7 @@ subprojects {
             targetSdk = 35
 
             // versionCode must increase for every distributed APK.
-            versionName = rootProject.providers.gradleProperty("roytoolsVersion").getOrElse("1.1.0")
+            versionName = rootProject.providers.gradleProperty("roytoolsVersion").getOrElse("1.1.1")
             val parts = versionName!!.split('.').map { it.toInt() }
             require(parts.size == 3 && parts[0] in 0..2100 && parts[1] in 0..999 && parts[2] in 0..999) {
                 "roytoolsVersion must be major.minor.patch"

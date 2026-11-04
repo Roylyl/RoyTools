@@ -24,6 +24,7 @@ import android.os.PowerManager
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import com.github.kr328.clash.R
+import com.github.kr328.clash.common.util.NotificationGroups
 import com.github.kr328.clash.widget.WidgetMusicState
 import java.util.concurrent.Executors
 
@@ -199,6 +200,7 @@ class MusicPlaybackService : Service() {
         } else {
             notifications.notify(NOTIFICATION_ID, notification)
         }
+        NotificationGroups.refresh(this, NotificationGroups.RUNTIME)
     }
 
     private fun publishMetadata(state: MusicPlayback.State) {
@@ -216,6 +218,8 @@ class MusicPlaybackService : Service() {
             Notification.Action.Builder(Icon.createWithResource(this, icon), getString(label),
                 if (enabled) commandPendingIntent(command, state.playing) else null).build()
         return Notification.Builder(this, CHANNEL)
+            .setGroup(NotificationGroups.RUNTIME)
+            .setGroupAlertBehavior(Notification.GROUP_ALERT_CHILDREN)
             .setSmallIcon(R.drawable.ic_music_notification)
             .setContentTitle(state.title.ifBlank { getString(R.string.music_notification_title) })
             .setContentText(state.artist.ifBlank { getString(R.string.music_notification_open) })
@@ -257,7 +261,7 @@ class MusicPlaybackService : Service() {
         if (now < artworkRetryAt) return
         artworkRetryAt = now + 30_000L
         artworkLoader.execute {
-            val bitmap = MusicArtwork.decode(this, url, 320)
+            val bitmap = MusicArtwork.decode(this, url)
             main.post {
                 if (destroyed || artworkPath != url) return@post
                 artwork = bitmap
@@ -290,6 +294,7 @@ class MusicPlaybackService : Service() {
         session.release()
         stopForeground(STOP_FOREGROUND_REMOVE)
         notifications.cancel(NOTIFICATION_ID)
+        NotificationGroups.refresh(this, NotificationGroups.RUNTIME)
         MusicPlayback.disconnected(this)
         super.onDestroy()
     }

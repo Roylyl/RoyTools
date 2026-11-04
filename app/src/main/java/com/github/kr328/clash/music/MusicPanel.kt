@@ -17,6 +17,9 @@ import android.os.Looper
 import android.os.Message
 import android.view.View
 import android.view.ViewGroup
+import android.view.Gravity
+import android.view.animation.Animation
+import android.view.animation.AnimationUtils
 import android.webkit.JavascriptInterface
 import android.webkit.JsResult
 import android.webkit.PermissionRequest
@@ -61,6 +64,9 @@ class MusicPanel(activity: Activity) {
     internal var started = false
         private set
     private var nativeSettings: NativeMusicSettingsPanel? = null
+    private var nativeSettingsVisible = false
+    private var miniIdentity: String? = null
+    private val miniPlayer = NativeMiniPlayer(activity) { action -> engine.dispatch(action, null) }
 
     var onNavigationChanged: ((String?, Int) -> Unit)? = null
         set(value) {
@@ -73,7 +79,14 @@ class MusicPanel(activity: Activity) {
 
     init {
         engine.bind(this, activity)
+        view.addView(miniPlayer, FrameLayout.LayoutParams(-1, dp(64), Gravity.BOTTOM).apply {
+            leftMargin = dp(16)
+            rightMargin = dp(16)
+            bottomMargin = dp(12)
+        })
     }
+
+    private fun dp(value: Int) = (view.resources.displayMetrics.density * value).toInt()
 
     fun onStart() {
         val activity = hostActivity ?: return
@@ -83,12 +96,14 @@ class MusicPanel(activity: Activity) {
         engine.refresh()
         if (entering) engine.checkCatalog()
         updateKeepScreenOn()
+        updateMiniPlayer()
     }
 
     /** Do not call WebView.onPause or pauseTimers: HTMLAudio remains the playback engine. */
     fun onStop() {
         started = false
         view.keepScreenOn = false
+        updateMiniPlayer()
         hostActivity?.let(MusicDownloadCoordinator::dismiss)
         nativeSettings?.closeDialogs()
         engine.closeDialogs()
@@ -98,7 +113,7 @@ class MusicPanel(activity: Activity) {
     fun onDestroy() {
         started = false
         view.keepScreenOn = false
-        nativeSettings?.let { it.dispose(); view.removeView(it.view) }
+        nativeSettings?.let { it.view.clearAnimation(); it.dispose(); view.removeView(it.view) }
         nativeSettings = null
         engine.release(this)
         onNavigationChanged = null
@@ -112,10 +127,27 @@ class MusicPanel(activity: Activity) {
     internal fun navigationChanged(title: String?, depth: Int) {
         updateKeepScreenOn()
         updateNativeSettings()
+        updateMiniPlayer()
         onNavigationChanged?.invoke(title, depth)
     }
 
-    internal fun settingsChanged() = updateNativeSettings()
+    internal fun settingsChanged() {
+        updateNativeSettings()
+        updateMiniPlayer()
+    }
+
+    internal fun playbackChanged() = updateMiniPlayer()
+
+    private fun updateMiniPlayer() {
+        val state = MusicPlayback.state
+        val visible = started && engine.miniPlayerVisible
+        val identity = "$visible\n${state.playing}\n${state.title}\n${state.artist}\n${state.album}\n${state.artwork}\n${state.canPrevious}\n${state.canNext}"
+        if (miniIdentity != identity) {
+            miniIdentity = identity
+            miniPlayer.render(state, visible)
+        }
+        if (visible && view.indexOfChild(miniPlayer) != view.childCount - 1) miniPlayer.bringToFront()
+    }
 
     private fun updateKeepScreenOn() {
         val enabled = hostActivity?.getSharedPreferences("roytools_music_native", Context.MODE_PRIVATE)
@@ -127,7 +159,7 @@ class MusicPanel(activity: Activity) {
         val state = engine.settingsState
         val show = engine.navigationPageKey == "settings" && state?.overlayOpen != true
         if (!show) {
-            nativeSettings?.setVisible(false)
+            nativeSettings?.let { setSettingsVisible(it, false) }
             return
         }
         val activity = hostActivity ?: return
@@ -136,13 +168,37 @@ class MusicPanel(activity: Activity) {
             view.addView(it.view, FrameLayout.LayoutParams(-1, -1))
         }
         panel.render(state)
-        (panel.view.layoutParams as FrameLayout.LayoutParams).apply {
-            // Leave the HTMLAudio player's compact capsule interactive below the native settings page.
-            val reserve = if (state?.hasCurrent == true) (90 * view.resources.displayMetrics.density).toInt() else 0
-            if (bottomMargin != reserve) { bottomMargin = reserve; panel.view.layoutParams = this }
+        // Keep the settings surface opaque and full-height; reserve scrolling
+        // space inside it instead of exposing the underlying WebView at the bottom.
+        val reserve = if (state?.hasCurrent == true) dp(90) else 0
+        if (panel.view.paddingBottom != reserve) {
+            panel.view.setPadding(panel.view.paddingLeft, panel.view.paddingTop, panel.view.paddingRight, reserve)
         }
-        panel.setVisible(true)
-        panel.view.bringToFront()
+        panel.view.clipToPadding = false
+        setSettingsVisible(panel, true)
+    }
+
+    private fun setSettingsVisible(panel: NativeMusicSettingsPanel, visible: Boolean) {
+        val changed = nativeSettingsVisible != visible
+        nativeSettingsVisible = visible
+        if (!changed) return
+        panel.view.clearAnimation()
+        if (visible) {
+            panel.setVisible(true)
+            if (changed && started) panel.view.startAnimation(AnimationUtils.loadAnimation(view.context,
+                com.github.kr328.clash.design.R.anim.roytools_push_in))
+        } else if (changed && started && engine.navigationPageKey != "player" && engine.settingsState?.overlayOpen != true) {
+            panel.closeDialogs()
+            val animation = AnimationUtils.loadAnimation(view.context, com.github.kr328.clash.design.R.anim.roytools_pop_out)
+            animation.setAnimationListener(object : Animation.AnimationListener {
+                override fun onAnimationStart(animation: Animation?) = Unit
+                override fun onAnimationRepeat(animation: Animation?) = Unit
+                override fun onAnimationEnd(animation: Animation?) {
+                    if (!nativeSettingsVisible) panel.setVisible(false)
+                }
+            })
+            panel.view.startAnimation(animation)
+        } else panel.setVisible(false)
     }
 }
 
@@ -160,6 +216,10 @@ private class MusicEngine(context: Context) {
     private val dialogs = mutableSetOf<AlertDialog>()
     private val popups = mutableSetOf<WebView>()
     private var ready = false
+    private var visualReady = false
+    private var visualRequest = 0L
+    private var appliedTheme: String? = null
+    private var appliedBackground: Int? = null
     @Volatile private var generation = 0
     private var probing = false
     private var pulseScheduled = false
@@ -171,6 +231,8 @@ private class MusicEngine(context: Context) {
     var navigationDepth = 0
         private set
     var navigationPageKey: String? = null
+        private set
+    var miniPlayerVisible = false
         private set
     var settingsState: MusicSettingsState? = null
         private set
@@ -203,11 +265,13 @@ private class MusicEngine(context: Context) {
         webContext.baseContext = activity
         theme = effectiveTheme(activity)
         applyBackground()
+        panel.view.setBackgroundColor(backgroundColor())
         if (web.parent !== panel.view) {
             (web.parent as? ViewGroup)?.removeView(web)
-            panel.view.addView(web, FrameLayout.LayoutParams(-1, -1))
+            panel.view.addView(web, 0, FrameLayout.LayoutParams(-1, -1))
         }
         if (ready) applyTheme()
+        revealFirstFrame()
         panel.navigationChanged(navigationTitle, navigationDepth)
         refreshPulse()
     }
@@ -237,7 +301,7 @@ private class MusicEngine(context: Context) {
             main.post { dispatch(action, position) }
             return
         }
-        if (action !in setOf("play", "pause", "toggle", "next", "previous", "seek", "openPlayer", "sync")) return
+        if (action !in setOf("play", "pause", "toggle", "next", "previous", "seek", "openPlayer", "openQueue", "sync")) return
         enqueue(action, position?.takeIf { it.isFinite() }?.coerceAtLeast(0.0))
     }
 
@@ -289,7 +353,26 @@ private class MusicEngine(context: Context) {
         }
     }
 
-    private fun applyTheme() = evaluate("window.RoyToolsMusicApp.setTheme(${JSONObject.quote(theme)})")
+    private fun applyTheme() {
+        if (!ready || !trustedPage || appliedTheme == theme) return
+        appliedTheme = theme
+        evaluate("window.RoyToolsMusicApp.setTheme(${JSONObject.quote(theme)})")
+    }
+
+    private fun revealFirstFrame() {
+        if (visualReady || !ready || !trustedPage || !web.isAttachedToWindow) return
+        val target = web
+        val page = generation
+        val request = ++visualRequest
+        target.postVisualStateCallback(request, object : WebView.VisualStateCallback() {
+            override fun onComplete(requestId: Long) {
+                if (target === web && page == generation && trustedPage && requestId == visualRequest) {
+                    visualReady = true
+                    target.alpha = 1f
+                }
+            }
+        })
+    }
 
     private fun evaluate(expression: String) {
         if (ready && trustedPage) web.evaluateJavascript("(function(){try{$expression}catch(e){}})()", null)
@@ -314,6 +397,7 @@ private class MusicEngine(context: Context) {
                     settingsCommand(action, value)
                 }
                 refresh()
+                revealFirstFrame()
             } else if (attempt < 40) {
                 main.postDelayed({ if (page == generation) probeReady(attempt + 1) }, 250)
             }
@@ -346,8 +430,13 @@ private class MusicEngine(context: Context) {
 
     private fun currentActivity(): Activity? = owner.get()?.hostActivity?.takeUnless { it.isFinishing || it.isDestroyed }
 
+    private fun backgroundColor() = if (theme == "dark") Color.rgb(18, 18, 20) else Color.rgb(242, 242, 247)
     private fun applyBackground() {
-        web.setBackgroundColor(if (theme == "dark") Color.rgb(18, 18, 20) else Color.rgb(242, 242, 247))
+        val color = backgroundColor()
+        if (appliedBackground != color) {
+            appliedBackground = color
+            web.setBackgroundColor(color)
+        }
     }
 
     private fun createWebView(): WebView = WebView(webContext).apply {
@@ -368,7 +457,8 @@ private class MusicEngine(context: Context) {
             if (Build.VERSION.SDK_INT >= 33) isAlgorithmicDarkeningAllowed = false
         }
         setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false)
-        setBackgroundColor(if (theme == "dark") Color.rgb(18, 18, 20) else Color.rgb(242, 242, 247))
+        setBackgroundColor(backgroundColor())
+        alpha = 0f
         isHorizontalScrollBarEnabled = false
         isVerticalScrollBarEnabled = false
         addJavascriptInterface(Bridge(), "RoyToolsMusicBridge")
@@ -388,6 +478,11 @@ private class MusicEngine(context: Context) {
                 closeDialogs()
                 generation++
                 ready = false
+                visualReady = false
+                appliedTheme = null
+                view.alpha = 0f
+                miniPlayerVisible = false
+                owner.get()?.playbackChanged()
                 probing = false
                 trustedPage = url != null && MusicAssets.isPage(Uri.parse(url))
                 if (!trustedPage) {
@@ -402,8 +497,17 @@ private class MusicEngine(context: Context) {
                 if (url != null && MusicAssets.isPage(Uri.parse(url))) probeReady()
             }
 
+            override fun onPageCommitVisible(view: WebView, url: String?) {
+                if (url != null && MusicAssets.isPage(Uri.parse(url))) revealFirstFrame()
+            }
+
             override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
                 ready = false
+                visualReady = false
+                appliedTheme = null
+                appliedBackground = null
+                miniPlayerVisible = false
+                owner.get()?.playbackChanged()
                 trustedPage = false
                 generation++
                 MusicDownloadCoordinator.fail(app, "音乐引擎已重启，下载已停止，请重新开始")
@@ -416,7 +520,7 @@ private class MusicEngine(context: Context) {
                         .getOrNull()?.let { MusicPlayback.update(app, it) }
                 }
                 web = createWebView()
-                owner.get()?.let { panel -> panel.view.addView(web, FrameLayout.LayoutParams(-1, -1)) }
+                owner.get()?.let { panel -> panel.view.addView(web, 0, FrameLayout.LayoutParams(-1, -1)) }
                 web.loadUrl(MusicAssets.HOME)
                 currentActivity()?.let { Toast.makeText(it, "音乐页面已恢复，请继续播放", Toast.LENGTH_SHORT).show() }
                 return true
@@ -593,6 +697,7 @@ private class MusicEngine(context: Context) {
                 if (!trustedPage || page != generation) return@post
                 latestState = payload
                 MusicPlayback.update(app, payload)
+                owner.get()?.playbackChanged()
                 refreshPulse()
             }
         }
@@ -610,6 +715,7 @@ private class MusicEngine(context: Context) {
                 navigationDepth = depth
                 navigationTitle = title
                 navigationPageKey = pageKey
+                miniPlayerVisible = state.optBoolean("miniPlayerVisible", false)
                 owner.get()?.navigationChanged(title, depth)
             }
         }

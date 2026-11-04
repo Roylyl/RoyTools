@@ -11,12 +11,15 @@ import com.github.kr328.clash.common.compat.pendingIntentFlags
 import com.github.kr328.clash.common.compat.startForegroundCompat
 import com.github.kr328.clash.common.constants.Components
 import com.github.kr328.clash.common.constants.Intents
+import com.github.kr328.clash.common.util.NotificationGroups
 import com.github.kr328.clash.service.R
 import com.github.kr328.clash.service.StatusProvider
 import kotlinx.coroutines.channels.Channel
 
 class StaticNotificationModule(service: Service) : Module<Unit>(service) {
     private val builder = NotificationCompat.Builder(service, CHANNEL_ID)
+        .setGroup(NotificationGroups.RUNTIME)
+        .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
         .setSmallIcon(R.drawable.ic_logo_service)
         .setOngoing(true)
         .setColor(service.getColorCompat(R.color.color_clash))
@@ -49,6 +52,7 @@ class StaticNotificationModule(service: Service) : Module<Unit>(service) {
                 .build()
 
             service.startForegroundCompat(R.id.nf_clash_status, notification)
+            NotificationGroups.refresh(service, NotificationGroups.RUNTIME)
         }
     }
 
@@ -67,6 +71,8 @@ class StaticNotificationModule(service: Service) : Module<Unit>(service) {
         fun notifyLoadingNotification(service: Service) {
             val notification =
                 NotificationCompat.Builder(service, CHANNEL_ID)
+                    .setGroup(NotificationGroups.RUNTIME)
+                    .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
                     .setSmallIcon(R.drawable.ic_logo_service)
                     .setOngoing(true)
                     .setColor(service.getColorCompat(R.color.color_clash))
@@ -76,6 +82,7 @@ class StaticNotificationModule(service: Service) : Module<Unit>(service) {
                     .build()
 
             service.startForegroundCompat(R.id.nf_clash_status, notification)
+            NotificationGroups.refresh(service, NotificationGroups.RUNTIME)
         }
     }
 }

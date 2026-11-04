@@ -20,15 +20,19 @@ class UpdateDownloadReceiver : BroadcastReceiver() {
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
                 val state = UpdateDownload.query(context)
-                if (state?.id == completedId && state.status == DownloadManager.STATUS_SUCCESSFUL) {
+                if (state == null || state.id != completedId || state.status !in listOf(DownloadManager.STATUS_SUCCESSFUL, DownloadManager.STATUS_FAILED)) return@launch
+                if (!UpdateDownload.claimCompletion(context, completedId)) return@launch
+                if (!UpdateDownload.isCurrentCompletion(context, completedId)) return@launch
+                if (state.status == DownloadManager.STATUS_SUCCESSFUL) {
                     UpdateNotifications.downloadReady(context)
                     android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        if (!UpdateDownload.isCurrentCompletion(context, completedId)) return@post
                         val activity = com.github.kr328.clash.util.ApplicationObserver.visibleActivity()
                         if (activity != null && activity !is UpdateActivity) {
                             runCatching { activity.startActivity(Intent(activity, UpdateActivity::class.java)) }
                         }
                     }
-                }
+                } else UpdateNotifications.downloadFailed(context, state.error ?: "更新包下载失败，请重新下载。")
             } catch (e: Exception) {
                 Log.w("Unable to handle application update download", e)
             } finally {

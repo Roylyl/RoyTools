@@ -22,6 +22,12 @@
 
 -dontobfuscate
 
+# These entries run in shell processes or are instantiated by the Shizuku server.
+# They are not reachable through the Android app's normal call graph.
+-keep class rikka.shizuku.server.ShizukuService { *; }
+-keep class moe.shizuku.starter.ServiceStarter { *; }
+-keep class com.mahmutalperenunal.adaptivehz.core.shizuku.InputMonitorUserService { *; }
+
 -assumenosideeffects class kotlin.jvm.internal.Intrinsics {
     public static void checkNotNull(...);
     public static void checkExpressionValueIsNotNull(...);

@@ -29,6 +29,7 @@ object UpdateDownload {
     private const val KEY_URL = "asset_url"
     private const val KEY_FILE = "file_name"
     private const val KEY_INSTALLED_CODE = "installed_version_code"
+    private const val KEY_HANDLED_ID = "handled_download_id"
     private val fileNamePattern = Regex("update-[a-f0-9-]+\\.apk")
 
     private fun preferences(context: Context): SharedPreferences =
@@ -54,7 +55,10 @@ object UpdateDownload {
         val prefs = preferences(context)
         val previous = query(context)
         if (previous != null && previous.status != DownloadManager.STATUS_FAILED) {
-            if (prefs.getString(KEY_URL, null) == release.assetUrl) return previous.id
+            if (prefs.getString(KEY_URL, null) == release.assetUrl) {
+                if (previous.status != DownloadManager.STATUS_SUCCESSFUL) UpdateDownloadService.start(context, previous.id)
+                return previous.id
+            }
             if (previous.status != DownloadManager.STATUS_SUCCESSFUL) {
                 throw IOException("另一个更新正在下载，请先取消当前下载。")
             }
@@ -74,7 +78,7 @@ object UpdateDownload {
             .setMimeType(MIME_APK)
             .setAllowedOverMetered(true)
             .setAllowedOverRoaming(false)
-            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_HIDDEN)
             .setDestinationUri(Uri.fromFile(destination))
 
         val downloads = manager(context)
@@ -91,6 +95,12 @@ object UpdateDownload {
         ) {
             downloads.remove(id)
             throw IOException("无法保存下载任务，请稍后重试。")
+        }
+        try {
+            UpdateDownloadService.start(context, id)
+        } catch (error: RuntimeException) {
+            cancel(context, id)
+            throw IOException("无法启动后台下载进度，请保持应用在前台后重试。", error)
         }
         return id
     }
@@ -131,12 +141,32 @@ object UpdateDownload {
     }
 
     @Synchronized
-    fun cancel(context: Context) {
+    fun cancel(context: Context, expectedId: Long? = null) {
         val prefs = preferences(context)
         val id = prefs.getLong(KEY_ID, -1L)
+        if (expectedId != null && id != expectedId) return
         if (id >= 0) manager(context).remove(id)
         downloadedFile(context)?.delete()
         prefs.edit().clear().commit()
+        UpdateDownloadService.stop(context)
+    }
+
+    /** Both a fast-transfer observer and the system receiver can report completion. */
+    @Synchronized
+    internal fun claimCompletion(context: Context, id: Long): Boolean {
+        val prefs = preferences(context)
+        if (prefs.getLong(KEY_ID, -1L) != id || prefs.getLong(KEY_HANDLED_ID, -1L) == id) return false
+        if (!prefs.edit().putLong(KEY_HANDLED_ID, id).commit()) return false
+        // Keep this under the same lock as start/cancel: a late completion for A
+        // must never stop the foreground observer already started for download B.
+        UpdateDownloadService.stop(context)
+        return true
+    }
+
+    @Synchronized
+    internal fun isCurrentCompletion(context: Context, id: Long): Boolean {
+        val prefs = preferences(context)
+        return prefs.getLong(KEY_ID, -1L) == id && prefs.getLong(KEY_HANDLED_ID, -1L) == id
     }
 
     /** Call from a foreground activity after obtaining permission to install unknown apps. */

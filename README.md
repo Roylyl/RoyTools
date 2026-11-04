@@ -4,12 +4,12 @@
 
 <h1 align="center">RoyTools</h1>
 
-<p align="center">把音乐播放、网络代理和自适应刷新率放进一个Android应用。</p>
+<p align="center">在Android上听歌、切换代理节点，也能让屏幕在静置时自动降频。</p>
 
 <p align="center">
   <a href="https://github.com/Roylyl/RoyTools/releases/latest"><img src="https://img.shields.io/github/v/release/Roylyl/RoyTools?style=flat-square&amp;display_name=tag&amp;label=%E7%89%88%E6%9C%AC&amp;color=007AFF" alt="最新发行版本"></a>
-  <a href="#运行要求"><img src="https://img.shields.io/badge/Android-12%2B-007AFF?style=flat-square" alt="Android12及以上"></a>
-  <a href="#运行要求"><img src="https://img.shields.io/badge/ABI-arm64--v8a-555555?style=flat-square" alt="arm64-v8a架构"></a>
+  <a href="#快速开始"><img src="https://img.shields.io/badge/Android-12%2B-007AFF?style=flat-square" alt="Android12及以上"></a>
+  <a href="#快速开始"><img src="https://img.shields.io/badge/ABI-arm64--v8a-555555?style=flat-square" alt="arm64-v8a架构"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/Roylyl/RoyTools?style=flat-square&amp;label=%E8%AE%B8%E5%8F%AF&amp;color=555555" alt="开源许可证"></a>
   <a href="https://github.com/Roylyl/RoyTools/releases"><img src="https://img.shields.io/github/downloads/Roylyl/RoyTools/total?style=flat-square&amp;label=%E7%B4%AF%E8%AE%A1%E4%B8%8B%E8%BD%BD&amp;color=007AFF" alt="发行附件累计下载量"></a>
 </p>
@@ -23,103 +23,69 @@
 </p>
 
 <p align="center">
-  <a href="#快速开始">快速开始</a> · <a href="#主要功能">主要功能</a> · <a href="docs/BUILDING.md">开发文档</a> · <a href="#上游与设计参考">上游来源</a> · <a href="https://github.com/Roylyl/RoyTools/releases">发行页</a>
+  <a href="https://github.com/Roylyl/RoyTools/releases/latest">下载APK</a> · <a href="#快速开始">快速开始</a> · <a href="#音乐">音乐</a> · <a href="#代理">代理</a> · <a href="#刷新率">刷新率</a> · <a href="#项目来源与许可">项目来源与许可</a>
 </p>
 
 ## 快速开始
 
-1. 前往[发行页](https://github.com/Roylyl/RoyTools/releases)，下载RoyTools的APK并安装。
-2. 打开“音乐”，进入全部歌曲、专辑或歌单即可联网播放。应用附带曲库索引，音频、歌词和专辑封面从云端加载，无需填写音乐服务配置。
-3. 需要代理时，进入“代理”导入自己的订阅地址或配置文件，再开启连接并接受Android的VPN授权。项目不提供节点、订阅或代理账户。
-4. 需要刷新率控制时，在“刷新率→配置辅助服务”中完成手机端无线调试配对，再选择刷新率模式。
+从[GitHub发行页](https://github.com/Roylyl/RoyTools/releases)下载APK，安装到运行Android12或更高版本的arm64-v8a手机上。第一次打开就可以联网听歌。代理和刷新率可以等用到时再配置。
 
-## 运行要求
+|想先做什么|第一次怎么用|
+|---|---|
+|听一首歌|打开“音乐→全部歌曲”，点歌名开始播放。也可以从专辑或歌单选歌。|
+|开启代理|打开“代理→配置”，点右上角“＋”。选择“URL”填写自己的订阅地址，或选择“文件”导入配置。保存并选中配置，返回代理首页开启连接，首次使用时允许系统VPN请求。|
+|自动调节刷新率|打开“刷新率→配置辅助服务”，按[手机配对步骤](#手机配对)激活后，将模式滑块调到“自适应”。|
 
-- Android12及以上，arm64-v8a设备。
-- 首次播放及下载音乐资源需要网络；完整下载到本机的曲目可离线播放。
-- 代理连接需要自行准备可用订阅或配置。
-- 刷新率控制需要相应系统权限；首次无线激活需连接Wi-Fi、开启开发者选项及无线调试。设备重启后可能需要重新激活。
-- 可用刷新率取决于屏幕与系统实际提供的档位，应用不能增加硬件不支持的刷新率。
+## 音乐
 
-## 主要功能
+浏览全部歌曲、专辑和歌单时，可以按歌名搜索、按歌手筛选或调整排序。有当前曲目时，迷你播放器固定在底部，打开音乐设置也能继续操作。点击封面或歌名进入全屏播放，左右滑动切歌，点击右侧队列按钮查看接下来要播的歌曲。全屏页可以看滚动歌词、切换播放模式或设置定时关闭。
 
-### 音乐
+- 离线收听。点击曲目右侧或全屏播放页右上角的“更多→下载”保存单曲。歌单和专辑支持“下载全部”。在“音乐→设置→音乐下载”可以下载整个曲库，也可以进入“已下载曲目”搜索和删除歌曲。下载可取消或转到后台，通知栏会显示进度。
+- 边听边存。开启音乐缓存后，播放时会继续加载并保存整首歌。开启“预加载下一首”后，会等当前曲目完整保存再加载下一首。缓存上限、批量下载歌词和封面、全屏播放保持亮屏都在音乐设置中。
+- 曲库同步。每次进入音乐模块都会检查曲库版本。“音乐→设置”底部也可以手动检查。歌曲、专辑和歌单跟随同一份云端目录更新，新增歌单会自动出现。离线时仍能浏览上次同步的目录，播放已完整保存的歌曲。
 
-- 全部歌曲、专辑、歌单和音乐设置，支持搜索、歌手筛选及排序。
-- 全屏封面与滚动歌词、播放队列、定时停止、上一首/下一首及播放模式。
-- 底部胶囊播放器支持左右滑动切歌，支持后台播放、媒体通知和系统媒体控制。
-- 歌单、专辑与整个曲库批量下载，歌词与封面也可分别批量保存。
-- 曲库、专辑和歌单与网页共用Music仓库，每次进入音乐模块检查更新；音乐设置底部也可手动检查，断网继续使用本地目录。
-- 自动显示新增歌单及歌曲数，其他歌单使用统一图标；曲目列表与全屏播放的更多菜单支持下载单曲。
-- 下载窗口显示百分比、进度和MB/s，支持取消与后台下载，通知栏同步显示进度。
-- 已下载曲目管理复用搜索与筛选；单曲删除采用两次点击确认，也可统一删除下载与缓存。
-- 缓存上限、下一首预加载，以及默认开启的全屏播放保持亮屏。
+APK附带首次浏览所需的曲库索引。音频、歌词和专辑封面都来自云端曲库。[浏览Roylyl/Music](https://github.com/Roylyl/Music)
 
-歌曲目录、歌单、音频、歌词与专辑封面统一来源于[Roylyl/Music](https://github.com/Roylyl/Music)。APK保留首次启动使用的曲库目录，音频、歌词和专辑封面按需从云端加载，下载后保存在应用本地缓存中。曲库版本独立于应用版本，日常新增歌曲、专辑和歌单只需发布Music仓库。
+## 代理
 
-### 代理
+在代理首页启动或停止连接，查看实时上传和下载速度。选择“默认”会使用当前配置指定的模式，也可以直接切换“规则”“全局”或“直连”。
 
-- 基于ClashMetaForAndroid衍生工程与mihomo核心，支持配置导入、订阅更新、节点选择和测速。
-- 首页四档代理模式：默认、规则、全局、直连。
-- 保留应用访问控制、网络、DNS、覆写和外部资源等配置入口。
-- 首页显示代理流量速度，常驻通知可显示流量。
-- 桌面小组件显示当前节点及当日Wi-Fi/移动数据代理业务用量，并可切换代理模式。
+进入“代理节点”选择节点或测速。应用访问控制、网络、DNS、配置覆写和外部资源都在代理设置中。订阅和节点由使用者自行提供。
 
-### 刷新率
+## 刷新率
 
-- 关闭、60Hz、120Hz、自适应四档控制。
-- 静置降频延迟以0.25秒递增，默认0.5秒。
-- 内置Shizuku相关服务及无线配对流程，通过通知输入配对码，减少切换页面操作。
-- 刷新率常驻通知可直接切换四档模式，控制中心提供自适应刷新率开关。
+模式滑块提供“关闭”“60Hz”“120Hz”和“自适应”。自适应模式在触控时升频，静置后降频。静置延迟默认0.5秒，每档相差0.25秒。实际可用的刷新率取决于手机屏幕和系统。
 
-### 总设置与快捷控制
+### 手机配对
 
-- 跟随系统、浅色和深色主题，默认跟随系统。
-- 统一后台运行设置、应用图标与最近任务显示控制。
-- 音乐、代理、刷新率和应用日志集中查看、分别导出，也可统一清空。
-- 应用内检查GitHub发行页更新，可手动检查或开启每小时自动检查，支持下载、后台进度和系统安装器。
-- 桌面长按快捷操作、控制中心代理开关和RoyTools横版4×2小组件；总设置内提供手动添加教程。
+1. 手机连上Wi-Fi并开启开发者选项。在RoyTools的“刷新率”页点“配置辅助服务→打开无线调试”。
+2. 在系统设置中开启“无线调试”，点“使用配对码配对设备”。保持系统配对窗口打开，直接在RoyTools的横幅通知里输入当前显示的6位配对码。
+3. 配对成功后，应用会尝试自动连接。如果通知要求输入连接端口，返回系统“无线调试”首页，填写“IP地址和端口”显示的端口。回到RoyTools，看到“辅助服务运行中”即可选择模式。
 
-## 常用设置
+配对可以全程在手机上完成。手机重启后若提示“待激活”，可从同一入口重新激活。
 
-- 音乐下载与缓存：进入“音乐→设置”，可下载整个曲库、管理已下载曲目、调整缓存上限或清理缓存。
-- 曲库更新：位于“音乐→设置”底部，可查看当前曲库版本并手动检查更新。
-- 全屏保持亮屏：位于“音乐→设置→播放设置”，默认开启。
-- 后台运行与主题：进入底部“设置”，可调整主题及后台运行方式。
-- 添加快捷工具：进入“设置→快捷控制”，按教程添加控制中心代理开关或RoyTools桌面小组件。
-- 应用更新：进入“设置→应用更新”，手动检查或开启每小时自动检查。
-- 查看与导出日志：进入“设置→关于RoyTools”，选择对应模块。
+## 快捷控制与设置
 
-## 问题反馈
+|入口|可以做什么|
+|---|---|
+|桌面4×2小组件|查看当前节点及当天经过代理的Wi-Fi和移动数据用量，切换代理模式和刷新率，查看曲目并控制播放。|
+|控制中心与桌面长按菜单|切换代理或自适应刷新率。在“设置→快捷控制”可查看控制中心按钮和桌面小组件的添加方法。|
+|通知栏|在刷新率通知中切换四个档位，在下载通知中查看进度。无线调试配对使用独立的高优先级通知。|
+|设置→主题、后台运行设置|选择跟随系统、浅色或深色主题，调整后台保活、桌面图标和最近任务的显示方式。|
+|设置→应用更新|手动检查新版本，或开启每小时检查。下载时可查看速度、取消或转入后台，完成后按系统提示安装。|
+|设置→关于RoyTools|按音乐、代理、刷新率和应用查看或导出日志，也可以清空全部日志。|
 
-使用中遇到问题，可在[Issues](https://github.com/Roylyl/RoyTools/issues)说明应用版本、Android版本和复现步骤。需要附日志时，先检查并移除订阅地址、节点密码、令牌等私人信息。
+如需反馈问题，请附上RoyTools版本、Android版本和复现步骤。分享日志前请隐去订阅链接、节点凭据等私人信息。[提交问题](https://github.com/Roylyl/RoyTools/issues)
 
-<details>
-<summary>源码与开发</summary>
+## 项目来源与许可
 
-需要自行构建或参与开发时，请阅读[构建文档](docs/BUILDING.md)和[贡献说明](CONTRIBUTING.md)。工程使用JDK21、Android SDK35与Gradle Wrapper，发行签名及原生核心重建步骤在构建文档中说明。
+|来源|用途|
+|---|---|
+|Clash-Meta-Plus、[ClashMetaForAndroid](https://github.com/MetaCubeX/ClashMetaForAndroid)、[mihomo](https://github.com/MetaCubeX/mihomo)|Android代理界面、VPN服务、配置管理与代理核心。|
+|[Adaptive-Hz](https://github.com/mahmutaunal/Adaptive-Hz)、[Shizuku](https://github.com/RikkaApps/Shizuku)、[Shizuku-API](https://github.com/RikkaApps/Shizuku-API)|自适应刷新率、内置权限服务与无线配对。|
+|[Roylyl Music网页](https://github.com/Roylyl/roylyl.github.io/tree/main/music)、[Roylyl/Music](https://github.com/Roylyl/Music)|播放器与曲库交互的来源，以及网页和应用共用的音乐目录。|
+|[ASRtestII](https://github.com/Roylyl/ASRtestII)|配色、页面布局和控件设计参考。|
 
-</details>
+RoyTools整体以[GNU GPLv3](LICENSE)分发。各上游组件保留原作者的版权和许可。歌曲、歌词与专辑封面的使用和分发遵循各自的权利条件。详见[上游来源](docs/UPSTREAM.md)、[第三方许可与媒体说明](THIRD_PARTY.md)和[版权声明](NOTICE)。
 
-## 上游与设计参考
-
-RoyTools整合并修改了下列项目，保留原作者、贡献者的版权与许可声明：
-
-|项目|在RoyTools中的用途|许可证|
-|---|---|---|
-|Clash-Meta-Plus本地分支、[ClashMetaForAndroid](https://github.com/MetaCubeX/ClashMetaForAndroid)|代理Android工程、VPN、配置与设置基础|GPLv3|
-|[mihomo](https://github.com/MetaCubeX/mihomo)|代理核心及修改后的当日代理用量统计|GPLv3|
-|[Adaptive-Hz](https://github.com/mahmutaunal/Adaptive-Hz)|刷新率控制引擎与辅助服务|MIT|
-|[Shizuku](https://github.com/RikkaApps/Shizuku)、[Shizuku-API](https://github.com/RikkaApps/Shizuku-API)|内置权限服务、无线配对及接口|Apache-2.0、MIT|
-|[Roylyl Music网页](https://github.com/Roylyl/roylyl.github.io/tree/main/music)|音乐播放器、筛选、缓存和歌单交互|GPLv3代码|
-|[ASRtestII](https://github.com/Roylyl/ASRtestII)|配色、页面布局与控件设计参考|Apache-2.0|
-
-详细来源、修改范围、原始许可副本和第三方组件说明见[UPSTREAM.md](docs/UPSTREAM.md)、[THIRD_PARTY.md](THIRD_PARTY.md)与[NOTICE](NOTICE)。本项目是独立衍生应用，上游项目名称用于说明来源。
-
-## 许可与资源
-
-RoyTools整体以[GNU GPLv3第3版](LICENSE)分发，既有第三方代码保留各自许可。分发修改后的APK时，应同时提供与该版本匹配的完整对应源码及构建材料。
-
-音乐播放器代码与歌曲、歌词、封面等内容分别适用各自权利条件。音乐仓库或网页代码的开源许可，不自动授予第三方媒体的再分发权；媒体来源和现有权利标记见[第三方说明](THIRD_PARTY.md#音乐网页音源仓库与媒体内容)。
-
-应用不附带代理订阅、节点凭据或签名私钥。运行时导入的配置、下载缓存和日志保存在用户设备中；公开源码不包含维护者的手机导出、个人代理配置或本机开发记录。
+开发与贡献请参阅[构建文档](docs/BUILDING.md)、[贡献指南](CONTRIBUTING.md)和[修改记录](CHANGELOG.md)。

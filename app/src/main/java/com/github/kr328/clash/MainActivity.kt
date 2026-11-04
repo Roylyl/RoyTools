@@ -33,6 +33,13 @@ import com.github.kr328.clash.util.ApplicationObserver
 import com.github.kr328.clash.util.applyRecentTaskVisibility
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import com.github.kr328.clash.common.log.Log
 import java.util.concurrent.TimeUnit
 import com.github.kr328.clash.design.R as DesignR
 import com.github.kr328.clash.design.MainDesign.Companion.TAB_MUSIC
@@ -50,20 +57,18 @@ class MainActivity : BaseActivity<MainDesign>() {
     private var selectedTab = 0
     private var settingsPage = SettingsPage.Home
     private var snapshotJob: Job? = null
+    private var trafficJob: Job? = null
+    private var proxyActionJob: Job? = null
+    private var proxyModeJob: Job? = null
+    private val proxyModeLock = Mutex()
+    private var trafficReadFailed = false
     private var musicPanel: MusicPanel? = null
-    private var musicDepth = 0
-    private var musicPageKey: String? = null
-    private var musicTitle: String? = null
-    private var musicHomeReturnAnimated = false
     private var refreshPanel: com.mahmutalperenunal.adaptivehz.RefreshPanel? = null
 
     private fun selectTabHome(tab: Int) {
         val reselectingMusic = selectedTab == TAB_MUSIC && tab == TAB_MUSIC && musicPanel != null
         val returning = (selectedTab == TAB_SETTINGS && settingsPage != SettingsPage.Home) ||
             (selectedTab == TAB_MUSIC && musicPanel?.isSecondary == true)
-        val musicHandlesReturn = selectedTab == TAB_MUSIC && tab == TAB_MUSIC && musicPanel?.isSecondary == true
-        // A cross-module return already animates below; goHome's later bridge callback must not repeat it.
-        if (tab == TAB_MUSIC) musicHomeReturnAnimated = returning && !musicHandlesReturn
         when (tab) {
             TAB_MUSIC -> musicPanel?.goHome()
             TAB_PROXY -> design?.resetProxyScroll()
@@ -74,7 +79,7 @@ class MainActivity : BaseActivity<MainDesign>() {
         // restarts layout/theme sync and visibly flashes an already open home page.
         if (reselectingMusic) return
         selectTab(tab)
-        if (returning && !musicHandlesReturn) design?.animateReturnToHome()
+        if (returning && tab != TAB_MUSIC) design?.animateReturnToHome()
     }
 
     private fun selectTab(tab: Int) {
@@ -87,20 +92,9 @@ class MainActivity : BaseActivity<MainDesign>() {
                 val panel = musicPanel ?: MusicPanel(this).also { created ->
                     musicPanel = created
                     created.onNavigationChanged = { title, depth ->
-                        val pageKey = created.navigationPageKey
-                        val pageChanged = if (pageKey != null) pageKey != musicPageKey else title != musicTitle
                         if (selectedTab == TAB_MUSIC) {
                             current.headerTitle(if (depth > 0) title ?: "音乐" else null)
-                            // The first callback runs before showMusic; overlays keep pageKey/depth stable.
-                            if (created.started && !musicHomeReturnAnimated &&
-                                (depth != musicDepth || depth > 0 && pageChanged)) {
-                                if (depth < musicDepth) current.animateReturnToHome() else current.animateOpenPage()
-                            }
                         }
-                        musicDepth = depth
-                        musicPageKey = pageKey
-                        musicTitle = title
-                        if (depth == 0) musicHomeReturnAnimated = false
                     }
                 }
                 current.showMusic(panel.view)
@@ -116,7 +110,7 @@ class MainActivity : BaseActivity<MainDesign>() {
             }
             TAB_SETTINGS -> showSettingsPage(settingsPage)
         }
-        if (tab == TAB_PROXY && clashRunning) launch { current.fetchTraffic() }
+        if (tab == TAB_PROXY && clashRunning) readProxyTraffic(current)
     }
 
     private fun showSettingsPage(page: SettingsPage) {
@@ -231,7 +225,84 @@ class MainActivity : BaseActivity<MainDesign>() {
 
     private fun readProxyStatus(current: MainDesign) {
         snapshotJob?.cancel()
-        snapshotJob = launch { current.fetch() }
+        snapshotJob = launch {
+            try {
+                withTimeout(10_000L) { current.fetch() }
+            } catch (error: TimeoutCancellationException) {
+                Log.w("读取代理状态超时")
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Log.w("读取代理状态失败", error)
+            }
+        }
+    }
+
+    private fun readProxyTraffic(current: MainDesign) {
+        if (trafficJob?.isActive == true) return
+        trafficJob = launch {
+            try {
+                withTimeout(5_000L) { current.fetchTraffic() }
+                trafficReadFailed = false
+            } catch (error: TimeoutCancellationException) {
+                if (!trafficReadFailed) Log.w("读取代理流量超时")
+                trafficReadFailed = true
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                if (!trafficReadFailed) Log.w("读取代理流量失败", error)
+                trafficReadFailed = true
+            }
+        }
+    }
+
+    private fun toggleProxy(current: MainDesign) {
+        if (proxyActionJob?.isActive == true) return
+        proxyActionJob = launch {
+            try {
+                if (clashRunning) stopClashService() else current.startClash()
+            } catch (error: TimeoutCancellationException) {
+                current.showToast("代理服务连接超时，请重试", ToastDuration.Long)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Log.w("切换代理失败", error)
+                current.showExceptionToast(error)
+            } finally {
+                if (currentCoroutineContext().isActive) readProxyStatus(current)
+            }
+        }
+    }
+
+    private fun changeProxyMode(current: MainDesign, request: MainDesign.Request) {
+        proxyModeJob?.cancel()
+        proxyModeJob = launch {
+            try {
+                proxyModeLock.withLock {
+                    withTimeout(10_000L) {
+                        withClash {
+                            val override = queryOverride(Clash.OverrideSlot.Session)
+                            override.mode = when (request) {
+                                MainDesign.Request.ModeRule -> TunnelState.Mode.Rule
+                                MainDesign.Request.ModeGlobal -> TunnelState.Mode.Global
+                                MainDesign.Request.ModeDirect -> TunnelState.Mode.Direct
+                                else -> null
+                            }
+                            patchOverride(Clash.OverrideSlot.Session, override)
+                        }
+                    }
+                }
+            } catch (error: TimeoutCancellationException) {
+                current.showToast("代理模式切换超时，请重试", ToastDuration.Long)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Log.w("切换代理模式失败", error)
+                current.showExceptionToast(error)
+            } finally {
+                if (currentCoroutineContext().isActive) readProxyStatus(current)
+            }
+        }
     }
     override fun onStop() {
         musicPanel?.onStop()
@@ -256,6 +327,7 @@ class MainActivity : BaseActivity<MainDesign>() {
         readProxyStatus(design)
 
         val ticker = ticker(TimeUnit.SECONDS.toMillis(1))
+        Log.d("主页操作队列已就绪")
 
         while (isActive) {
             select<Unit> {
@@ -269,13 +341,9 @@ class MainActivity : BaseActivity<MainDesign>() {
                     }
                 }
                 design.requests.onReceive {
+                    Log.d("主页处理操作：$it")
                     when (it) {
-                        MainDesign.Request.ToggleStatus -> {
-                            if (clashRunning)
-                                stopClashService()
-                            else
-                                design.startClash()
-                        }
+                        MainDesign.Request.ToggleStatus -> toggleProxy(design)
                         MainDesign.Request.OpenLanSharing ->
                             startActivity(OverrideSettingsActivity::class.intent.putExtra(
                                 OverrideSettingsActivity.EXTRA_LAN_ONLY, true
@@ -287,23 +355,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                         MainDesign.Request.ModeDefault,
                         MainDesign.Request.ModeRule,
                         MainDesign.Request.ModeGlobal,
-                        MainDesign.Request.ModeDirect -> {
-                            try {
-                                withClash {
-                                    val override = queryOverride(Clash.OverrideSlot.Session)
-                                    override.mode = when (it) {
-                                        MainDesign.Request.ModeRule -> TunnelState.Mode.Rule
-                                        MainDesign.Request.ModeGlobal -> TunnelState.Mode.Global
-                                        MainDesign.Request.ModeDirect -> TunnelState.Mode.Direct
-                                        else -> null
-                                    }
-                                    patchOverride(Clash.OverrideSlot.Session, override)
-                                }
-                            } catch (e: Exception) {
-                                design.showExceptionToast(e)
-                            }
-                            design.fetch()
-                        }
+                        MainDesign.Request.ModeDirect -> changeProxyMode(design, it)
                         MainDesign.Request.OpenAppSettings -> startActivity(AppSettingsActivity::class.intent)
                         MainDesign.Request.OpenNetworkSettings -> startActivity(NetworkSettingsActivity::class.intent)
                         MainDesign.Request.OpenOverrideSettings -> startActivity(OverrideSettingsActivity::class.intent)
@@ -314,7 +366,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                 }
                 if (clashRunning && activityStarted && selectedTab == TAB_PROXY) {
                     ticker.onReceive {
-                        design.fetchTraffic()
+                        readProxyTraffic(design)
                     }
                 }
             }
@@ -375,7 +427,7 @@ class MainActivity : BaseActivity<MainDesign>() {
     }
 
     private suspend fun MainDesign.startClash() {
-        val active = withProfile { queryActive() }
+        val active = withTimeout(10_000L) { withProfile { queryActive() } }
 
         if (active == null || !active.imported) {
             showActionDialog(getString(DesignR.string.no_profile_selected), DesignR.string.profiles) {

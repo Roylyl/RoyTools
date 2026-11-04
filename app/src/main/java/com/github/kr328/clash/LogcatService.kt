@@ -13,6 +13,7 @@ import com.github.kr328.clash.common.compat.getColorCompat
 import com.github.kr328.clash.common.compat.pendingIntentFlags
 import com.github.kr328.clash.common.compat.startForegroundCompat
 import com.github.kr328.clash.common.util.intent
+import com.github.kr328.clash.common.util.NotificationGroups
 import com.github.kr328.clash.core.model.LogMessage
 import com.github.kr328.clash.log.LogcatCache
 import com.github.kr328.clash.log.UnifiedLogs
@@ -38,6 +39,7 @@ class LogcatService : Service(), CoroutineScope by CoroutineScope(Dispatchers.De
         cancel()
 
         stopForeground(true)
+        NotificationGroups.refresh(this, NotificationGroups.RUNTIME)
 
         running = false
 
@@ -78,6 +80,8 @@ class LogcatService : Service(), CoroutineScope by CoroutineScope(Dispatchers.De
     private fun showNotification() {
         val notification = NotificationCompat
             .Builder(this, CHANNEL_ID)
+            .setGroup(NotificationGroups.RUNTIME)
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
             .setSmallIcon(com.github.kr328.clash.service.R.drawable.ic_logo_service)
             .setColor(getColorCompat(com.github.kr328.clash.design.R.color.color_clash_light))
             .setContentTitle(getString(com.github.kr328.clash.design.R.string.clash_logcat))
@@ -94,6 +98,7 @@ class LogcatService : Service(), CoroutineScope by CoroutineScope(Dispatchers.De
             .build()
 
         startForegroundCompat(R.id.nf_logcat_status, notification)
+        NotificationGroups.refresh(this, NotificationGroups.RUNTIME)
     }
 
     companion object {

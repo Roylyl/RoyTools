@@ -11,6 +11,7 @@ import com.github.kr328.clash.common.compat.getColorCompat
 import com.github.kr328.clash.common.compat.pendingIntentFlags
 import com.github.kr328.clash.common.constants.Components
 import com.github.kr328.clash.common.constants.Intents
+import com.github.kr328.clash.common.util.NotificationGroups
 import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.core.util.trafficDownload
 import com.github.kr328.clash.core.util.trafficDownloadRate
@@ -29,6 +30,8 @@ import java.util.concurrent.TimeUnit
 
 class DynamicNotificationModule(service: Service) : Module<Unit>(service) {
     private val builder = NotificationCompat.Builder(service, StaticNotificationModule.CHANNEL_ID)
+        .setGroup(NotificationGroups.RUNTIME)
+        .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
         .setSmallIcon(R.drawable.ic_logo_service)
         .setOngoing(true)
         .setColor(service.getColorCompat(R.color.color_clash))
@@ -48,10 +51,12 @@ class DynamicNotificationModule(service: Service) : Module<Unit>(service) {
 
     private val notificationManager = NotificationManagerCompat.from(service)
     private val store = ServiceStore(service)
+    private var lastSummaryTitle: String? = null
 
     private fun update(showTraffic: Boolean) {
         val profile = StatusProvider.currentProfile
-        builder.setContentTitle(profile?.let { "代理运行中·$it" } ?: "代理正在加载")
+        val title = profile?.let { "代理运行中·$it" } ?: "代理正在加载"
+        builder.setContentTitle(title)
         if (showTraffic) {
             val now = Clash.queryTrafficNow()
             val total = Clash.queryTrafficTotal()
@@ -71,6 +76,10 @@ class DynamicNotificationModule(service: Service) : Module<Unit>(service) {
             builder.setContentText("代理服务运行中").setStyle(null)
         }
         notificationManager.notify(R.id.nf_clash_status, builder.build())
+        if (lastSummaryTitle != title) {
+            lastSummaryTitle = title
+            NotificationGroups.refresh(service, NotificationGroups.RUNTIME)
+        }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

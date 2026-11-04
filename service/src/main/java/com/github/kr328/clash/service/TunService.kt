@@ -11,6 +11,7 @@ import android.os.Build
 import com.github.kr328.clash.common.compat.pendingIntentFlags
 import com.github.kr328.clash.common.constants.Components
 import com.github.kr328.clash.common.log.Log
+import com.github.kr328.clash.common.util.NotificationGroups
 import com.github.kr328.clash.service.clash.RuntimeSession
 import com.github.kr328.clash.service.clash.clashRuntime
 import com.github.kr328.clash.service.clash.module.*
@@ -170,6 +171,7 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
         val completed = session.finish() ?: return
         StatusProvider.serviceRunning = false
         stopForeground(true)
+        NotificationGroups.refresh(this, NotificationGroups.RUNTIME)
         sendClashStopped(reason)
         Log.i("TunService runtime stopped: ${reason ?: "successfully"}")
 

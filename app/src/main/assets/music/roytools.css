@@ -66,7 +66,7 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--blue); }
 .image-placeholder button { background:var(--soft)!important;color:var(--blue)!important;border:0!important;border-radius:var(--control-radius); }
 .player .now-title-line strong { color:var(--text); }
 .timeline,.full-timeline { color:var(--muted);font-family:inherit;font-size:11px; }
-.queue-panel,.full-queue,.track-more-menu,#settings-dialog,#sleep-dialog,.music-region-notice {
+.queue-panel,.full-queue,.track-more-menu,#settings-dialog,#sleep-dialog {
   color:var(--text)!important;background:var(--panel)!important;border:1px solid var(--line)!important;
   border-radius:var(--dialog-radius)!important;box-shadow:0 8px 32px #00000016!important;backdrop-filter:none!important;
 }
@@ -109,8 +109,6 @@ dialog::backdrop { background:#00000040!important;backdrop-filter:none!important
 .lyric-group.active,.lyric-group.active .lyric-line,.lyric-group.is-active,.lyric-group.is-active .lyric-line { color:var(--blue)!important; }
 .full-queue { top:12px;z-index:8!important; }
 #feedback-stack>* { color:var(--text)!important;background:var(--panel)!important;border-color:var(--line)!important;border-radius:var(--control-radius)!important;box-shadow:0 4px 20px #00000016!important; }
-.music-region-notice h2 { font-size:20px; }
-.music-region-notice .music-region-kicker { display:none; }
 /* NativeHeader owns page titles and the upper-left back control. */
 html.native-embedded #back-albums,html.native-embedded .full-header,
 html.native-embedded .settings-head { display:none!important; }
@@ -178,15 +176,22 @@ body:not(.has-current-track) main { padding-bottom:20px!important; }
 }
 @media(prefers-reduced-motion:reduce) { .player .now { transition:none!important; } }
 
+/* Android owns the floating player; only the scrolling content moves between pages. */
+html.native-embedded { --player-height:64px!important; }
+html.native-embedded .player { display:none!important; }
+html.native-embedded body.has-current-track main { padding-bottom:90px!important; }
+html.native-embedded body:not(.has-current-track) main { padding-bottom:16px!important; }
+html.native-embedded .queue-panel { bottom:12px!important; }
+
 /* Match the native action buttons: 40px visible capsule inside a 48px touch target. */
-button.primary,button.secondary,button.back,button.quality,#feedback-stack button,.music-region-notice button {
+button.primary,button.secondary,button.back,button.quality,#feedback-stack button {
   display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;
   min-width:64px;min-height:48px!important;padding:8px 16px!important;font-size:14px!important;line-height:20px;
   border-top:4px solid transparent!important;border-bottom:4px solid transparent!important;
   border-left:0!important;border-right:0!important;border-radius:999px!important;
   background:var(--action-blue)!important;background-clip:padding-box!important;color:#fff!important;box-shadow:none!important;
 }
-button.primary:active,button.secondary:active,button.back:active,button.quality:active,#feedback-stack button:active,.music-region-notice button:active { background-color:#0069d9!important; }
+button.primary:active,button.secondary:active,button.back:active,button.quality:active,#feedback-stack button:active { background-color:#0069d9!important; }
 .album-card .open-album { background:var(--action-blue)!important;color:#fff!important;box-shadow:none!important; }
 
 /* Visible selectors use themed native dialogs; hidden selects keep filtering and sort state. */

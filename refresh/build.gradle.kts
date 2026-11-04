@@ -3,7 +3,7 @@ plugins {
     id("com.android.library")
     id("dev.rikka.tools.refine") version "4.4.0"
 }
-val royToolsVersion = providers.gradleProperty("roytoolsVersion").getOrElse("1.1.0")
+val royToolsVersion = providers.gradleProperty("roytoolsVersion").getOrElse("1.1.1")
 val royToolsParts = royToolsVersion.split('.').map { it.toInt() }
 val royToolsCode = royToolsParts[0] * 1_000_000 + royToolsParts[1] * 1000 + royToolsParts[2]
 android {

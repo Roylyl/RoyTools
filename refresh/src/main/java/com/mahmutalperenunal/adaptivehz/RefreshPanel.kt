@@ -275,7 +275,8 @@ class RefreshPanel(private val activity: Activity) : android.content.ContextWrap
             val intent = Intent().setClassName("com.android.settings",
                 "com.android.settings.Settings\$WirelessDebuggingActivity")
             runCatching { startActivity(intent) }.onFailure {
-                startActivity(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS))
+                startActivity(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
+                    .putExtra(":settings:fragment_args_key", "toggle_adb_wireless"))
             }
         }
     }

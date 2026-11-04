@@ -14,6 +14,7 @@ import com.github.kr328.clash.common.constants.Components
 import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.id.UndefinedIds
 import com.github.kr328.clash.common.util.setUUID
+import com.github.kr328.clash.common.util.NotificationGroups
 import com.github.kr328.clash.common.util.uuid
 import com.github.kr328.clash.service.data.ImportedDao
 import com.github.kr328.clash.service.util.sendProfileUpdateCompleted
@@ -48,6 +49,7 @@ class ProfileWorker : BaseService() {
 
     override fun onDestroy() {
         stopForeground(true)
+        NotificationGroups.refresh(this, NotificationGroups.RUNTIME)
 
         super.onDestroy()
     }
@@ -116,6 +118,8 @@ class ProfileWorker : BaseService() {
 
     private fun foreground() {
         val notification = NotificationCompat.Builder(this, SERVICE_CHANNEL)
+            .setGroup(NotificationGroups.RUNTIME)
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
             .setContentTitle(getString(R.string.profile_updater))
             .setContentText(getString(R.string.running))
             .setColor(getColorCompat(R.color.color_clash))
@@ -125,6 +129,7 @@ class ProfileWorker : BaseService() {
             .build()
 
         startForegroundCompat(R.id.nf_profile_worker, notification)
+        NotificationGroups.refresh(this, NotificationGroups.RUNTIME)
     }
 
     private suspend inline fun processing(name: String, block: () -> Unit) {
@@ -137,17 +142,20 @@ class ProfileWorker : BaseService() {
             .setSmallIcon(R.drawable.ic_logo_service)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setGroup(STATUS_CHANNEL)
+            .setGroup(NotificationGroups.RUNTIME)
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
             .build()
 
         NotificationManagerCompat.from(applicationContext)
             .notify(id, notification)
+        NotificationGroups.refresh(this, NotificationGroups.RUNTIME)
         try {
             block()
         } finally {
             withContext(NonCancellable) {
                 NotificationManagerCompat.from(applicationContext)
                     .cancel(id)
+                NotificationGroups.refresh(this@ProfileWorker, NotificationGroups.RUNTIME)
             }
         }
     }

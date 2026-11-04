@@ -122,14 +122,38 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
 
         launch {
             try {
-                defer()
-            } finally {
-                withContext(NonCancellable) {
-                    super.finish()
-                    overridePendingTransition(R.anim.roytools_pop_in, R.anim.roytools_pop_out)
-                }
+                // A disconnected service or a missing stop broadcast must not
+                // trap navigation behind an unfinished save/cleanup operation.
+                withTimeout(10_000L) { defer() }
+                finishAfterDeferredOperation()
+            } catch (error: TimeoutCancellationException) {
+                deferRunning = false
+                showDeferredExitFailure()
+            } catch (error: CancellationException) {
+                deferRunning = false
+                throw error
+            } catch (error: Exception) {
+                deferRunning = false
+                com.github.kr328.clash.common.log.Log.w("退出前的保存或清理失败", error)
+                showDeferredExitFailure()
             }
         }
+    }
+
+    private fun finishAfterDeferredOperation() {
+        super.finish()
+        overridePendingTransition(R.anim.roytools_pop_in, R.anim.roytools_pop_out)
+    }
+
+    private fun showDeferredExitFailure() {
+        if (isFinishing || isDestroyed) return
+        com.github.kr328.clash.design.dialog.RoyToolsDialogBuilder(this)
+            .setTitle("退出前操作未完成")
+            .setMessage("保存或清理暂时未能完成，当前页面和输入已保留。可以重试；放弃并返回可能丢失尚未保存的更改。")
+            .setNegativeButton("留在此页", null)
+            .setNeutralButton("放弃并返回") { _, _ -> finishAfterDeferredOperation() }
+            .setPositiveButton("重试") { _, _ -> finish() }
+            .show()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

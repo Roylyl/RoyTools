@@ -17,8 +17,21 @@ plugins {
     id("com.android.application")
 }
 
+android {
+    packaging {
+        jniLibs {
+            // Preserve every native feature while compressing libraries in the APK.
+            // Android extracts them at install time for normal System.loadLibrary calls.
+            useLegacyPackaging = true
+        }
+    }
+}
+
 dependencies {
     compileOnly(project(":hideapi"))
+    // The embedded Shizuku server uses Android system APIs supplied by the device.
+    // Make their stubs visible to the final shrinker without bundling system classes.
+    compileOnly("dev.rikka.hidden:stub:4.4.0")
 
     implementation(project(":refresh"))
     implementation(project(":core"))

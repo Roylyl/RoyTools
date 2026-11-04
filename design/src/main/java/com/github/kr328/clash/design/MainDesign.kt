@@ -39,6 +39,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     private val binding = DesignMainBinding.inflate(context.layoutInflater, context.root, false)
     private val shell = LinearLayout(context)
     private val pageHost = FrameLayout(context)
+    private var musicView: View? = null
     private val subtitle = TextView(context)
     private val titleView = TextView(context)
     private val backButton = ImageButton(context)
@@ -146,9 +147,23 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     }
 
     private fun showPage(view: View, selected: Int) {
-        pageHost.removeAllViews()
-        (view.parent as? ViewGroup)?.removeView(view)
-        pageHost.addView(view, FrameLayout.LayoutParams(-1, -1))
+        pageHost.clearAnimation()
+        // Keep Chromium attached to its Window across module changes. Detaching
+        // the retained music page discards its compositor surface and flashes
+        // a blank frame on every return, even though the document stays loaded.
+        for (index in pageHost.childCount - 1 downTo 0) {
+            val child = pageHost.getChildAt(index)
+            if (child === view) continue
+            child.clearAnimation()
+            if (child === musicView) child.visibility = View.INVISIBLE
+            else pageHost.removeViewAt(index)
+        }
+        if (view.parent !== pageHost) {
+            (view.parent as? ViewGroup)?.removeView(view)
+            pageHost.addView(view, FrameLayout.LayoutParams(-1, -1))
+        }
+        view.visibility = View.VISIBLE
+        view.bringToFront()
         subtitle.text = listOf("音乐", "代理", "刷新率", "设置")[selected]
         headerTitle(null)
         tabLabels.indices.forEach { index ->
@@ -159,7 +174,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
     }
 
-    fun showMusic(view: View) = showPage(view, TAB_MUSIC)
+    fun showMusic(view: View) {
+        if (musicView !== view) musicView?.let(pageHost::removeView)
+        musicView = view
+        showPage(view, TAB_MUSIC)
+    }
     fun showProxy() = showPage(binding.root, TAB_PROXY)
     fun resetProxyScroll() { (binding.root as? ScrollView)?.scrollTo(0, 0) }
     fun animateReturnToHome() {
@@ -171,7 +190,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         pageHost.startAnimation(AnimationUtils.loadAnimation(context, R.anim.roytools_push_in))
     }
     fun showRefresh(view: View) = showPage(view, TAB_REFRESH)
-    fun request(request: Request) { requests.trySend(request) }
+    fun request(request: Request) {
+        val sent = requests.trySend(request)
+        com.github.kr328.clash.common.log.Log.d("主页收到点击：$request，入队=${sent.isSuccess}")
+    }
 
     suspend fun setProfileName(name: String?) = withContext(Dispatchers.Main) { binding.profileName = name }
     suspend fun setClashRunning(running: Boolean) = withContext(Dispatchers.Main) {

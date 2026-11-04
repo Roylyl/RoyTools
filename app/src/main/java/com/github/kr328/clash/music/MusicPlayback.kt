@@ -210,5 +210,5 @@ object MusicPlayback {
         if (Looper.myLooper() == Looper.getMainLooper()) block() else main.post(block)
     }
 
-    private val commands = setOf("play", "pause", "toggle", "next", "previous", "seek", "openPlayer", "sync")
+    private val commands = setOf("play", "pause", "toggle", "next", "previous", "seek", "openPlayer", "openQueue", "sync")
 }

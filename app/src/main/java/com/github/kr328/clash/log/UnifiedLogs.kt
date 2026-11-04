@@ -40,6 +40,12 @@ object UnifiedLogs {
     @Volatile private var storage: UnifiedLogStorage? = null
     @Volatile private var app: Context? = null
     private var bound = false
+    private var reconnectAttempts = 0
+    private var connectedBinder: IBinder? = null
+    private val reconnect = Runnable { bindProxy() }
+    private val stableConnection = Runnable {
+        if (bound && connectedBinder?.isBinderAlive == true) reconnectAttempts = 0
+    }
 
     /** Main process only. Binding the controller does not start VPN/tunnel or another FGS. */
     fun start(context: Context) {
@@ -175,6 +181,11 @@ object UnifiedLogs {
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder) {
+            connectedBinder = binder
+            main.removeCallbacks(reconnect)
+            main.removeCallbacks(stableConnection)
+            // An immediate connect/death cycle must not reset the retry budget.
+            main.postDelayed(stableConnection, 60_000L)
             scope.launch {
                 try {
                     binder.unwrap(IRemoteService::class).clash().setLogObserver(object : ILogObserver {
@@ -189,27 +200,50 @@ object UnifiedLogs {
             }
         }
         override fun onServiceDisconnected(name: ComponentName?) {
+            connectedBinder = null
+            main.removeCallbacks(stableConnection)
             app?.let { append(it, Module.App, "代理日志连接中断，等待系统重连", LogMessage.Level.Warning) }
         }
         override fun onBindingDied(name: ComponentName?) {
             val context = app ?: return
             if (bound) runCatching { context.unbindService(this) }
             bound = false
-            main.post { bindProxy() }
+            connectedBinder = null
+            main.removeCallbacks(stableConnection)
+            scheduleProxyReconnect()
         }
         override fun onNullBinding(name: ComponentName?) {
             val context = app ?: return
             if (bound) runCatching { context.unbindService(this) }
             bound = false
+            connectedBinder = null
+            main.removeCallbacks(stableConnection)
+            scheduleProxyReconnect()
         }
+    }
+
+    private fun scheduleProxyReconnect() {
+        if (main.hasCallbacks(reconnect)) return
+        val context = app ?: return
+        if (reconnectAttempts >= 2) {
+            append(context, Module.App, "代理日志连接重试已暂停，避免反复启动异常服务", LogMessage.Level.Warning)
+            return
+        }
+        val delay = if (reconnectAttempts++ == 0) 5_000L else 30_000L
+        main.postDelayed(reconnect, delay)
     }
 
     private fun bindProxy() {
         val context = app ?: return
         if (bound) return
-        try { bound = context.bindService(Intent(context, RemoteService::class.java), connection, Context.BIND_AUTO_CREATE) }
+        try {
+            bound = context.bindService(Intent(context, RemoteService::class.java), connection, Context.BIND_AUTO_CREATE)
+            if (!bound) scheduleProxyReconnect()
+        }
         catch (failure: RuntimeException) {
+            bound = false
             append(context, Module.App, "代理日志采集不可用：${failure.message}", LogMessage.Level.Warning)
+            scheduleProxyReconnect()
         }
     }
 }

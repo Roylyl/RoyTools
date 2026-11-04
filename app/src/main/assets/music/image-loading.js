@@ -1,5 +1,21 @@
 (() => {
   const records = new Map();
+  const pendingPlacement = new Set();
+  let placementFrame = null;
+  function placePending() {
+    placementFrame = null;
+    const active = [...pendingPlacement].map(img => records.get(img)).filter(record => record && record.img.isConnected && !record.overlay.hidden);
+    pendingPlacement.clear();
+    // Finish style reads before changing hosts, then measure every image before writing overlays.
+    const staticHosts = new Set(active.map(record => record.host).filter(host => getComputedStyle(host).position === 'static'));
+    staticHosts.forEach(host => host.classList.add('image-loading-host'));
+    const positions = active.map(record => [record, record.measure()]);
+    positions.forEach(([record, position]) => Object.assign(record.overlay.style, position));
+  }
+  function queuePlacement(img) {
+    pendingPlacement.add(img);
+    if (placementFrame === null) placementFrame = requestAnimationFrame(placePending);
+  }
   const labels = () => document.documentElement.lang === 'en'
     ? { retry: 'Retry image', failed: 'Image unavailable · tap to retry' }
     : document.documentElement.lang === 'zh-TW'
@@ -8,22 +24,30 @@
   const visibility = new IntersectionObserver(entries => entries.forEach(({ target, isIntersecting }) => {
     records.get(target)?.overlay.toggleAttribute('data-visible', isIntersecting && !document.hidden);
   }));
+  const sizing = new ResizeObserver(entries => entries.forEach(({target}) => records.get(target)?.place()));
+  function release(img) {
+    if (img.isConnected) return;
+    const record = records.get(img);
+    if (!record) return;
+    records.delete(img);pendingPlacement.delete(img);
+    visibility.unobserve(img);sizing.unobserve(img);record.dispose();
+  }
   function setup(img) {
-    if (records.has(img)) return;
+    if (!img.isConnected || records.has(img)) return;
     const host = img.parentElement;
     if (!host) return;
     const overlay = document.createElement('span');
     overlay.className = 'image-placeholder';
     overlay.hidden = true;
     overlay.setAttribute('aria-hidden', 'true');
-    if (getComputedStyle(host).position === 'static') host.classList.add('image-loading-host');
     host.append(overlay);
     const interactive = img.closest('button,a');
     let generation = 0;
-    const place = () => {
+    const place = () => queuePlacement(img);
+    const measure = () => {
       const a = img.getBoundingClientRect(), b = host.getBoundingClientRect();
       const sx = b.width / (host.offsetWidth || b.width || 1), sy = b.height / (host.offsetHeight || b.height || 1);
-      Object.assign(overlay.style, { left: `${(a.left-b.left)/sx-host.clientLeft+host.scrollLeft}px`, top: `${(a.top-b.top)/sy-host.clientTop+host.scrollTop}px`, width: `${a.width/sx}px`, height: `${a.height/sy}px` });
+      return { left: `${(a.left-b.left)/sx-host.clientLeft+host.scrollLeft}px`, top: `${(a.top-b.top)/sy-host.clientTop+host.scrollTop}px`, width: `${a.width/sx}px`, height: `${a.height/sy}px` };
     };
     const retry = () => {
       start();
@@ -62,24 +86,38 @@
       const orbit = document.createElement('span'); orbit.className = 'image-placeholder-orbit'; overlay.replaceChildren(orbit); place();
       if (img.complete && !img.naturalWidth) failed();
     }
-    if (interactive) interactive.addEventListener('click', event => {
+    const retryClick = event => {
       if (img.dataset.imageState !== 'error') return;
       event.preventDefault(); event.stopImmediatePropagation(); retry();
-    }, true);
-    records.set(img, { overlay, place, start, failed });
+    };
+    if (interactive) interactive.addEventListener('click', retryClick, true);
+    records.set(img, { img, host, overlay, place, measure, start, failed, dispose() {
+      generation++;
+      img.removeEventListener('load', loaded);img.removeEventListener('error', failed);
+      interactive?.removeEventListener('click', retryClick, true);overlay.remove();
+    } });
     img.addEventListener('load', loaded); img.addEventListener('error', failed);
-    new ResizeObserver(place).observe(img);
+    sizing.observe(img);
     visibility.observe(img); start();
   }
   document.querySelectorAll('img').forEach(setup);
-  new MutationObserver(changes => changes.forEach(change => {
-    if (change.type === 'attributes') records.get(change.target)?.start();
-    else change.addedNodes.forEach(node => {
-      if (node.nodeType !== 1) return;
-      if (node.matches('img')) setup(node);
-      node.querySelectorAll('img').forEach(setup);
-    });
-  })).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['src', 'srcset'] });
+  new MutationObserver(changes => {
+    const restart = new Set();
+    for (const change of changes) {
+      if (change.type === 'attributes') { restart.add(change.target);continue; }
+      for (const node of change.removedNodes) {
+        if (node.nodeType !== 1) continue;
+        if (node.matches('img')) release(node);
+        node.querySelectorAll('img').forEach(release);
+      }
+      for (const node of change.addedNodes) {
+        if (node.nodeType !== 1) continue;
+        if (node.matches('img')) setup(node);
+        node.querySelectorAll('img').forEach(setup);
+      }
+    }
+    restart.forEach(img => records.get(img)?.start());
+  }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['src', 'srcset'] });
   window.addEventListener('resize', () => records.forEach(record => record.place()));
   window.addEventListener('site-language-change', () => records.forEach((record, img) => { if (img.dataset.imageState === 'error') record.failed(); }));
   document.addEventListener('visibilitychange', () => records.forEach((record, img) => {

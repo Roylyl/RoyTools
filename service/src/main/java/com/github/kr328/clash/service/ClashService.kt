@@ -6,6 +6,7 @@ import android.os.Looper
 import android.os.Binder
 import android.os.IBinder
 import com.github.kr328.clash.common.log.Log
+import com.github.kr328.clash.common.util.NotificationGroups
 import com.github.kr328.clash.service.clash.RuntimeSession
 import com.github.kr328.clash.service.clash.clashRuntime
 import com.github.kr328.clash.service.clash.module.*
@@ -146,6 +147,7 @@ class ClashService : BaseService() {
         val completed = session.finish() ?: return
         StatusProvider.serviceRunning = false
         stopForeground(true)
+        NotificationGroups.refresh(this, NotificationGroups.RUNTIME)
         sendClashStopped(reason)
         Log.i("ClashService runtime stopped: ${reason ?: "successfully"}")
 

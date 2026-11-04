@@ -2,8 +2,9 @@ package com.github.kr328.clash.remote
 
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
+import com.github.kr328.clash.common.log.Log
 
-class Resource<T> {
+class Resource<T>(private val label: String = "remote") {
     private interface Callback<T> {
         fun accept(value: T)
     }
@@ -42,6 +43,7 @@ class Resource<T> {
 
         if (v == null) {
             pending.add(callback)
+            Log.d("Resource $label waiting count=${pending.size}")
         } else {
             callback.accept(v)
         }
@@ -52,11 +54,14 @@ class Resource<T> {
         this.value = value
 
         if (value != null) {
-            pending.forEach {
+            val callbacks = pending.toList()
+            pending.clear()
+            Log.d("Resource $label ready pending=${callbacks.size}")
+            callbacks.forEach {
                 it.accept(value)
             }
-
-            pending.clear()
+        } else {
+            Log.d("Resource $label unavailable pending=${pending.size}")
         }
     }
 
@@ -69,6 +74,6 @@ class Resource<T> {
 
     @Synchronized
     private fun cancel(callback: Callback<T>) {
-        pending.remove(callback)
+        if (pending.remove(callback)) Log.d("Resource $label wait cancelled remaining=${pending.size}")
     }
 }

@@ -24,6 +24,10 @@ object UpdateNotifications {
             context.getString(R.string.update_install_notification))
     }
 
+    fun downloadFailed(context: Context, message: String) {
+        show(context, DOWNLOADED, "应用更新下载失败", message)
+    }
+
     fun dismiss(context: Context) {
         NotificationManagerCompat.from(context).cancel(AVAILABLE)
         NotificationManagerCompat.from(context).cancel(DOWNLOADED)

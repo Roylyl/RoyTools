@@ -71,19 +71,12 @@ object ApplicationObserver {
 fun Context.verifyApk(): Boolean {
     return try {
         val info = applicationInfo
-        val sources = info.splitSourceDirs ?: arrayOf(info.sourceDir) ?: return false
-
-        val regexNativeLibrary = Regex("lib/(\\S+)/libclash.so")
-        val availableAbi = Build.SUPPORTED_ABIS.toSet()
-        val apkAbi = sources
-            .asSequence()
-            .filter { File(it).exists() }
-            .flatMap { ZipFile(it).entries().asSequence() }
-            .mapNotNull { regexNativeLibrary.matchEntire(it.name) }
-            .mapNotNull { it.groups[1]?.value }
-            .toSet()
-
-        availableAbi.intersect(apkAbi).isNotEmpty()
+        val sources = listOfNotNull(info.sourceDir) + info.splitSourceDirs.orEmpty()
+        sources.any { path ->
+            File(path).isFile && ZipFile(path).use { apk ->
+                Build.SUPPORTED_ABIS.any { abi -> apk.getEntry("lib/$abi/libclash.so") != null }
+            }
+        }
     } catch (e: Exception) {
         false
     }

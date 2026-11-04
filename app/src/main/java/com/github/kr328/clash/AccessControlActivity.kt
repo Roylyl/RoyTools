@@ -26,17 +26,20 @@ class AccessControlActivity : BaseActivity<AccessControlDesign>() {
         val selected = withContext(Dispatchers.IO) {
             service.accessControlPackages.toMutableSet()
         }
+        var restartRequired = false
 
         defer {
             withContext(Dispatchers.IO) {
                 val changed = selected != service.accessControlPackages
+                restartRequired = restartRequired || clashRunning && changed
                 service.accessControlPackages = selected
-                if (clashRunning && changed) {
-                    stopClashService()
+                if (restartRequired) {
+                    if (clashRunning) stopClashService()
                     while (clashRunning) {
                         delay(200)
                     }
                     startClashService()
+                    restartRequired = false
                 }
             }
         }

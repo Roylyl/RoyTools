@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Looper
 import android.os.SystemClock
+import android.util.LruCache
 import com.github.kr328.clash.common.log.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,17 +34,31 @@ internal object MusicArtwork {
     private const val MAX_BYTES = 2L * 1024 * 1024
     private const val MAX_CACHE_BYTES = 32L * 1024 * 1024
     private const val MAX_CACHE_FILES = 256
+    private const val MAX_BITMAP_BYTES = 8 * 1024 * 1024
+    private const val BITMAP_EDGE = 320
     private val cacheLock = Any()
     private val commitLock = Any()
     private val cacheGeneration = AtomicLong(0)
+    private var clearedGeneration = 0L // Protected by cacheLock.
     private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var legacyCoverPaths: Map<String, String>? = null
+    @Volatile private var legacyCoverPaths: Map<String, Source>? = null
+    // All native consumers share one sampled bitmap per original file and revision.
+    // Loading stays serialized with disk writes, so concurrent requests also share
+    // the first fetch/decode instead of storing a copy for each song or surface.
+    private val bitmaps = object : LruCache<String, Bitmap>(MAX_BITMAP_BYTES) {
+        override fun sizeOf(key: String, value: Bitmap): Int = value.allocationByteCount
+    }
     private data class Source(val relative: String, val revision: String?, val legacy: Boolean) {
         val cachePath: String get() = if (revision == null) relative else "$relative.rev-$revision"
     }
 
-    // Kept for existing callers as a validated relative cache identity, not an AssetManager path.
-    fun assetPath(url: String): String? = parseSource(url)?.cachePath
+    // Callers compare this identity without doing IO on the main thread.
+    fun assetPath(url: String): String? {
+        val request = parseSource(url) ?: return null
+        val original = if (request.legacy) legacyCoverPaths?.get(request.relative) else null
+        val source = original?.copy(revision = request.revision ?: original.revision) ?: request
+        return "${cacheGeneration.get()}:${source.cachePath}"
+    }
 
     private fun parseSource(url: String): Source? {
         if (url.length > 4096 || runCatching { URI(url) }.isFailure) return null
@@ -71,40 +86,47 @@ internal object MusicArtwork {
         return relative
     }
 
-    fun decode(context: Context, url: String, size: Int): Bitmap? {
+    fun decode(context: Context, url: String): Bitmap? {
         if (Looper.myLooper() == Looper.getMainLooper()) return null
         val request = parseSource(url) ?: return null
-        val relative = request.cachePath
         val generation = cacheGeneration.get()
         return synchronized(cacheLock) {
             if (generation != cacheGeneration.get()) return@synchronized null
             runCatching {
+                clearInvalidatedCache(context.applicationContext, generation)
+                val source = if (!request.legacy) request else {
+                    val original = originalCoverPaths(context)[request.relative] ?: return@runCatching null
+                    original.copy(revision = request.revision ?: original.revision)
+                }
+                val relative = source.cachePath
+                val bitmapKey = "$generation:$relative"
+                bitmaps.get(bitmapKey)?.takeUnless { it.isRecycled }?.let { return@runCatching it }
                 val directory = File(context.applicationContext.cacheDir, "music-artwork").canonicalFile
                 val cached = File(directory, relative).canonicalFile
                 if (!cached.path.startsWith(directory.path + File.separator)) return@runCatching null
                 if (cached.isFile && cached.length() in 1L..MAX_BYTES) {
-                    decodeFile(cached, size)?.let { bitmap ->
+                    decodeFile(cached, BITMAP_EDGE)?.let { bitmap ->
                         if (generation != cacheGeneration.get()) return@runCatching null
                         cached.setLastModified(System.currentTimeMillis())
+                        bitmaps.put(bitmapKey, bitmap)
                         return@runCatching bitmap
                     }
                 }
                 cached.delete()
                 // Old saved notifications contain the website's derived JPG URL. Resolve
                 // those covers through the bundled track metadata, then fetch the original.
-                val source = if (!request.legacy) request.relative
-                    else originalCoverPaths(context)[request.relative] ?: request.relative
                 val parent = cached.parentFile ?: return@runCatching null
                 if (!parent.isDirectory && !parent.mkdirs()) return@runCatching null
                 val temporary = File.createTempFile("cover-", ".part", parent)
                 try {
-                    if (!download(source, request.revision, temporary, generation)) return@runCatching null
-                    val bitmap = decodeFile(temporary, size) ?: return@runCatching null
+                    if (!download(source.relative, source.revision, temporary, generation)) return@runCatching null
+                    val bitmap = decodeFile(temporary, BITMAP_EDGE) ?: return@runCatching null
                     val stored = synchronized(commitLock) {
                         if (generation != cacheGeneration.get()) return@runCatching null
                         temporary.renameTo(cached)
                     }
                     if (stored) trimCache(directory, cached)
+                    bitmaps.put(bitmapKey, bitmap)
                     bitmap
                 } finally {
                     temporary.delete()
@@ -114,7 +136,7 @@ internal object MusicArtwork {
     }
 
     /** Called only by the artwork IO worker while holding cacheLock. */
-    private fun originalCoverPaths(context: Context): Map<String, String> {
+    private fun originalCoverPaths(context: Context): Map<String, Source> {
         legacyCoverPaths?.let { return it }
         val paths = runCatching {
             val catalog = context.applicationContext.assets.open("music/data/catalog.json")
@@ -122,8 +144,12 @@ internal object MusicArtwork {
             val tracks = catalog.getJSONArray("tracks")
             buildMap {
                 for (index in 0 until tracks.length()) {
-                    val cover = validRelativePath(tracks.getJSONObject(index).optString("cover")) ?: continue
-                    put(cover.substringBeforeLast('.') + ".jpg", cover)
+                    val track = tracks.getJSONObject(index)
+                    val cover = validRelativePath(track.optString("cover")) ?: continue
+                    val revision = track.optString("coverRevision").takeIf {
+                        Regex("[A-Za-z0-9._-]{1,128}").matches(it)
+                    }
+                    put(cover.substringBeforeLast('.') + ".jpg", Source(cover, revision, false))
                 }
             }
         }.getOrDefault(emptyMap())
@@ -134,32 +160,41 @@ internal object MusicArtwork {
     /** Invalidates pending writes immediately; file deletion stays on the shared IO dispatcher. */
     internal fun clearCache(context: Context) {
         val app = context.applicationContext
-        synchronized(commitLock) { cacheGeneration.incrementAndGet() }
+        val generation = synchronized(commitLock) { cacheGeneration.incrementAndGet() }
         cleanupScope.launch {
             runCatching {
                 synchronized(cacheLock) {
-                    val cacheRoot = app.cacheDir.canonicalFile
-                    val target = File(cacheRoot, "music-artwork").absoluteFile
-                    if (target.canonicalFile != target || target.parentFile != cacheRoot) {
-                        throw IOException("封面缓存目录超出应用缓存路径")
-                    }
-                    if (!target.exists()) return@synchronized
-                    // walkFileTree does not follow symbolic links, so nested links are
-                    // removed as entries without visiting anything outside this directory.
-                    Files.walkFileTree(target.toPath(), object : SimpleFileVisitor<Path>() {
-                        override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
-                            Files.deleteIfExists(file)
-                            return FileVisitResult.CONTINUE
-                        }
-                        override fun postVisitDirectory(dir: Path, error: IOException?): FileVisitResult {
-                            if (error != null) throw error
-                            Files.deleteIfExists(dir)
-                            return FileVisitResult.CONTINUE
-                        }
-                    })
+                    clearInvalidatedCache(app, generation)
                 }
             }.onFailure { Log.w("原生专辑封面缓存清理失败", it) }
         }
+    }
+
+    /** Under cacheLock; a new decode can finish pending cleanup before writing fresh artwork. */
+    private fun clearInvalidatedCache(context: Context, generation: Long) {
+        if (generation <= clearedGeneration) return
+        val cacheRoot = context.cacheDir.canonicalFile
+        val target = File(cacheRoot, "music-artwork").absoluteFile
+        if (target.canonicalFile != target || target.parentFile != cacheRoot) {
+            throw IOException("封面缓存目录超出应用缓存路径")
+        }
+        bitmaps.evictAll()
+        if (target.exists()) {
+            // Do not follow links outside this application's artwork cache.
+            Files.walkFileTree(target.toPath(), object : SimpleFileVisitor<Path>() {
+                override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                    Files.deleteIfExists(file)
+                    return FileVisitResult.CONTINUE
+                }
+                override fun postVisitDirectory(dir: Path, error: IOException?): FileVisitResult {
+                    if (error != null) throw error
+                    Files.deleteIfExists(dir)
+                    return FileVisitResult.CONTINUE
+                }
+            })
+        }
+        // Older queued cleanup jobs now leave artwork fetched in this generation alone.
+        clearedGeneration = generation
     }
 
     private fun download(relative: String, revision: String?, destination: File, generation: Long): Boolean {

@@ -32,8 +32,13 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
 
         defer {
             canceled = true
-
-            withProfile { release(uuid) }
+            try {
+                withProfile { release(uuid) }
+            } catch (error: Exception) {
+                // Failed exit leaves this editor open; do not disable later draft saves.
+                canceled = false
+                throw error
+            }
         }
 
         while (isActive) {

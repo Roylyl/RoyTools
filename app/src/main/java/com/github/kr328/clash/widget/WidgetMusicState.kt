@@ -39,7 +39,7 @@ object WidgetMusicState {
             cached != null && cached.path == path &&
                 (cached.bitmap != null || SystemClock.elapsedRealtime() - cached.loadedAt < 30_000L) -> cached.bitmap
             Looper.myLooper() == Looper.getMainLooper() -> null
-            else -> MusicArtwork.decode(context, state.artwork, 96).also { lastCover = Cover(path, it) }
+            else -> MusicArtwork.decode(context, state.artwork).also { lastCover = Cover(path, it) }
         }
         return Snapshot(state.title, state.artist, bitmap, state.playing,
             state.title.isNotBlank() || state.artist.isNotBlank(), state.canPrevious, state.canNext)

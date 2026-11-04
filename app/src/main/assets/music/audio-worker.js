@@ -1,7 +1,7 @@
 'use strict';
 importScripts('./lyric-parser.js');
-const AUDIO='roylyl-music-audio-v2',META='roylyl-music-audio-meta-v1',SHELL='roylyl-music-shell-20261104-17';
-const FILES=['/music/','/music/index.html','/music/music.css?v=20261104-android-17','/music/roytools.css?v=20261104-android-17','/music/app.js?v=20261104-android-17','/music/playback-feedback.js?v=20261104-android-17','/music/lyric-parser.js?v=20261104-android-17','/music/image-loading.css?v=20260927-1','/music/image-loading.js?v=20260927-1','/music/region-notice.css?v=20260928-1','/music/region-notice.js?v=20261104-android-17','/music/catalog-sync.js?v=20261104-android-17','/music/data/catalog.json?v=20261104-android-17','/music/favicon.svg','/music/placeholder.svg'];
+const AUDIO='roylyl-music-audio-v2',META='roylyl-music-audio-meta-v1',SHELL='roylyl-music-shell-20261104-22';
+const FILES=['/music/','/music/index.html','/music/music.css?v=20261104-android-22','/music/roytools.css?v=20261104-android-22','/music/app.js?v=20261104-android-22','/music/playback-feedback.js?v=20261104-android-22','/music/lyric-parser.js?v=20261104-android-22','/music/image-loading.css?v=20260927-1','/music/image-loading.js?v=20261104-1','/music/catalog-sync.js?v=20261104-android-22','/music/data/catalog.json?v=20261104-android-22','/music/favicon.svg','/music/placeholder.svg'];
 const metaKey='/music/__audio_index__',configKey='/music/__audio_config__',freshKey='/music/__audio_recovery__';
 let generation=0,budget=-1,preloadEnabled=true,writeQueue=Promise.resolve(),configRevision=0,configRead,freshRead,optionalEpoch=0,lastKeptSource='';
 const inflight=new Map(),playingRequests=new Map(),protectedSources=new Map();
@@ -121,7 +121,7 @@ self.addEventListener('message',event=>{
     const previousBudget=budget;configRevision++;budget=validBudget(data.budget)?data.budget:-1;
     if(manualBatch?.kind==='audio'&&budget!==-1&&(previousBudget===-1||budget<previousBudget))stopManualBatch(manualBatch,'budget','缓存上限已调整，下载已停止','budget-exceeded');
     preloadEnabled=data.preload!==false;if(!budget||!preloadEnabled){optionalEpoch++;lastKeptSource='';}protectedSources.set(event.source?.id||'current',data.current||'');
-    for(const [key,job] of inflight)if(job.optional&&(!budget||(!preloadEnabled&&job.preload)))cancelJob(key,job);
+    for(const [key,job] of inflight)if(job.optional&&(!budget||(!preloadEnabled&&job.preload))||job.playback&&!protectedSource(key))cancelJob(key,job);
     run((async()=>{await serial(saveConfig);await trimToBudget();port?.postMessage({ok:true});})());
   }
   if(data.type==='AUDIO_STATS')run(stats(port));
@@ -140,6 +140,14 @@ self.addEventListener('message',event=>{
   if(data.type==='CACHE_AUDIO')run((async()=>{
     await ensureConfig();const version=generation,epoch=optionalEpoch;
     if(!audioSource(data.source)||!budget||(data.preload&&!preloadEnabled)){port?.postMessage({ok:false});return;}
+    if(data.preload){
+      const owner=protectedSources.get(event.source?.id||'current');
+      if(owner&&owner!==data.source&&!await cachedFull(owner)){
+        const currentJob=inflight.get(owner);
+        if(!currentJob||!await currentJob.stored){port?.postMessage({ok:false});return;}
+      }
+      if(owner&&owner!==protectedSources.get(event.source?.id||'current')){port?.postMessage({ok:false});return;}
+    }
     const hit=await cachedFull(data.source);
     if(hit){port?.postMessage({ok:true});return;}
     // An in-progress playback Range may already be returning a full 200.
@@ -164,9 +172,15 @@ self.addEventListener('message',event=>{
 function cancelJob(source,job){job.controller.abort();if(inflight.get(source)===job)inflight.delete(source);}
 function stopManualBatch(batch,status,reason,code){
   if(batch.stopped)return;
-  batch.stopped={status,reason,code};batch.controller?.abort();batch.cancel();
+  batch.stopped={status,reason,code};batch.controller?.abort();
+  for(const controller of batch.controllers||[])controller.abort();
+  batch.cancel();
 }
 function batchProgress(batch,status='running',reason='',code=''){
+  if(batch.activeSources){
+    const active=batch.activeSources.entries().next().value;
+    batch.current=active?.[0]||'';batch.currentBytes=active?.[1].bytes||0;batch.currentTotalBytes=active?.[1].total||0;
+  }
   const totalBytes=[...batch.sizes.values()].reduce((sum,bytes)=>sum+bytes,0);
   try{batch.port?.postMessage({type:'AUDIO_BATCH_PROGRESS',id:batch.id,kind:batch.kind,total:batch.sources.size,
     processed:batch.processed,downloaded:batch.downloaded,cached:batch.cached,failed:batch.failed,missing:batch.missing,
@@ -175,7 +189,7 @@ function batchProgress(batch,status='running',reason='',code=''){
     currentTotalBytes:batch.currentTotalBytes,currentTotalBytesKnown:batch.currentTotalBytes>0,
     lastFailure:batch.lastFailure||null});}catch{}
 }
-function failedBatchSource(batch,code,reason){batch.failed++;batch.lastFailure={source:batch.current,code,reason};}
+function failedBatchSource(batch,code,reason,source=batch.current){batch.failed++;batch.lastFailure={source,code,reason};}
 function finishBatchSource(batch){batch.processed++;batch.current='';batch.currentBytes=0;batch.currentTotalBytes=0;}
 async function verifiedCachedAudio(source){
   const cache=await caches.open(AUDIO),hit=await cache.match(source);
@@ -200,9 +214,11 @@ async function verifiedCachedAudio(source){
   });
   return true;
 }
-function countBatchResponse(response,batch){
-  const size=validSize(response);batch.currentTotalBytes=size;
-  if(size)batch.sizes.set(batch.current,size);
+function countBatchResponse(response,batch,source=batch.current){
+  // Fetch exposes decoded text, while Content-Length can describe compressed wire bytes.
+  const size=batch.kind==='lyrics'?0:validSize(response),active=batch.activeSources?.get(source);
+  if(active)active.total=size;else batch.currentTotalBytes=size;
+  if(size)batch.sizes.set(source,size);
   batchProgress(batch);
   if(!response.body)return response;
   const reader=response.body.getReader();let last=0;
@@ -211,7 +227,8 @@ function countBatchResponse(response,batch){
       try{
         const part=await reader.read();
         if(part.done){controller.close();return;}
-        batch.currentBytes+=part.value.byteLength;batch.downloadedBytes+=part.value.byteLength;
+        if(active)active.bytes+=part.value.byteLength;else batch.currentBytes+=part.value.byteLength;
+        batch.downloadedBytes+=part.value.byteLength;
         const now=Date.now();if(now-last>=500){last=now;batchProgress(batch);}
         controller.enqueue(part.value);
       }catch(error){controller.error(error);}
@@ -261,28 +278,30 @@ async function cachedAsset(kind,source){
   if(!hit)return false;
   if(kind==='covers')return hit.status===200;
   const saved=Number(hit.headers.get('X-Roylyl-Cached-At')||0),age=saved>0?Math.max(0,Date.now()-saved):Infinity;
-  if(hit.status===404&&age<60000)return 'missing';
+  if((hit.status===404||hit.status===410)&&age<86400000)return 'missing';
   return hit.status===200&&age<86400000;
 }
 async function storeAsset(kind,source,response,version,signal,batch,outcome){
   const fail=(code,reason)=>{Object.assign(outcome,{code,reason});return false;};
   const changed=()=>signal.aborted||version!==assetGenerations[kind];
   if(changed())return fail('cancelled','下载已取消');
-  if(!response.ok&&!(kind==='lyrics'&&response.status===404))return fail('http',`资源服务器返回${response.status}，无法下载`);
+  if(!response.ok&&!(kind==='lyrics'&&(response.status===404||response.status===410)))return fail('http',`资源服务器返回${response.status}，无法下载`);
   let body,status=200,headers,phase='network';
   try{
-    if(kind==='lyrics'&&response.status===404){
-      body='';status=404;outcome.missing=true;batch.sizes.set(source,0);batch.currentTotalBytes=0;
-      await response.body?.cancel();
+    if(kind==='lyrics'&&(response.status===404||response.status===410)){
+      body='';status=404;outcome.missing=true;batch.sizes.set(source,0);
+      const active=batch.activeSources?.get(source);if(active)active.total=0;else batch.currentTotalBytes=0;
+      // Missing-file headers are conclusive; do not wait for an error body.
+      response.body?.cancel().catch(()=>{});
     }else{
       const blob=await response.blob(),size=validSize(response);
-      if(size&&blob.size!==size)return fail('incomplete','资源未完整下载，请重试');
+      if(kind!=='lyrics'&&size&&blob.size!==size)return fail('incomplete','资源未完整下载，请重试');
       if(kind==='lyrics'){
         const text=await blob.text();
         if(/^\s*(?:<!doctype\s+html|<html[\s>])/i.test(text))return fail('invalid-content','歌词服务器返回了网页，请稍后重试');
         const missing=self.RoylylLyrics.parseLrc(text).diagnostic==='empty';
         body=missing?'':text;status=missing?404:200;outcome.missing=missing;
-        if(!batch.sizes.has(source))batch.sizes.set(source,blob.size);
+        batch.sizes.set(source,blob.size);
       }else{
         const type=response.headers.get('Content-Type')||'';
         if(!blob.size||(type&&!/^image\//i.test(type)))return fail('invalid-content','专辑封面资源无效');
@@ -303,6 +322,50 @@ async function storeAsset(kind,source,response,version,signal,batch,outcome){
       signal.aborted?'下载已取消':error?.name==='QuotaExceededError'?'设备存储空间不足，下载已停止':phase==='storage'?'无法保存资源，请检查存储空间':'资源下载中断，请检查网络');
   }
 }
+async function downloadLyricBatch(batch,sources,version){
+  batch.controllers=new Set();batch.activeSources=new Map();
+  let next=0;
+  const stopped=()=>batch.stopped||version!==assetGenerations.lyrics;
+  async function consume(){
+    while(!stopped()&&next<sources.length){
+      const source=sources[next++];let controller,timer,timedOut=false;
+      batch.activeSources.set(source,{bytes:0,total:0});batchProgress(batch);
+      try{
+        const cached=await cachedAsset('lyrics',source);
+        if(stopped())break;
+        if(cached){
+          if(cached==='missing')batch.missing++;else batch.cached++;
+          batch.processed++;batch.sizes.set(source,0);continue;
+        }
+        controller=new AbortController();batch.controllers.add(controller);
+        timer=setTimeout(()=>{timedOut=true;controller.abort();},12000);
+        const response=await fetch(new Request(source),{signal:controller.signal,cache:'no-cache'}),outcome={};
+        const missing=response.status===404||response.status===410;
+        const stored=await storeAsset('lyrics',source,missing?response:countBatchResponse(response,batch,source),
+          version,controller.signal,batch,outcome);
+        if(stopped())break;
+        if(stored){if(outcome.missing)batch.missing++;else batch.downloaded++;}
+        else{
+          if(timedOut){outcome.code='timeout';outcome.reason='歌词下载超时，已跳过，可稍后重试';}
+          failedBatchSource(batch,outcome.code,outcome.reason,source);
+          if(outcome.code==='quota'||outcome.code==='storage')stopManualBatch(batch,'error',outcome.reason,outcome.code);
+        }
+        batch.processed++;
+      }catch(error){
+        if(stopped())break;
+        const code=!controller?'storage':timedOut?'timeout':'network';
+        const reason=code==='storage'?'无法访问歌词缓存，请检查存储空间':timedOut?'歌词下载超时，已跳过，可稍后重试':'歌词下载失败，已跳过，可稍后重试';
+        failedBatchSource(batch,code,reason,source);batch.processed++;
+        if(code==='storage')stopManualBatch(batch,'error',reason,code);
+      }finally{
+        clearTimeout(timer);controller?.abort();batch.controllers.delete(controller);batch.activeSources.delete(source);
+        if(!batch.stopped)batchProgress(batch);
+      }
+    }
+  }
+  // Small text files can run concurrently without letting one slow 404 stall the queue.
+  await Promise.all(Array.from({length:Math.min(4,sources.length)},consume));
+}
 async function downloadAudioBatch(data,port,owner){
   const kind=data.type==='DOWNLOAD_AUDIO_BATCH'?'audio':data.kind;
   const label=kind==='audio'?'歌曲':kind==='lyrics'?'歌词':'专辑封面',unit=kind==='audio'?'首':kind==='lyrics'?'份':'张';
@@ -320,7 +383,8 @@ async function downloadAudioBatch(data,port,owner){
   try{
     batchProgress(batch);
     if(kind==='audio'&&!budget)stopManualBatch(batch,'budget','音乐缓存已关闭，请先设置缓存上限','budget-disabled');
-    for(const source of sources){
+    if(kind==='lyrics')await downloadLyricBatch(batch,sources,version);
+    else for(const source of sources){
       if(batch.stopped)break;
       batch.current=source;batch.currentBytes=0;batch.currentTotalBytes=0;batchProgress(batch);
       try{
@@ -453,10 +517,10 @@ async function storeFull(source,response,version,signal,epoch=sourceEpoch.get(so
 }
 function startFull(source,request,optional,preload=false,providedResponse,requestGeneration=generation,requestEpoch=sourceEpoch.get(source)||0){
   let job=inflight.get(source);
-  if(job){if(!optional)job.optional=false;return job;}
+  if(job){if(!optional){job.optional=false;job.playback=true;}if(!preload)job.preload=false;return job;}
   const controller=new AbortController(),version=requestGeneration,epoch=requestEpoch;
   const response=providedResponse?Promise.resolve(providedResponse):fetch(request,{signal:controller.signal,...(freshSources.has(source)?{cache:'no-store'}:{})});
-  job={controller,optional,preload,response,stored:null};
+  job={controller,optional,preload,playback:!optional,response,stored:null};
   job.stored=response.then(value=>storeFull(source,value.clone(),version,controller.signal,epoch)).catch(()=>false).then(ok=>{if(!ok&&job.optional)controller.abort();return ok;}).finally(()=>{if(inflight.get(source)===job)inflight.delete(source);});
   inflight.set(source,job);return job;
 }
@@ -492,6 +556,21 @@ async function audioFetch(event){
   const playback=event.request.destination==='audio';
   if(playback)protectedSources.set(event.clientId||'current',source);
   if(range){
+    if(playback&&budget){
+      // A full 200 response is valid when a server ignores Range. Share one
+      // stream with playback while storeFull drains its independent clone.
+      const headers=new Headers(event.request.headers);headers.delete('Range');
+      const job=startFull(source,new Request(event.request,{headers}),false,false);
+      event.waitUntil(job.stored);
+      const response=await job.response;
+      if(fullResponse(response)){
+        if(/^bytes=0-\d*$/i.test(range))return response.clone();
+        // Seeking waits for this same full transfer instead of opening a second
+        // network range. A failed storage write may still serve the shared body.
+        const stored=await job.stored,complete=stored&&await cachedFull(source);
+        return cachedRange(complete||response.clone(),range,method);
+      }
+    }
     // Network ranges stay intact. An ignored Range (200) can feed the optional
     // full cache, but a genuine 206 can never enter that cache.
     const version=generation,epoch=sourceEpoch.get(source)||0,promise=fetch(event.request,freshSources.has(source)?{cache:'no-store'}:{});playingRequests.set(source,promise);

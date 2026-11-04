@@ -40,6 +40,10 @@ __pycache__/
 !.env.sample
 **/adbkey
 **/adbkey.pub
+**/adb_keys
+/.android/
+/adb-keys/
+/wireless-keys/
 *.local.properties
 /secrets/
 /credentials/
@@ -76,6 +80,14 @@ __pycache__/
 /config-backups/
 /backups/
 /exports/
+/source-exports/
+/RoyTools-source-*/
+/RoyTools-*.zip
+/profiles.json
+/subscriptions.json
+/proxy-configs.json
+/nodes.json
+/config-backups.json
 /*.yaml
 /*.yml
 /*.conf
@@ -87,6 +99,11 @@ __pycache__/
 /Roylyl-*.yml
 /logcat*.txt
 /bugreport-*
+/adb-*.txt
+/adaptivehz-backend*.txt
+/wireless-setup*.txt
+/*.err
+/*.out
 /*.ab
 /*.har
 
@@ -95,6 +112,20 @@ __pycache__/
 /app/src/main/assets/geosite.dat
 /app/src/main/assets/ASN.mmdb
 /app/src/main/assets/BundleMRS.7z
+
+# Local scratch work and temporary helpers
+/.codex/
+/.history/
+/.cache/
+/tmp/
+/temp/
+/.tmp/
+/scratch/
+/local-tools/
+node_modules/
+/*.tmp
+/*.temp
+/*.bak
 
 # OS/editor temporary files
 .DS_Store

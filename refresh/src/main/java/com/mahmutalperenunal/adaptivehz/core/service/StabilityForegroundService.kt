@@ -12,6 +12,7 @@ import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import com.github.kr328.clash.common.util.NotificationGroups
 import com.mahmutalperenunal.adaptivehz.OneSetup
 import com.mahmutalperenunal.adaptivehz.R
 import com.mahmutalperenunal.adaptivehz.core.engine.AdaptiveHzRuntimeState
@@ -52,6 +53,7 @@ class StabilityForegroundService : Service() {
     override fun onCreate() {
         super.onCreate()
         startForeground(NOTIF_ID, buildNotification())
+        NotificationGroups.refresh(this, NotificationGroups.RUNTIME)
     }
 
     /**
@@ -94,6 +96,8 @@ class StabilityForegroundService : Service() {
         val needsRecovery = mode != AdaptiveHzMode.OFF &&
             AdaptiveHzRuntimeState.getAccessibilityState(this) == AdaptiveHzRuntimeState.AccessibilityState.BROKEN
         return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setGroup(NotificationGroups.RUNTIME)
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
             .setSmallIcon(R.drawable.ic_qs_refresh_phone)
             .setContentTitle("刷新率控制")
             .setSubText("RoyTools")
@@ -153,6 +157,8 @@ class StabilityForegroundService : Service() {
 
     override fun onDestroy() {
         mainHandler.removeCallbacksAndMessages(null)
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        NotificationGroups.refresh(this, NotificationGroups.RUNTIME)
         super.onDestroy()
     }
 
