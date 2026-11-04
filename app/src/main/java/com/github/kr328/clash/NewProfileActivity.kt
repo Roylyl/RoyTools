@@ -15,7 +15,12 @@ import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.model.ProfileProvider
 import com.github.kr328.clash.design.util.showExceptionToast
 import com.github.kr328.clash.service.model.Profile
-import com.github.kr328.clash.util.withProfile
+import com.github.kr328.clash.remote.Remote
+import com.github.kr328.clash.common.constants.Authorities
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 import io.github.g00fy2.quickie.QRResult
 import io.github.g00fy2.quickie.QRResult.QRError
 import io.github.g00fy2.quickie.QRResult.QRMissingPermission
@@ -50,42 +55,15 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                 design.requests.onReceive {
                     when (it) {
                         is NewProfileDesign.Request.Create -> {
-                            withProfile {
-                                val name = getString(R.string.new_profile)
-
-                                val uuid: UUID? = when (val p = it.provider) {
-                                    is ProfileProvider.File ->
-                                        create(Profile.Type.File, name)
-
-                                    is ProfileProvider.Url ->
-                                        create(Profile.Type.Url, name)
-
-                                    is ProfileProvider.QR -> {
-                                        null
-                                    }
-
-                                    is ProfileProvider.External -> {
-                                        val data = p.get()
-
-                                        if (data != null) {
-                                            val (uri, initialName) = data
-
-                                            create(
-                                                Profile.Type.External,
-                                                initialName ?: name,
-                                                uri.toString()
-                                            )
-                                        } else {
-                                            null
-                                        }
-                                    }
+                            when (val provider = it.provider) {
+                                is ProfileProvider.File -> createDraft(Profile.Type.File)
+                                is ProfileProvider.Url -> createDraft(Profile.Type.Url)
+                                is ProfileProvider.External -> provider.get()?.let { (uri, name) ->
+                                    createDraft(Profile.Type.External, uri.toString(), name)
                                 }
-
-                                if (uuid != null)
-                                    launchProperties(uuid)
+                                is ProfileProvider.QR -> Unit
                             }
                         }
-
                         is NewProfileDesign.Request.OpenDetail -> {
                             launchAppDetailed(it.provider)
                         }
@@ -186,15 +164,34 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
     }
 
     private suspend fun createProfileByQrCode(url: String) {
-        withProfile {
-            launchProperties(
-                create(
-                    type = Profile.Type.Url,
-                    name = getString(R.string.new_profile),
-                    url,
-                )
-            )
-        }
+        createDraft(Profile.Type.Url, url)
     }
 
+    private var creating: Job? = null
+
+    private fun createDraft(type: Profile.Type, source: String = "", label: String? = null) {
+        if (creating?.isActive == true) return
+        creating = launch {
+            try {
+                val manager = withTimeout(8000L) {
+                    // Acquiring the provider starts the profile process even after an OEM
+                    // task cleaner has rejected a background service bind.
+                    withContext(Dispatchers.IO) {
+                        contentResolver.acquireUnstableContentProviderClient(Authorities.STATUS_PROVIDER)?.close()
+                    }
+                    Remote.service.bind()
+                    Remote.service.remote.get().profile()
+                }
+                val name = label ?: getString(R.string.new_profile)
+                val uuid = withContext(Dispatchers.IO) { manager.create(type, name, source) }
+                launchProperties(uuid)
+            } catch (_: TimeoutCancellationException) {
+                design?.showExceptionToast("配置服务未连接，请再点一次重试")
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                design?.showExceptionToast(error)
+            }
+        }
+    }
 }
