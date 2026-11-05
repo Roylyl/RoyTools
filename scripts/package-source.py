@@ -8,7 +8,7 @@ import zipfile
 
 root = Path(__file__).resolve().parent.parent
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--version', default='1.1.1', help='major.minor.patch')
+parser.add_argument('--version', default='1.1.2', help='major.minor.patch')
 arguments = parser.parse_args()
 if not re.fullmatch(r'\d+\.\d+\.\d+', arguments.version):
     parser.error('--version must be major.minor.patch')

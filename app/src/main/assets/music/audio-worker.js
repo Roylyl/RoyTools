@@ -1,7 +1,7 @@
 'use strict';
 importScripts('./lyric-parser.js');
-const AUDIO='roylyl-music-audio-v2',META='roylyl-music-audio-meta-v1',SHELL='roylyl-music-shell-20261104-22';
-const FILES=['/music/','/music/index.html','/music/music.css?v=20261104-android-22','/music/roytools.css?v=20261104-android-22','/music/app.js?v=20261104-android-22','/music/playback-feedback.js?v=20261104-android-22','/music/lyric-parser.js?v=20261104-android-22','/music/image-loading.css?v=20260927-1','/music/image-loading.js?v=20261104-1','/music/catalog-sync.js?v=20261104-android-22','/music/data/catalog.json?v=20261104-android-22','/music/favicon.svg','/music/placeholder.svg'];
+const AUDIO='roylyl-music-audio-v2',META='roylyl-music-audio-meta-v1',SHELL='roylyl-music-shell-20261105-26';
+const FILES=['/music/','/music/index.html','/music/music.css?v=20261105-android-26','/music/roytools.css?v=20261105-android-26','/music/app.js?v=20261105-android-26','/music/playback-feedback.js?v=20261105-android-26','/music/lyric-parser.js?v=20261105-android-26','/music/image-loading.css?v=20260927-1','/music/image-loading.js?v=20261104-1','/music/catalog-sync.js?v=20261105-android-26','/music/data/catalog.json?v=20261105-android-26','/music/favicon.svg','/music/placeholder.svg'];
 const metaKey='/music/__audio_index__',configKey='/music/__audio_config__',freshKey='/music/__audio_recovery__';
 let generation=0,budget=-1,preloadEnabled=true,writeQueue=Promise.resolve(),configRevision=0,configRead,freshRead,optionalEpoch=0,lastKeptSource='';
 const inflight=new Map(),playingRequests=new Map(),protectedSources=new Map();
@@ -481,7 +481,24 @@ async function storeFull(source,response,version,signal,epoch=sourceEpoch.get(so
     }
     // Only the optional cache copy waits for completion. The audio element gets
     // its streaming response immediately. Count actual bytes before publishing.
-    const body=await response.blob();
+    const reader=response.body.getReader(),chunks=[];
+    let received=0,lastReport=0;
+    try {
+      while(true){
+        if(signal.aborted||version!==generation||epoch!==(sourceEpoch.get(source)||0)){
+          await reader.cancel();return fail('cancelled','下载已取消');
+        }
+        const part=await reader.read();
+        if(part.done)break;
+        chunks.push(part.value);received+=part.value.byteLength;
+        if(Date.now()-lastReport>=250||received===size){
+          lastReport=Date.now();
+          const progress={type:'AUDIO_DOWNLOAD_PROGRESS',source,bytes:received,total:size};
+          self.clients.matchAll().then(clients=>{for(const client of clients)client.postMessage(progress);}).catch(()=>{});
+        }
+      }
+    } finally {reader.releaseLock();}
+    const body=new Blob(chunks,{type:response.headers.get('Content-Type')||'audio/mpeg'});
     if(body.size!==size)return fail('incomplete','歌曲文件未完整下载，请重试');
     if(version!==generation||signal.aborted)return fail('cancelled','下载已取消');
     phase='storage';

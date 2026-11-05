@@ -1,6 +1,6 @@
 'use strict';
 (() => {
-  const APP_VERSION='20261104-android-22', SHELL_VERSION='roylyl-music-shell-20261104-22';
+  const APP_VERSION='20261105-android-26', SHELL_VERSION='roylyl-music-shell-20261105-26';
   const ROOT = 'https://raw.githubusercontent.com/Roylyl/Music/main/';
   const $ = id => document.getElementById(id);
   const musicSelectTitles={artist:'歌手','sort-primary':'第一顺序','sort-secondary':'第二顺序','sort-direction':'方向'};
@@ -46,6 +46,7 @@
       lyricPreloadController?.abort();lyricPreloadController=null;
     }
     await sendAudioConfig();
+    if(current&&audioBudget())cacheAudio(audioSource(current));
     if(revision!==preloadPreferenceRevision||!preloadAllowed()||!current||audio.paused)return;
     preloadNext();preloadNextLyrics(current);
   }
@@ -191,6 +192,7 @@
     navigator.serviceWorker?.controller?.postMessage({type:'CANCEL_PRELOAD',keep});
   }
   const audioCacheJobs=new Map();
+  const audioDownloadProgress=new Map();
   async function cacheAudio(source) {
     if(!navigator.serviceWorker?.controller || !audioBudget())return false;
     const generation=audioCacheGeneration,preload=source!==audioSource(current||{src:''});
@@ -198,7 +200,14 @@
     const existing=audioCacheJobs.get(source);
     if(existing?.generation===generation&&existing.preload===preload)return existing.promise;
     const job={generation,preload,promise:null};
-    job.promise=workerMessage({type:'CACHE_AUDIO',source,preload},120000).then(result=>generation===audioCacheGeneration&&result?.ok===true)
+    job.promise=workerMessage({type:'CACHE_AUDIO',source,preload},120000).then(result=>{
+      const complete=generation===audioCacheGeneration&&result?.ok===true;
+      if(complete){
+        audioDownloadProgress.set(source,1);
+        if(current&&source===audioSource(current))paintBufferedProgress();
+      }
+      return complete;
+    })
       .finally(()=>{if(audioCacheJobs.get(source)===job)audioCacheJobs.delete(source);});
     audioCacheJobs.set(source,job);return job.promise;
   }
@@ -214,7 +223,13 @@
       syncPreloadPreference();reportShellVersion();
     });
     navigator.serviceWorker.addEventListener('message',event=>{
+      if(event.data?.type==='AUDIO_DOWNLOAD_PROGRESS'){
+        audioDownloadProgress.set(event.data.source,event.data.total>0?Math.min(.999,event.data.bytes/event.data.total):0);
+        if(current&&event.data.source===audioSource(current))paintBufferedProgress();
+      }
       if(event.data?.type==='AUDIO_CACHED'){
+        audioDownloadProgress.set(event.data.source,1);
+        if(current&&event.data.source===audioSource(current)){paintBufferedProgress();if(pendingResumePosition)useCompletedAudio();}
         updateCacheStatus();
         if(view==='downloads'){clearTimeout(downloadsRefreshTimer);downloadsRefreshTimer=setTimeout(()=>refreshDownloadedTracks(),1000);}
         if(current && event.data.source===audioSource(current))preloadNext();
@@ -229,7 +244,7 @@
   }
   document.querySelectorAll('[data-open-settings]').forEach(button=>button.addEventListener('click',updateCacheStatus));
   for (const [buttonId,cacheName,statusElement,invalidate,done] of [
-    ['clear-audio-cache',AUDIO_CACHE,audioCacheStatus,()=>{audioCacheGeneration++;cancelPreload();releasePrepared();},'音乐缓存已清理'],
+    ['clear-audio-cache',AUDIO_CACHE,audioCacheStatus,()=>{audioCacheGeneration++;audioDownloadProgress.clear();paintBufferedProgress();cancelPreload();releasePrepared();},'音乐缓存已清理'],
     ['clear-cover-cache',COVER_CACHE,coverCacheStatus,()=>{coverCacheGeneration++;document.querySelectorAll('img[data-cover-bound]').forEach(img=>{img.src=coverSource(img.dataset.coverBound);delete img.dataset.coverBound;});for(const blob of coverUrls.values())URL.revokeObjectURL(blob);coverUrls.clear();coverRequests.clear();},'专辑封面缓存已清理'],
   ]) $(buttonId).onclick = async () => {
     if(cacheName===AUDIO_CACHE&&downloadBatch?.active){showSystemMessage('请先取消下载，再清理音乐缓存');return false;}
@@ -1019,7 +1034,7 @@
     current = t; bindCover($('now-cover'),t.cover,true); $('now-title').textContent = t.title; $('now-artist').textContent = t.artist + ' · ' + t.album;
     sendAudioConfig();
     const position=savedPlaybackPosition();
-    $('duration').textContent = time(t.duration); $('elapsed').textContent = time(position); $('seek').value = t.duration>0?position/t.duration*100:0; $('seek').disabled = true;paintSeekProgress();
+    $('duration').textContent = time(t.duration); $('elapsed').textContent = time(position); $('seek').value = t.duration>0?position/t.duration*100:0; $('seek').disabled = !(t.duration>0);paintSeekProgress();
     if ('mediaSession' in navigator && 'MediaMetadata' in window) navigator.mediaSession.metadata = new MediaMetadata({title:t.title,artist:t.artist,album:t.album,artwork:[{src:picture(t)}]});
     syncPlaybackState(true);
     registerMediaActions();
@@ -1154,7 +1169,10 @@
     const before=[...nextUp];nextUp=[];queueChanged();rememberQueueUndo(before,'已清空待插队歌曲');
   }
   function paintBufferedProgress() {
-    const gradient=loadedTrackId===current?.id?RoylylPlaybackFeedback.bufferGradient(audio.buffered,audio.duration):'none';
+    const progress=current?audioDownloadProgress.get(audioSource(current)):undefined;
+    const gradient=progress>0
+      ? 'linear-gradient(to right,var(--seek-buffered,#ffffff66) 0% '+(progress*100)+'%,transparent '+(progress*100)+'% 100%)'
+      : loadedTrackId===current?.id?RoylylPlaybackFeedback.bufferGradient(audio.buffered,audio.duration):'none';
     for(const id of ['seek','full-seek'])$(id).style.setProperty('--seek-buffer-gradient',gradient);
   }
   function clearPlaybackRecovery() { $('playback-recovery').hidden=true; }
@@ -1218,18 +1236,45 @@
     }
   }
   function renderPlaybackProgress() {
+    if(seekDrag||pendingResumePosition)return;
     $('elapsed').textContent=time(audio.currentTime); $('full-elapsed').textContent=time(audio.currentTime); $('full-seek').value=Number.isFinite(audio.duration)&&audio.duration>0?audio.currentTime/audio.duration*100:0; if(Number.isFinite(audio.duration)&&audio.duration>0)$('seek').value=audio.currentTime/audio.duration*100;paintSeekProgress();
     updateLyricPosition();
     for(const id of ['seek','full-seek']){$(id).setAttribute('aria-valuetext',time(audio.currentTime)+' / '+time(Number.isFinite(audio.duration)?audio.duration:current?.duration));}
   }
+  function playbackDuration() {
+    return loadedTrackId===current?.id&&Number.isFinite(audio.duration)&&audio.duration>0
+      ? audio.duration : Number(current?.duration)||0;
+  }
+  let seekDrag=false;
+  let completedAudioRequest=null;
+  async function useCompletedAudio() {
+    if(!current||localAudioUrl||completedAudioRequest||loadedTrackId!==current.id)return;
+    const id=current.id,source=audioSource(current),token=playToken;
+    completedAudioRequest=source;
+    try {
+      const blob=await cachedAudioUrl(source);
+      if(!blob)return;
+      if(token!==playToken||current?.id!==id||localAudioUrl){URL.revokeObjectURL(blob);return;}
+      const position=savedPlaybackPosition(),resume=!audio.paused;
+      localAudioUrl=blob;
+      pendingResumePosition={id,time:position};
+      if(resume){
+        await play(current,queue,true,true,!!insertionAnchor,{forceReload:true});
+      } else {
+        audio.src=blob;
+        audio.load();
+      }
+    } finally {completedAudioRequest=null;}
+  }
   function seekPlayback(position,fast=false) {
     if(!current||!Number.isFinite(position))return;
     const duration=loadedTrackId===current.id&&Number.isFinite(audio.duration)?audio.duration:current.duration;
-    const time=Math.max(0,Number.isFinite(duration)&&duration>0?Math.min(position,duration):position);
-    pendingResumePosition={id:current.id,time,fast};
-    if(audio.paused||playbackBlocked)pausedPosition={id:current.id,time};
-    restorePlaybackPosition();rebasePlaybackClock();
-    tracePlayback('seek-request','target='+time+(pendingResumePosition?' pending':' completed'));
+    const targetTime=Math.max(0,Number.isFinite(duration)&&duration>0?Math.min(position,duration):position);
+    pendingResumePosition={id:current.id,time:targetTime,fast};
+    $('elapsed').textContent=$('full-elapsed').textContent=time(targetTime);
+    if(audio.paused||playbackBlocked)pausedPosition={id:current.id,time:targetTime};
+    restorePlaybackPosition();useCompletedAudio();rebasePlaybackClock();
+    tracePlayback('seek-request','target='+targetTime+(pendingResumePosition?' pending':' completed'));
     savePlaybackSession();updateLyricPosition(true);syncPlaybackState();
   }
   function completePlaybackSeek() {
@@ -1238,8 +1283,8 @@
     // Background delivery can lag behind the actual seek completion. Accept
     // the small amount the native clock could have advanced in that time.
     const elapsed=Math.max(0,performance.now()-(target.appliedAt??performance.now()))/1000;
-    const forwardTolerance=audio.paused||!target.nativeSeek ? .15 : elapsed*(audio.playbackRate||1)+.15;
-    if(!target.applied||audio.currentTime<target.time-.15||audio.currentTime>target.time+forwardTolerance)return false;
+    const forwardTolerance=audio.paused||!target.nativeSeek ? 1 : elapsed*(audio.playbackRate||1)+1;
+    if(!target.applied||audio.currentTime<target.time-1||audio.currentTime>target.time+forwardTolerance)return false;
     pendingResumePosition=null;
     if(audio.paused||playbackBlocked)pausedPosition={id:target.id,time:audio.currentTime};
     tracePlayback('seek-completed','target='+target.time);
@@ -1563,7 +1608,24 @@
   $('cancel-insertion').onclick=()=>{const id=$('cancel-insertion').dataset.cancelInsertion;closeTrackMenu();cancelInsertion(id);};
   for(const id of ['clear-insertions','full-clear-insertions'])$(id).onclick=()=>{closeTrackMenu();closeFullMore();clearInsertions();};
   $('now-like').onclick = () => like();
-  $('seek').oninput = () => { paintSeekProgress();seekPlayback(Number($('seek').value)/100*audio.duration); };
+  for(const id of ['seek','full-seek']){
+    const input=$(id);
+    input.addEventListener('pointerdown',()=>{seekDrag=true;});
+    input.addEventListener('input',()=>{
+      seekDrag=true;
+      const position=Number(input.value)/100*playbackDuration();
+      $('elapsed').textContent=$('full-elapsed').textContent=time(position);
+      input.setAttribute('aria-valuetext',time(position)+' / '+time(playbackDuration()));
+      paintSeekProgress();
+    });
+    input.addEventListener('change',()=>{
+      seekDrag=false;
+      seekPlayback(Number(input.value)/100*playbackDuration());
+    });
+    input.addEventListener('pointercancel',()=>{seekDrag=false;});
+  }
+  window.addEventListener('pointerup',()=>{seekDrag=false;});
+  audio.addEventListener('durationchange',()=>{updateFull();$('seek').disabled=playbackDuration()<=0;restorePlaybackPosition();});
   const mobileVolume = matchMedia('(max-width:700px)');
   function placeLikeButton() {
     if (mobileVolume.matches) document.querySelector('.now').append($('now-like'));
@@ -1779,8 +1841,8 @@
     updateModeControls();
     const duration=loadedTrackId===current.id&&Number.isFinite(audio.duration)?audio.duration:current.duration;
     $('full-duration').textContent=time(duration);
-    $('full-seek').disabled=loadedTrackId!==current.id||!Number.isFinite(audio.duration);
-    $('full-seek').value=duration>0?savedPlaybackPosition()/duration*100:0;paintSeekProgress();
+    $('full-seek').disabled=playbackDuration()<=0;
+    if(!seekDrag)$('full-seek').value=duration>0?savedPlaybackPosition()/duration*100:0;paintSeekProgress();
     $('full-elapsed').textContent=time(savedPlaybackPosition()); $('full-status').textContent=!window.RoyToolsMusicBridge && playerStatusText && playerStatusText!==BUFFERING_STATUS ? playerStatusText : '';
     loadLyrics(current);
   }
@@ -1977,7 +2039,6 @@
   }
   installMiniPlayerSwipe();
   for(const [button,target] of [['full-play','play'],['full-prev','prev'],['full-next','next'],['full-like','now-like'],['full-like-mobile','now-like'],['full-repeat','repeat']])$(button).onclick=()=>$(target).click();
-  $('full-seek').oninput=()=>{paintSeekProgress();seekPlayback(Number($('full-seek').value)/100*audio.duration);};
 
   let catalogVersion='',catalogStatus='尚未检查曲库更新',catalogChecking=false,catalogCheckPromise=null;
   const catalogSync=RoylylCatalogSync.create({fallbackUrl:'./data/catalog.json?v='+APP_VERSION,onState:state=>{

@@ -8,15 +8,15 @@ const full=body=>new Response(body??bytes,{headers:{'Content-Length':'30','Conte
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 async function until(check){for(let n=0;n<150;n++){if(check())return;await tick();}throw Error('Work did not advance');}
 function harness(network){
-  const stores=new Map(),handlers={},calls=[];
+  const stores=new Map(),handlers={},calls=[],messages=[];
   const key=request=>new URL(typeof request==='string'?request:request.url,ORIGIN).href;
   const cache=name=>{if(!stores.has(name))stores.set(name,new Map());const entries=stores.get(name);return {
     async match(request){return entries.get(key(request))?.clone();},
     async put(request,response){entries.set(key(request),new Response(await response.arrayBuffer(),{status:response.status,headers:response.headers}));},
     async delete(request){return entries.delete(key(request));},async keys(){return [...entries.keys()].map(value=>new Request(value));}
   };};
-  const sandbox={URL,Request,Response,Headers,AbortController,ReadableStream,setTimeout,clearTimeout,setInterval,clearInterval,console,importScripts(){},
-    self:{location:{origin:ORIGIN},addEventListener:(name,handler)=>handlers[name]=handler,clients:{async matchAll(){return [];}}},
+  const sandbox={URL,Request,Response,Headers,Blob,AbortController,ReadableStream,setTimeout,clearTimeout,setInterval,clearInterval,console,importScripts(){},
+    self:{location:{origin:ORIGIN},addEventListener:(name,handler)=>handlers[name]=handler,clients:{async matchAll(){return [{postMessage(value){messages.push(value);}}];}}},
     caches:{async open(name){return cache(name);},async keys(){return [...stores.keys()];},async delete(name){return stores.delete(name);}},
     fetch(request,options={}){calls.push({request,options});return network(request,options);}};
   vm.createContext(sandbox);vm.runInContext(worker,sandbox);
@@ -26,7 +26,7 @@ function harness(network){
     const waits=[];let response;handlers.fetch({request,clientId:'audio-test',waitUntil:promise=>waits.push(promise),respondWith:value=>response=value});
     return {response,async done(){await response;await Promise.all(waits);}};
   }
-  return {calls,cache,message,request,async config(current,budget=-1,preload=true){await message({type:'AUDIO_CONFIG',budget,current:current?source(current):'',preload}).done;}};
+  return {calls,messages,cache,message,request,async config(current,budget=-1,preload=true){await message({type:'AUDIO_CONFIG',budget,current:current?source(current):'',preload}).done;}};
 }
 (async()=>{
   {
@@ -48,6 +48,7 @@ function harness(network){
     release();await playing.done();await current.done;await next.done;
     const earlySegment=await earlySeek.response;assert.equal(earlySegment.status,206);assert.equal(await earlySegment.text(),bytes.slice(10,20));await earlySeek.done();
     assert.equal(current.answer.ok,true);assert.equal(next.answer.ok,true);
+    assert.ok(h.messages.some(x=>x.type==='AUDIO_DOWNLOAD_PROGRESS'&&x.source===source('current')&&x.bytes===30),'whole-file byte progress reaches completion independently of playback');
     assert.equal(h.calls.length,2);assert.equal(h.calls[1].request.url,source('next'));
     assert.equal(await (await h.cache(AUDIO).match(source('current'))).text(),bytes,'whole song is saved even when the audio response is never consumed');
     const seek=h.request('current','bytes=10-19'),segment=await seek.response;
