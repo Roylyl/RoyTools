@@ -15,4 +15,8 @@
     <include
         domain="file"
         path="clash/override.json" />
+    <exclude domain="sharedpref" path="notification_forward_private.xml" />
+    <exclude domain="database" path="androidx.work.workdb" />
+    <exclude domain="database" path="androidx.work.workdb-wal" />
+    <exclude domain="database" path="androidx.work.workdb-shm" />
 </full-backup-content>

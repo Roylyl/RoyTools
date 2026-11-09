@@ -25,6 +25,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     companion object {
         const val TAB_MUSIC = 0
         const val TAB_PROXY = 1
+        const val TAB_FORWARD = 4
         const val TAB_REFRESH = 2
         const val TAB_SETTINGS = 3
     }
@@ -114,7 +115,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             setBackgroundColor(context.resolveThemedColor(com.google.android.material.R.attr.colorSurface))
             setPadding(dp(12), dp(3), dp(12), dp(3))
         }
-        listOf("音乐", "代理", "刷新率", "设置").forEachIndexed { index, label ->
+        listOf(TAB_MUSIC to "音乐", TAB_PROXY to "代理", TAB_FORWARD to "通知转发", TAB_REFRESH to "刷新率", TAB_SETTINGS to "设置").forEach { (index, label) ->
             val item = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
@@ -125,6 +126,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 setImageResource(when (index) {
                     TAB_MUSIC -> R.drawable.roytools_nav_music
                     TAB_PROXY -> R.drawable.roytools_nav_proxy
+                    TAB_FORWARD -> R.drawable.roytools_nav_forward
                     TAB_REFRESH -> R.drawable.roytools_nav_refresh
                     else -> R.drawable.roytools_nav_settings
                 })
@@ -164,10 +166,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
         view.visibility = View.VISIBLE
         view.bringToFront()
-        subtitle.text = listOf("音乐", "代理", "刷新率", "设置")[selected]
+        subtitle.text = listOf("音乐", "代理", "刷新率", "设置", "通知转发")[selected]
         headerTitle(null)
         tabLabels.indices.forEach { index ->
-            val color = if (index == selected) accent else context.resolveThemedColor(R.attr.glassTextSecondary)
+            val color = if (listOf(TAB_MUSIC, TAB_PROXY, TAB_FORWARD, TAB_REFRESH, TAB_SETTINGS)[index] == selected) accent else context.resolveThemedColor(R.attr.glassTextSecondary)
             (tabIcons[index].parent as ViewGroup).isSelected = index == selected
             tabIcons[index].imageTintList = ColorStateList.valueOf(color)
             tabLabels[index].setTextColor(color)
@@ -189,6 +191,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         pageHost.clearAnimation()
         pageHost.startAnimation(AnimationUtils.loadAnimation(context, R.anim.roytools_push_in))
     }
+    fun showForward(view: View) = showPage(view, TAB_FORWARD)
     fun showRefresh(view: View) = showPage(view, TAB_REFRESH)
     fun request(request: Request) {
         val sent = requests.trySend(request)

@@ -32,7 +32,7 @@ class StabilityForegroundService : Service() {
 
     private val healthMonitorRunnable = object : Runnable {
         override fun run() {
-            if (!OneSetup.isKeepAliveEnabled(this@StabilityForegroundService)) {
+            if (!OneSetup.isKeepAliveEnabled(this@StabilityForegroundService) || proxyForeground(this@StabilityForegroundService)) {
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
                 return
@@ -61,7 +61,7 @@ class StabilityForegroundService : Service() {
      * Notification actions are handled by RoyToolsShortcutActivity.
      */
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (!OneSetup.isKeepAliveEnabled(this)) {
+        if (!OneSetup.isKeepAliveEnabled(this) || proxyForeground(this)) {
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
@@ -86,51 +86,12 @@ class StabilityForegroundService : Service() {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         val contentIntent = PendingIntent.getActivity(this, 1001, open,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val mode = AdaptiveHzActionHandler.getCurrentMode(this)
-        val modeText = when (mode) {
-            AdaptiveHzMode.OFF -> "关闭"
-            AdaptiveHzMode.FORCE_MIN -> "60Hz"
-            AdaptiveHzMode.FORCE_MAX -> "120Hz"
-            AdaptiveHzMode.ADAPTIVE -> "自适应刷新率"
-        }
-        val needsRecovery = mode != AdaptiveHzMode.OFF &&
-            AdaptiveHzRuntimeState.getAccessibilityState(this) == AdaptiveHzRuntimeState.AccessibilityState.BROKEN
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setGroup(NotificationGroups.RUNTIME)
-            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
             .setSmallIcon(R.drawable.ic_qs_refresh_phone)
-            .setContentTitle("刷新率控制")
-            .setSubText("RoyTools")
-            .setContentText(if (needsRecovery) "辅助服务待恢复，请打开RoyTools配置" else modeText)
-            .setContentIntent(contentIntent)
-            .setCustomBigContentView(controlView(mode, needsRecovery))
-            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
-            .setOngoing(true)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setOnlyAlertOnce(true)
-            .setShowWhen(false)
-            .build()
-    }
-
-    private fun controlView(mode: AdaptiveHzMode, needsRecovery: Boolean): android.widget.RemoteViews {
-        val views = android.widget.RemoteViews(packageName, R.layout.roytools_refresh_notification)
-        views.setViewVisibility(R.id.refresh_notification_warning, if (needsRecovery) android.view.View.VISIBLE else android.view.View.GONE)
-        val entries = listOf(
-            Triple(R.id.refresh_notification_off, AdaptiveHzMode.OFF, "REFRESH_DEFAULT"),
-            Triple(R.id.refresh_notification_60, AdaptiveHzMode.FORCE_MIN, "REFRESH_60"),
-            Triple(R.id.refresh_notification_120, AdaptiveHzMode.FORCE_MAX, "REFRESH_120"),
-            Triple(R.id.refresh_notification_adaptive, AdaptiveHzMode.ADAPTIVE, "REFRESH_ADAPTIVE"))
-        entries.forEachIndexed { index, (id, option, action) ->
-            val intent = Intent().setClassName(packageName, "com.github.kr328.clash.RoyToolsShortcutActivity")
-                .setAction("com.roylyl.tools.shortcut." + action)
-                .putExtra("roytools_notification_action", true)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
-            views.setOnClickPendingIntent(id, PendingIntent.getActivity(this, 2100 + index, intent,
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
-            views.setInt(id, "setBackgroundResource", if (mode == option) R.drawable.roytools_notification_selected else R.drawable.roytools_notification_button)
-            views.setTextColor(id, if (mode == option) android.graphics.Color.WHITE else android.graphics.Color.rgb(0, 122, 255))
-        }
-        return views
+            .setContentTitle("RoyTools后台运行")
+            .setContentText("后台保活已开启")
+            .setContentIntent(contentIntent).setOngoing(true).setSilent(true).build()
     }
 
     /**
@@ -168,7 +129,14 @@ class StabilityForegroundService : Service() {
 
         private const val HEALTH_CHECK_INTERVAL_MS = 5_000L
 
+        fun proxyForeground(context: Context): Boolean = runCatching {
+            context.getSystemService(NotificationManager::class.java).activeNotifications.any {
+                it.notification.channelId == "clash_status_channel" && it.notification.flags and Notification.FLAG_FOREGROUND_SERVICE != 0
+            }
+        }.getOrDefault(false)
+
         fun start(context: Context) {
+            if (proxyForeground(context)) { stop(context); return }
             if (!OneSetup.isKeepAliveEnabled(context)) return
             val appContext = context.applicationContext
             val intent = Intent(appContext, StabilityForegroundService::class.java)

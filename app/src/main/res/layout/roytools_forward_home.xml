@@ -1,0 +1,17 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="match_parent" android:paddingHorizontal="16dp" android:paddingVertical="8dp" android:clipToPadding="false">
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+<LinearLayout style="@style/RoyTools.Card">
+<TextView style="@style/RoyTools.CardTitle" android:text="通知转发" />
+<TextView android:id="@+id/forward_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="12dp" android:text="尚未配置" />
+<com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/forward_enabled" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="实时转发到Telegram" />
+</LinearLayout>
+<LinearLayout style="@style/RoyTools.Card">
+<TextView style="@style/RoyTools.CardTitle" android:text="Chat" />
+<com.google.android.material.button.MaterialButton android:id="@+id/forward_chat_open" style="@style/RoyTools.SecondaryButton" android:text="打开聊天" />
+</LinearLayout>
+<LinearLayout style="@style/RoyTools.Card">
+<TextView style="@style/RoyTools.CardTitle" android:text="设置" />
+<com.google.android.material.button.MaterialButton android:id="@+id/forward_settings" style="@style/RoyTools.SecondaryButton" android:text="转发设置" />
+</LinearLayout>
+</LinearLayout>
+</ScrollView>

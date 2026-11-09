@@ -45,6 +45,7 @@ import com.github.kr328.clash.design.R as DesignR
 import com.github.kr328.clash.design.MainDesign.Companion.TAB_MUSIC
 import com.github.kr328.clash.design.MainDesign.Companion.TAB_PROXY
 import com.github.kr328.clash.design.MainDesign.Companion.TAB_REFRESH
+import com.github.kr328.clash.design.MainDesign.Companion.TAB_FORWARD
 import com.github.kr328.clash.design.MainDesign.Companion.TAB_SETTINGS
 import com.github.kr328.clash.music.MusicPanel
 import com.github.kr328.clash.music.MusicPlayback
@@ -54,6 +55,7 @@ import com.github.kr328.clash.design.dialog.RoyToolsDialogBuilder
 
 class MainActivity : BaseActivity<MainDesign>() {
     private enum class SettingsPage { Home, Theme, About, Background }
+    private var forwardPanel: com.github.kr328.clash.forward.ForwardPanel? = null
     private var selectedTab = 0
     private var settingsPage = SettingsPage.Home
     private var snapshotJob: Job? = null
@@ -71,6 +73,7 @@ class MainActivity : BaseActivity<MainDesign>() {
             (selectedTab == TAB_MUSIC && musicPanel?.isSecondary == true)
         when (tab) {
             TAB_MUSIC -> musicPanel?.goHome()
+            TAB_FORWARD -> forwardPanel?.goHome()
             TAB_PROXY -> design?.resetProxyScroll()
             TAB_REFRESH -> refreshPanel?.scrollToTop()
             TAB_SETTINGS -> settingsPage = SettingsPage.Home
@@ -99,6 +102,15 @@ class MainActivity : BaseActivity<MainDesign>() {
                 }
                 current.showMusic(panel.view)
                 panel.onStart()
+            }
+            TAB_FORWARD -> {
+                val panel = forwardPanel ?: com.github.kr328.clash.forward.ForwardPanel(this).also { created ->
+                    forwardPanel = created
+                    created.onNavigationChanged = { secondary -> if(selectedTab == TAB_FORWARD) current.headerTitle(if(secondary) "转发设置" else null) }
+                }
+                current.showForward(panel.view)
+                current.headerTitle(if(panel.isSecondary) "转发设置" else null)
+                panel.refresh()
             }
             TAB_PROXY -> current.showProxy()
             TAB_REFRESH -> {
@@ -180,6 +192,7 @@ class MainActivity : BaseActivity<MainDesign>() {
     }
 
     private fun navigateBack() {
+        if(selectedTab == TAB_FORWARD && forwardPanel?.isSecondary == true) { forwardPanel?.goHome(); return }
         if (selectedTab == TAB_MUSIC) {
             musicPanel?.handleBack { handled -> if (!handled && selectedTab == TAB_MUSIC) finish() }
             return
@@ -311,6 +324,7 @@ class MainActivity : BaseActivity<MainDesign>() {
     }
 
     override fun onDestroy() {
+        forwardPanel?.destroy()
         musicPanel?.onDestroy()
         refreshPanel?.onStop()
         super.onDestroy()
@@ -396,6 +410,7 @@ class MainActivity : BaseActivity<MainDesign>() {
     override fun onStart() {
         super.onStart()
         UpdateScheduler.checkOnLaunch(this)
+        if (selectedTab == TAB_FORWARD) forwardPanel?.refresh()
         com.github.kr328.clash.widget.ProxyWidgetProvider.refresh(this)
         if (selectedTab == TAB_SETTINGS && settingsPage == SettingsPage.Background) {
             design?.refreshBackgroundStatus(
@@ -496,7 +511,7 @@ class MainActivity : BaseActivity<MainDesign>() {
         }
         selectedTab = if (savedInstanceState?.containsKey("selected_tab") == true) {
             val stored = savedInstanceState.getInt("selected_tab")
-            (if (savedInstanceState.getInt("navigation_schema", 1) < 2) stored + 1 else stored).coerceIn(TAB_MUSIC, TAB_SETTINGS)
+            (if (savedInstanceState.getInt("navigation_schema", 1) < 2) stored + 1 else stored).coerceIn(TAB_MUSIC, TAB_FORWARD)
         } else requested
         settingsPage = savedInstanceState?.getString("settings_page")?.let { name ->
             SettingsPage.entries.firstOrNull { it.name == name }

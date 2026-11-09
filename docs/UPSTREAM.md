@@ -52,3 +52,11 @@ RoyTools图标、启动页两行文字和控件由本工程资源实现；代理
 ## 历史文档
 
 [`docs/upstream`](upstream)保留收到的旧贡献约定与隐私文本，仅用于来源追溯，不替代现行文档，也不应被解释为本分支要求贡献者授权闭源分发。当前条款见[CONTRIBUTING.md](../CONTRIBUTING.md)与[PRIVACY_POLICY.md](../PRIVACY_POLICY.md)。
+
+## 通知转发设计参考
+
+- [teslor/sms-telebot](https://github.com/teslor/sms-telebot)：Android通知到Telegram的配置流程参考。
+- [ItsAzni/NotificationForwarder](https://github.com/ItsAzni/NotificationForwarder)：NotificationListenerService通知转发流程参考。
+- [Telegram Bot API](https://core.telegram.org/bots/api)：使用getUpdates获取接收会话，sendMessage发送通知。
+
+该模块使用Android现有通知监听API和工程已有WorkManager实现，未复制上述项目源码或引入其依赖。

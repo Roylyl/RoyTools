@@ -41,6 +41,7 @@ class MainApplication : com.mahmutalperenunal.adaptivehz.OneApplication() {
                     .getBoolean(ServiceStore.KEY_AGGRESSIVE_KEEP_ALIVE, true)
                 settings.edit().putBoolean("keep_alive", legacyKeepAlive).apply()
             }
+            KeepAliveCoordinator.start(this)
             Remote.launch()
             UpdateScheduler.schedulePeriodic(this)
         } else {

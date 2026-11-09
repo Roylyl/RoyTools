@@ -143,3 +143,16 @@ Desktop.ini
 !/core/src/foss/golang/clash/test/config/example.org-key.pem
 !/core/src/foss/golang/clash/test/config/example.org.pem
 # JSON/YAML inside the source tree remains available for build configuration and fixtures.
+
+# Telegram credentials and device Chat data exports
+**/notification_forward_private.xml
+**/telegram-chat/
+**/chat-media/
+**/chat-downloads/
+/telegram-credentials.json
+/telegram-config.json
+/bot-token.txt
+/chat-history*.json
+/chat-history*.jsonl
+*.db-wal
+*.db-shm

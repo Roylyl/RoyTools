@@ -44,6 +44,7 @@ object AdaptiveHzActionHandler {
 
         runCatching {
             StabilityForegroundService.refreshNotification(appContext)
+            RefreshModeNotice.show(appContext, getCurrentMode(appContext))
         }.onFailure {
             Log.w(TAG, "Notification refresh failed", it)
         }

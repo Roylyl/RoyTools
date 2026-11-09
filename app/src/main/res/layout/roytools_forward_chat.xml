@@ -1,0 +1,17 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="16dp" android:background="?attr/glassCanvasStart">
+<LinearLayout android:layout_width="match_parent" android:layout_height="56dp" android:gravity="center_vertical">
+<ImageButton android:id="@+id/chat_back" android:layout_width="48dp" android:layout_height="48dp" android:background="@android:color/transparent" android:src="@drawable/roytools_back" android:contentDescription="返回" app:tint="?attr/colorPrimary" />
+<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Chat" android:textSize="25sp" android:textStyle="bold" />
+</LinearLayout>
+<TextView android:id="@+id/chat_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="8dp" android:text="连接失败" android:visibility="gone" android:textColor="#FF3B30" />
+<ScrollView android:id="@+id/chat_scroll" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true">
+<LinearLayout android:id="@+id/chat_messages" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
+</ScrollView>
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="bottom" android:paddingTop="8dp" android:paddingBottom="4dp">
+<ImageButton android:id="@+id/chat_add" android:layout_width="44dp" android:layout_height="44dp" android:layout_marginEnd="8dp" android:src="@drawable/chat_plus" android:contentDescription="添加附件" android:background="@android:color/transparent" />
+<LinearLayout android:id="@+id/chat_composer" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="bottom" android:padding="5dp">
+<EditText android:id="@+id/chat_input" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:minHeight="36dp" android:paddingHorizontal="12dp" android:paddingVertical="7dp" android:background="@android:color/transparent" android:hint="信息" android:textSize="16sp" android:inputType="textMultiLine|textCapSentences" android:maxLength="3900" android:maxLines="5" />
+<ImageButton android:id="@+id/chat_send" android:layout_width="34dp" android:layout_height="34dp" android:layout_margin="1dp" android:padding="7dp" android:src="@drawable/chat_send" android:contentDescription="发送" android:background="@android:color/transparent" />
+</LinearLayout>
+</LinearLayout>
+</LinearLayout>

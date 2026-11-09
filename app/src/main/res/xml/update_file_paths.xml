@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <external-files-path name="application_updates" path="updates/" />
+    <cache-path name="chat_media" path="chat-media/" />
+    <files-path name="chat_downloads" path="chat-downloads/" />
 </paths>

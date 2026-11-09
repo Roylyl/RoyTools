@@ -1,0 +1,35 @@
+<ScrollView xmlns:app="http://schemas.android.com/apk/res-auto" xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:paddingHorizontal="16dp" android:paddingVertical="8dp" android:clipToPadding="false">
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+<LinearLayout style="@style/RoyTools.Card">
+<TextView style="@style/RoyTools.CardTitle" android:text="通知权限" />
+<com.google.android.material.button.MaterialButton android:id="@+id/forward_permission" style="@style/RoyTools.SecondaryButton" android:text="配置通知使用权" />
+</LinearLayout>
+<LinearLayout style="@style/RoyTools.Card">
+<TextView style="@style/RoyTools.CardTitle" android:text="Telegram机器人" />
+<com.google.android.material.textfield.TextInputLayout app:boxBackgroundMode="outline" app:boxCornerRadiusTopStart="18dp" app:boxCornerRadiusTopEnd="18dp" app:boxCornerRadiusBottomStart="18dp" app:boxCornerRadiusBottomEnd="18dp" android:layout_marginBottom="12dp" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Bot Token">
+<com.google.android.material.textfield.TextInputEditText android:id="@+id/forward_token" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="textPassword" android:importantForAutofill="no" android:singleLine="true" />
+</com.google.android.material.textfield.TextInputLayout>
+<com.google.android.material.textfield.TextInputLayout app:boxBackgroundMode="outline" app:boxCornerRadiusTopStart="18dp" app:boxCornerRadiusTopEnd="18dp" app:boxCornerRadiusBottomStart="18dp" app:boxCornerRadiusBottomEnd="18dp" android:layout_marginBottom="12dp" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Chat ID">
+<com.google.android.material.textfield.TextInputEditText android:id="@+id/forward_chat" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberSigned" android:singleLine="true" />
+</com.google.android.material.textfield.TextInputLayout>
+<com.google.android.material.button.MaterialButton android:id="@+id/forward_save" style="@style/RoyTools.SecondaryButton" android:text="保存配置" />
+<com.google.android.material.button.MaterialButton android:id="@+id/forward_discover" style="@style/RoyTools.SecondaryButton" android:text="自动获取Chat ID" />
+<com.google.android.material.button.MaterialButton android:id="@+id/forward_test" style="@style/RoyTools.SecondaryButton" android:text="发送测试消息" />
+</LinearLayout>
+<LinearLayout style="@style/RoyTools.Card">
+<TextView style="@style/RoyTools.CardTitle" android:text="配置步骤" />
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="1.在iPhone的Telegram中打开@BotFather，发送/newbot创建独立机器人，复制Token。\n\n2.打开新机器人的聊天，点击开始并发送一条消息。\n\n3.在这里填入Token，点击自动获取Chat ID，确认接收会话。\n\n4.允许RoyTools读取通知，发送测试消息，再开启实时转发。\n\n手机需要能访问api.telegram.org。开启后通知标题和正文会发送到选定会话，请确认接收人。常驻通知、汇总通知、RoyTools和Telegram通知不转发。" />
+</LinearLayout>
+<LinearLayout style="@style/RoyTools.Card">
+<TextView style="@style/RoyTools.CardTitle" android:text="数据管理" />
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+<com.google.android.material.button.MaterialButton android:id="@+id/forward_clear_media" style="@style/RoyTools.SecondaryButton" android:layout_width="0dp" android:layout_weight="1" android:text="清除所有转发媒体" />
+<TextView android:id="@+id/forward_media_size" android:layout_width="88dp" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:gravity="end" android:textColor="?attr/glassTextSecondary" android:textSize="14sp" android:text="—" />
+</LinearLayout>
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+<com.google.android.material.button.MaterialButton android:id="@+id/forward_clear_records" style="@style/RoyTools.SecondaryButton" android:layout_width="0dp" android:layout_weight="1" android:text="清除所有转发记录" />
+<TextView android:id="@+id/forward_record_count" android:layout_width="88dp" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:gravity="end" android:textColor="?attr/glassTextSecondary" android:textSize="14sp" android:text="—" />
+</LinearLayout>
+</LinearLayout>
+</LinearLayout>
+</ScrollView>

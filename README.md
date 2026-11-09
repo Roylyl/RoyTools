@@ -4,7 +4,7 @@
 
 <h1 align="center">RoyTools</h1>
 
-<p align="center">在Android上听歌、切换代理节点，也能让屏幕在静置时自动降频。</p>
+<p align="center">音乐、代理、通知转发与Chat、自适应刷新率，一个应用集中管理。</p>
 
 <p align="center">
   <a href="https://github.com/Roylyl/RoyTools/releases/latest"><img src="https://img.shields.io/github/v/release/Roylyl/RoyTools?style=flat-square&amp;display_name=tag&amp;label=%E7%89%88%E6%9C%AC&amp;color=007AFF" alt="最新发行版本"></a>
@@ -23,7 +23,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Roylyl/RoyTools/releases/latest">下载APK</a> · <a href="#快速开始">快速开始</a> · <a href="#音乐">音乐</a> · <a href="#代理">代理</a> · <a href="#刷新率">刷新率</a> · <a href="#项目来源与许可">项目来源与许可</a>
+  <a href="https://github.com/Roylyl/RoyTools/releases/latest">下载APK</a> · <a href="#快速开始">快速开始</a> · <a href="#音乐">音乐</a> · <a href="#代理">代理</a> · <a href="#通知转发">通知转发</a> · <a href="#刷新率">刷新率</a> · <a href="#项目来源与许可">项目来源与许可</a>
 </p>
 
 ## 快速开始
@@ -34,6 +34,7 @@
 |---|---|
 |听一首歌|打开“音乐→全部歌曲”，点歌名开始播放。也可以从专辑或歌单选歌。|
 |开启代理|打开“代理→配置”，点右上角“＋”。选择“URL”填写自己的订阅地址，或选择“文件”导入配置。保存并选中配置，返回代理首页开启连接，首次使用时允许系统VPN请求。|
+|转发通知到iPhone|打开“通知转发→转发设置”，填写Telegram机器人Token、获取Chat ID并授予通知使用权，测试成功后开启转发。|
 |自动调节刷新率|打开“刷新率→配置辅助服务”，按[手机配对步骤](#手机配对)激活后，将模式滑块调到“自适应”。|
 
 ## 音乐
@@ -53,6 +54,28 @@ APK附带首次浏览所需的曲库索引。音频、歌词和专辑封面都�
 
 进入“代理节点”选择节点或测速。应用访问控制、网络、DNS、配置覆写和外部资源都在代理设置中。订阅和节点由使用者自行提供。
 
+## 通知转发
+
+把Android的新通知转发到Telegram，在iPhone上接收；也可以进入Chat双向聊天。Android端直接使用Telegram Bot API，无需登录Telegram账号或自建服务器。手机需要能访问api.telegram.org。
+
+1. 在iPhone的Telegram中打开@BotFather，发送`/newbot`创建独立机器人，复制Bot Token。
+2. 点击BotFather创建成功回复里的`t.me/机器人用户名`链接，进入新机器人聊天，点击“开始”并发送一句话。
+3. 打开“通知转发→转发设置”，填入Token，点击“自动获取Chat ID”并确认接收会话。
+4. 配置通知使用权，发送测试消息，确认iPhone收到后开启实时转发。
+
+转发会过滤重复内容，并跳过常驻通知、分组摘要、RoyTools和Telegram通知。断网任务联网后重试，超过24小时的待发通知不再发送。iPhone是否弹出横幅由Telegram会话及iOS通知设置决定。
+
+### Chat聊天
+
+- 左灰右蓝的聊天气泡，新消息动态追加；发送后回到最新消息，空输入时发送键禁用。
+- 输入框左侧“＋”打开附件小浮窗。相册支持勾选图片和视频，文件通过系统文件选择器选择。图片最大10MB，视频和文件最大50MB。
+- 图片按原始比例适配预览，加载时显示动画，失败可重试。点开图片支持放大，视频可打开播放。
+- 文件只在点击右侧下载按钮后下载。窗口显示速度、进度和百分比，可取消或后台下载；后台进度显示在通知栏。
+- 系统分享菜单选择“RoyTools Chat”，文本进入输入框，附件确认后发送到已配置的会话。
+- 收到新消息会独立通知，点击进入Chat。记录保存在本机，Telegram Bot API无法补取完整历史；后台接收取决于Android是否允许应用继续运行，可在总设置调整后台保活。
+
+“转发设置→数据管理”显示媒体占用空间和记录条数，支持分别清除媒体或记录，清除后更新统计。Token和Chat ID保存在应用私有配置中，并从系统备份排除。数据发送与保存说明见[隐私说明](PRIVACY_POLICY.md)。
+
 ## 刷新率
 
 模式滑块提供“关闭”“60Hz”“120Hz”和“自适应”。自适应模式在触控时升频，静置后降频。静置延迟默认0.5秒，每档相差0.25秒。实际可用的刷新率取决于手机屏幕和系统。
@@ -71,7 +94,7 @@ APK附带首次浏览所需的曲库索引。音频、歌词和专辑封面都�
 |---|---|
 |桌面4×2小组件|查看当前节点及当天经过代理的Wi-Fi和移动数据用量，切换代理模式和刷新率，查看曲目并控制播放。|
 |控制中心与桌面长按菜单|切换代理或自适应刷新率。在“设置→快捷控制”可查看控制中心按钮和桌面小组件的添加方法。|
-|通知栏|在刷新率通知中切换四个档位，在下载通知中查看进度。无线调试配对使用独立的高优先级通知。|
+|通知栏|刷新率切换后短暂提示。代理开启时用速度通知承担运行提示，关闭后按后台保活设置接替。下载进度归入运行通知组，Chat新消息单独提醒，无线调试使用独立高优先级通知。|
 |设置→主题、后台运行设置|选择跟随系统、浅色或深色主题，调整后台保活、桌面图标和最近任务的显示方式。|
 |设置→应用更新|手动检查新版本，或开启每小时检查。下载时可查看速度、取消或转入后台，完成后按系统提示安装。|
 |设置→关于RoyTools|按音乐、代理、刷新率和应用查看或导出日志，也可以清空全部日志。|
@@ -85,6 +108,7 @@ APK附带首次浏览所需的曲库索引。音频、歌词和专辑封面都�
 |Clash-Meta-Plus、[ClashMetaForAndroid](https://github.com/MetaCubeX/ClashMetaForAndroid)、[mihomo](https://github.com/MetaCubeX/mihomo)|Android代理界面、VPN服务、配置管理与代理核心。|
 |[Adaptive-Hz](https://github.com/mahmutaunal/Adaptive-Hz)、[Shizuku](https://github.com/RikkaApps/Shizuku)、[Shizuku-API](https://github.com/RikkaApps/Shizuku-API)|自适应刷新率、内置权限服务与无线配对。|
 |[Roylyl Music网页](https://github.com/Roylyl/roylyl.github.io/tree/main/music)、[Roylyl/Music](https://github.com/Roylyl/Music)|播放器与曲库交互的来源，以及网页和应用共用的音乐目录。|
+|[sms-telebot](https://github.com/teslor/sms-telebot)、[NotificationForwarder](https://github.com/ItsAzni/NotificationForwarder)|通知转发配置与监听流程参考；模块基于Android通知API和Telegram Bot API实现，未复制其源码。|
 |[ASRtestII](https://github.com/Roylyl/ASRtestII)|配色、页面布局和控件设计参考。|
 
 RoyTools整体以[GNU GPLv3](LICENSE)分发。各上游组件保留原作者的版权和许可。歌曲、歌词与专辑封面的使用和分发遵循各自的权利条件。详见[上游来源](docs/UPSTREAM.md)、[第三方许可与媒体说明](THIRD_PARTY.md)和[版权声明](NOTICE)。
