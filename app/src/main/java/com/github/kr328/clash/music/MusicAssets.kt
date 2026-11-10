@@ -13,10 +13,14 @@ import java.util.Locale
 
 /** The WebView and its service worker share a real HTTPS origin backed only by music assets. */
 internal class MusicAssets(context: Context) {
+    private val app = context.applicationContext
     private val assets = context.applicationContext.assets
 
     fun intercept(request: WebResourceRequest): WebResourceResponse? =
-        open(request.url, request.method, request.requestHeaders)
+        if (request.method == "GET" && !isOrigin(request.url)) {
+            MusicArtwork.openResponse(app, request.url.toString())
+                ?: open(request.url, request.method, request.requestHeaders)
+        } else open(request.url, request.method, request.requestHeaders)
 
     fun open(uri: Uri, method: String = "GET", requestHeaders: Map<String, String> = emptyMap()): WebResourceResponse? {
         if (!isOrigin(uri)) return null

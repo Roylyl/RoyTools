@@ -262,3 +262,6 @@ button.primary:active,button.secondary:active,button.back:active,button.quality:
 #songs .download-row .download-delete svg { width:21px;height:21px; }
 #songs .download-row .download-delete.is-confirming { width:88px;padding-inline:10px;background:#ff3b3014; }
 html[data-theme="dark"] #songs .download-row .download-delete { color:#ff453a; }
+
+/* Queue spacers own scroll positioning; retained rows must not shift the anchor. */
+#queue-list,#full-queue-list { overflow-anchor:none; }

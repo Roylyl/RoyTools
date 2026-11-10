@@ -128,8 +128,10 @@ internal class NativeMiniPlayer(context: Context, private val onAction: (String)
         if (artUrl == state.artwork) return
         artUrl = state.artwork
         artJob?.cancel()
-        cover.setImageDrawable(null)
-        if (state.artwork.isBlank()) return
+        if (state.artwork.isBlank()) {
+            cover.setImageDrawable(null)
+            return
+        }
         val app = context.applicationContext
         val url = state.artwork
         artJob = CoroutineScope(Dispatchers.Main.immediate).launch {

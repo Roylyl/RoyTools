@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Looper
 import android.os.SystemClock
 import android.util.LruCache
+import android.webkit.WebResourceResponse
 import com.github.kr328.clash.common.log.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,6 +15,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.File
+import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URI
@@ -31,8 +33,8 @@ internal object MusicArtwork {
     private const val COVER_HOST = "raw.githubusercontent.com"
     private const val LEGACY_COVER_PATH = "/music/share-covers/"
     private const val LEGACY_COVER_HOST = "roylyl.github.io"
-    private const val MAX_BYTES = 2L * 1024 * 1024
-    private const val MAX_CACHE_BYTES = 32L * 1024 * 1024
+    private const val MAX_BYTES = 16L * 1024 * 1024
+    private const val MAX_CACHE_BYTES = 64L * 1024 * 1024
     private const val MAX_CACHE_FILES = 256
     private const val MAX_BITMAP_BYTES = 8 * 1024 * 1024
     private const val BITMAP_EDGE = 320
@@ -86,6 +88,36 @@ internal object MusicArtwork {
         return relative
     }
 
+    /** WebView, notifications and widgets share the same original file and fetch lock. */
+    fun openResponse(context: Context, url: String): WebResourceResponse? {
+        val request = parseSource(url) ?: return null
+        if (Looper.myLooper() == Looper.getMainLooper()) return null
+        val headers = mapOf("Access-Control-Allow-Origin" to MusicAssets.ORIGIN,
+            "Cache-Control" to "no-cache", "X-Content-Type-Options" to "nosniff")
+        val generation = cacheGeneration.get()
+        val response = synchronized(cacheLock) {
+            // decode also validates the downloaded image before committing its original.
+            if (decode(context, url) == null || generation != cacheGeneration.get()) return@synchronized null
+            val original = if (request.legacy) legacyCoverPaths?.get(request.relative) else null
+            val source = original?.copy(revision = request.revision ?: original.revision) ?: request
+            val directory = File(context.applicationContext.cacheDir, "music-artwork").canonicalFile
+            val cached = File(directory, source.cachePath).canonicalFile
+            if (!cached.path.startsWith(directory.path + File.separator) || !cached.isFile) return@synchronized null
+            runCatching {
+                val mime = when (source.relative.substringAfterLast('.').lowercase()) {
+                    "png" -> "image/png"
+                    "webp" -> "image/webp"
+                    else -> "image/jpeg"
+                }
+                WebResourceResponse(mime, null, 200, "OK",
+                    headers + ("Content-Length" to cached.length().toString()), cached.inputStream())
+            }.getOrNull()
+        }
+        // Do not fall through to a second network request when the shared fetch fails.
+        return response ?: WebResourceResponse("text/plain", "UTF-8", 502, "Artwork unavailable",
+            headers, ByteArrayInputStream(ByteArray(0)))
+    }
+
     fun decode(context: Context, url: String): Bitmap? {
         if (Looper.myLooper() == Looper.getMainLooper()) return null
         val request = parseSource(url) ?: return null
@@ -100,11 +132,11 @@ internal object MusicArtwork {
                 }
                 val relative = source.cachePath
                 val bitmapKey = "$generation:$relative"
-                bitmaps.get(bitmapKey)?.takeUnless { it.isRecycled }?.let { return@runCatching it }
                 val directory = File(context.applicationContext.cacheDir, "music-artwork").canonicalFile
                 val cached = File(directory, relative).canonicalFile
                 if (!cached.path.startsWith(directory.path + File.separator)) return@runCatching null
                 if (cached.isFile && cached.length() in 1L..MAX_BYTES) {
+                    bitmaps.get(bitmapKey)?.takeUnless { it.isRecycled }?.let { return@runCatching it }
                     decodeFile(cached, BITMAP_EDGE)?.let { bitmap ->
                         if (generation != cacheGeneration.get()) return@runCatching null
                         cached.setLastModified(System.currentTimeMillis())

@@ -75,7 +75,7 @@
       try { await img.decode(); } catch (_) { /* A load event already confirms a usable image. */ }
       if (version !== generation) return;
       img.dataset.imageState = 'ready'; img.removeAttribute('aria-busy'); overlay.hidden = true;
-      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) img.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 350, easing: 'ease-out' });
+      if (!img.hasAttribute('data-cover-path') && !img.dataset.coverBound && !matchMedia('(prefers-reduced-motion: reduce)').matches) img.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 350, easing: 'ease-out' });
     }
     function start() {
       generation++;

@@ -1,6 +1,6 @@
 'use strict';
 (() => {
-  const APP_VERSION='20261105-android-26', SHELL_VERSION='roylyl-music-shell-20261105-26';
+  const APP_VERSION='20261110-android-27', SHELL_VERSION='roylyl-music-shell-20261110-27';
   const ROOT = 'https://raw.githubusercontent.com/Roylyl/Music/main/';
   const $ = id => document.getElementById(id);
   const musicSelectTitles={artist:'歌手','sort-primary':'第一顺序','sort-secondary':'第二顺序','sort-direction':'方向'};
@@ -403,7 +403,7 @@
         const local = URL.createObjectURL(blob);
         coverUrls.set(source,local);
         return local;
-      } catch { return source; }
+      } catch { return null; }
       finally { if(coverRequests.get(source)===request)coverRequests.delete(source); }
     })();
     coverRequests.set(source,request);
@@ -415,7 +415,7 @@
     coverObserver?.unobserve(img);
     if(!img.isConnected)return;
     const address=coverSource(path),generation=coverCacheGeneration,source=await cachedCover(path);
-    if(img.isConnected&&generation===coverCacheGeneration&&img.dataset.coverBound===path&&img.dataset.coverSource===address)img.src=source;
+    if(img.isConnected&&generation===coverCacheGeneration&&img.dataset.coverBound===path&&img.dataset.coverSource===address)img.src=source||'data:image/png;base64,';
   }
   const coverObserver = 'IntersectionObserver' in window ? new IntersectionObserver(entries => {
     for (const {target,isIntersecting} of entries) if (isIntersecting) loadCoverInto(target,target.dataset.coverBound);
@@ -425,10 +425,14 @@
     const source=coverSource(path);
     if(img.dataset.coverBound===path&&img.dataset.coverSource===source)return;
     img.dataset.coverBound=path;img.dataset.coverSource=source;
-    img.src = './placeholder.svg';
+    img._retryCover=()=>loadCoverInto(img,path);
+    // Cached artwork goes straight to its final URL without a placeholder round trip.
     if (coverUrls.has(source)) img.src = coverUrls.get(source);
-    else if (eager || !coverObserver) loadCoverInto(img,path);
-    else {observedCovers.add(img);coverObserver.observe(img);}
+    else {
+      img.src = './placeholder.svg';
+      if (eager || !coverObserver) loadCoverInto(img,path);
+      else {observedCovers.add(img);coverObserver.observe(img);}
+    }
   }
   function hydrateCovers(root) {
     for(const img of observedCovers)if(!img.isConnected){coverObserver?.unobserve(img);observedCovers.delete(img);}
@@ -999,8 +1003,33 @@
     const end=Math.min(items.length,start+Math.ceil(list.clientHeight/72)+9);
     if(!force&&list._queueStart===start&&list._queueEnd===end)return;
     list._queueStart=start;list._queueEnd=end;
-    list.querySelectorAll('img[data-cover-path]').forEach(img=>coverObserver?.unobserve(img));
-    list.innerHTML=items.length?`<div aria-hidden="true" style="height:${start*72}px"></div>`+trackRows(items.slice(start,end),true,start)+`<div aria-hidden="true" style="height:${(items.length-end)*72}px"></div>`:'<p class="muted">播放一首歌曲后，队列会显示在这里。</p>';
+    if(!items.length){
+      if(!list._queueEmpty){list.replaceChildren();const message=document.createElement('p');message.className='muted';message.textContent='播放一首歌曲后，队列会显示在这里。';list.append(message);}
+      list._queueEmpty=true;list._queueTop=list._queueBottom=null;return;
+    }
+    list._queueEmpty=false;
+    if(!list._queueTop){
+      list.replaceChildren();list._queueTop=document.createElement('div');list._queueBottom=document.createElement('div');
+      for(const spacer of [list._queueTop,list._queueBottom])spacer.setAttribute('aria-hidden','true');
+      list.append(list._queueTop,list._queueBottom);
+    }
+    // Keep overlapping rows (and decoded images) attached while scrolling.
+    const wanted=new Set(items.slice(start,end).map((t,i)=>(start+i)+':'+t.id));
+    const existing=new Map();
+    for(const row of list.querySelectorAll('.track-row[data-queue-key]')){
+      if(wanted.has(row.dataset.queueKey))existing.set(row.dataset.queueKey,row);
+      else {for(const img of row.querySelectorAll('img')){coverObserver?.unobserve(img);observedCovers.delete(img);}row.remove();}
+    }
+    let cursor=list._queueTop.nextSibling;
+    for(let index=start;index<end;index++){
+      const track=items[index],key=index+':'+track.id;
+      let row=existing.get(key);
+      if(!row){const template=document.createElement('template');template.innerHTML=trackRows([track],true,index);row=template.content.firstElementChild;row.dataset.queueKey=key;}
+      if(row!==cursor)list.insertBefore(row,cursor);
+      cursor=row.nextSibling;
+      row.dataset.queuedRepeat=String(!track._queueCurrent);row.dataset.queueInserted=String(!!track._queueInserted);
+    }
+    list._queueTop.style.height=start*72+'px';list._queueBottom.style.height=(items.length-end)*72+'px';
     hydrateCovers(list);updateQueueMarkers();
   }
   function renderQueue() {
