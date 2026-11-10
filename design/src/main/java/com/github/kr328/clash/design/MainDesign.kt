@@ -32,7 +32,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     enum class Request {
         ToggleStatus, OpenLanSharing, OpenProxy, OpenProfiles, OpenAppSettings,
         OpenNetworkSettings, OpenOverrideSettings, OpenProviders,
-        ModeDefault, ModeRule, ModeGlobal, ModeDirect, AddProxyTile, AddProxyWidget
+        ModeDefault, ModeRule, ModeMusic, ModeAI, ModeGlobal, ModeDirect, AddProxyTile, AddProxyWidget
     }
 
     var onHeaderBack: (() -> Unit)? = null
@@ -48,7 +48,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     private val tabIcons = mutableListOf<ImageView>()
     private val tabLabels = mutableListOf<TextView>()
     private var trackingProxyMode = false
-    private val proxyModes = listOf(Request.ModeDefault, Request.ModeRule, Request.ModeGlobal, Request.ModeDirect)
+    private val proxyModes = listOf(Request.ModeDefault, Request.ModeRule, Request.ModeMusic, Request.ModeAI, Request.ModeGlobal, Request.ModeDirect)
     override val root: View get() = shell
     private fun dp(value: Int) = (context.resources.displayMetrics.density * value).toInt()
 
@@ -57,6 +57,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         binding.uploadSpeed = "0.00KB/s"
         binding.downloadSpeed = "0.00KB/s"
         binding.mode = context.getString(R.string.rule_mode)
+        binding.proxyModeSlider.max = 5
+        binding.proxyModeSlider.tickCount = 6
         binding.proxyModeSlider.alignLabels(binding.proxyModeLabels)
         binding.proxyModeSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
@@ -75,7 +77,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 request(proxyModes[seekBar.progress])
             }
         })
-        for (index in 0..3) binding.proxyModeLabels.getChildAt(index).setOnClickListener {
+        for (index in 0 until binding.proxyModeLabels.childCount) binding.proxyModeLabels.getChildAt(index).setOnClickListener {
             if (binding.proxyModeSlider.progress != index) TouchFeedback.step(binding.proxyModeSlider)
             binding.proxyModeSlider.progress = index
             request(proxyModes[index])
@@ -203,7 +205,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         binding.clashRunning = running
         binding.proxyModeSlider.isEnabled = running
         binding.proxyModeSlider.alpha = if (running) 1f else 0.45f
-        for (index in 0..3) binding.proxyModeLabels.getChildAt(index).isEnabled = running
+        for (index in 0 until binding.proxyModeLabels.childCount) binding.proxyModeLabels.getChildAt(index).isEnabled = running
         if (!running) {
             binding.uploadSpeed = "0.00KB/s"
             binding.downloadSpeed = "0.00KB/s"
@@ -214,11 +216,12 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         binding.downloadSpeed = if (binding.clashRunning) value.trafficDownloadRate() else "0.00KB/s"
     }
     suspend fun setForwarded(value: Long) = withContext(Dispatchers.Main) { binding.forwarded = value.trafficTotal() }
-    suspend fun setProxyMode(override: TunnelState.Mode?) = withContext(Dispatchers.Main) {
-        if (!trackingProxyMode) binding.proxyModeSlider.progress = when (override) {
+    suspend fun setProxyMode(override: TunnelState.Mode?, preset: String? = null) = withContext(Dispatchers.Main) {
+        if(preset=="music")binding.mode="音乐模式" else if(preset=="ai")binding.mode="AI模式"
+        if (!trackingProxyMode) binding.proxyModeSlider.progress = if(preset=="music")2 else if(preset=="ai")3 else when (override) {
             TunnelState.Mode.Rule -> 1
-            TunnelState.Mode.Global -> 2
-            TunnelState.Mode.Direct -> 3
+            TunnelState.Mode.Global -> 4
+            TunnelState.Mode.Direct -> 5
             else -> 0
         }
     }

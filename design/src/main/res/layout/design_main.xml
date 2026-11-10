@@ -31,10 +31,12 @@
             </LinearLayout>
             <LinearLayout style="@style/RoyTools.Card">
                 <TextView style="@style/RoyTools.CardTitle" android:text="代理模式" />
-                <com.github.kr328.clash.common.ui.FourStepSlider android:id="@+id/proxy_mode_slider" android:layout_width="match_parent" android:layout_height="56dp" android:contentDescription="代理模式，默认、规则、全局、直连" />
+                <com.github.kr328.clash.common.ui.FourStepSlider android:id="@+id/proxy_mode_slider" android:layout_width="match_parent" android:layout_height="56dp" android:contentDescription="代理模式，默认、规则、音乐、AI、全局、直连" />
                 <LinearLayout android:id="@+id/proxy_mode_labels" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
                     <TextView style="@style/RoyTools.Caption" android:layout_width="0dp" android:layout_weight="1" android:gravity="center" android:text="默认" />
                     <TextView style="@style/RoyTools.Caption" android:layout_width="0dp" android:layout_weight="1" android:gravity="center" android:text="规则" />
+                    <TextView style="@style/RoyTools.Caption" android:layout_width="0dp" android:layout_weight="1" android:gravity="center" android:text="音乐" />
+                    <TextView style="@style/RoyTools.Caption" android:layout_width="0dp" android:layout_weight="1" android:gravity="center" android:text="AI" />
                     <TextView style="@style/RoyTools.Caption" android:layout_width="0dp" android:layout_weight="1" android:gravity="center" android:text="全局" />
                     <TextView style="@style/RoyTools.Caption" android:layout_width="0dp" android:layout_weight="1" android:gravity="center" android:text="直连" />
                 </LinearLayout>

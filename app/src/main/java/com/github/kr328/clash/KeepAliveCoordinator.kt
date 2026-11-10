@@ -31,6 +31,7 @@ object KeepAliveCoordinator {
                     StabilityForegroundService.stop(app)
                     OneSetup.recoverAccessibility(app)
                 }
+                com.github.kr328.clash.forward.ForwardRecovery.ensure(app)
                 main.postDelayed(this,5000)
             }
         },5000)

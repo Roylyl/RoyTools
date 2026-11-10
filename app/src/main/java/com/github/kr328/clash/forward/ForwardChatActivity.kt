@@ -90,6 +90,7 @@ class ForwardChatActivity: AppCompatActivity(), CoroutineScope by MainScope() {
         com.github.kr328.clash.common.ui.TouchFeedback.install(window)
         overridePendingTransition(com.github.kr328.clash.design.R.anim.roytools_push_in, com.github.kr328.clash.design.R.anim.roytools_push_out)
         status = findViewById(R.id.chat_status); messages = findViewById(R.id.chat_messages); scroll = findViewById(R.id.chat_scroll)
+        status.setOnClickListener { toast(ChatReceiver.failureReason) }
         findViewById<View>(R.id.chat_back).setOnClickListener { finish() }
         val input = findViewById<EditText>(R.id.chat_input)
         val send = findViewById<ImageButton>(R.id.chat_send)

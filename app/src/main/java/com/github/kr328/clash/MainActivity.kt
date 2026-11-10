@@ -295,7 +295,16 @@ class MainActivity : BaseActivity<MainDesign>() {
                     withTimeout(10_000L) {
                         withClash {
                             val override = queryOverride(Clash.OverrideSlot.Session)
+                            val preset=when(request){MainDesign.Request.ModeRule->"roylyl";MainDesign.Request.ModeMusic->"music";MainDesign.Request.ModeAI->"ai";else->null}
+                            if(preset!=null){
+                                val target=queryProxyGroupNames(false).firstOrNull{it!="GLOBAL" && it!="DIRECT" && it!="REJECT"}
+                                    ?: queryProxyGroup("GLOBAL",com.github.kr328.clash.core.model.ProxySort.Default).now.takeIf{it!="DIRECT" && it!="REJECT" && it!="GLOBAL"}
+                                    ?: error("请先选择可用代理节点")
+                                if(preset=="roylyl")com.github.kr328.clash.core.model.BundledRoutingRules.apply(this@MainActivity,override,target,queryProxyGroupNames(false))
+                                else com.github.kr328.clash.core.model.RoutingPresets.apply(override,preset,target)
+                            }else com.github.kr328.clash.core.model.RoutingPresets.clear(override)
                             override.mode = when (request) {
+                                MainDesign.Request.ModeMusic,MainDesign.Request.ModeAI -> TunnelState.Mode.Rule
                                 MainDesign.Request.ModeRule -> TunnelState.Mode.Rule
                                 MainDesign.Request.ModeGlobal -> TunnelState.Mode.Global
                                 MainDesign.Request.ModeDirect -> TunnelState.Mode.Direct
@@ -368,6 +377,8 @@ class MainActivity : BaseActivity<MainDesign>() {
                             startActivity(ProfilesActivity::class.intent)
                         MainDesign.Request.ModeDefault,
                         MainDesign.Request.ModeRule,
+                        MainDesign.Request.ModeMusic,
+                        MainDesign.Request.ModeAI,
                         MainDesign.Request.ModeGlobal,
                         MainDesign.Request.ModeDirect -> changeProxyMode(design, it)
                         MainDesign.Request.OpenAppSettings -> startActivity(AppSettingsActivity::class.intent)
@@ -427,7 +438,7 @@ class MainActivity : BaseActivity<MainDesign>() {
             queryTunnelState()
         }
         setMode(state.mode)
-        setProxyMode(withClash { queryOverride(Clash.OverrideSlot.Session).mode })
+        withClash { queryOverride(Clash.OverrideSlot.Session) }.let { setProxyMode(it.mode,it.routingPreset) }
 
         withProfile {
             setProfileName(queryActive()?.name)

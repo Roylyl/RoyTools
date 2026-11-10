@@ -35,6 +35,21 @@ data class ConfigurationOverride(
     @SerialName("mode")
     var mode: TunnelState.Mode? = null,
 
+    @SerialName("rule")
+    var rules: List<String>? = null,
+
+    @SerialName("rule-providers")
+    var ruleProviders: Map<String,RuleProviderOverride>? = null,
+
+    @SerialName("roytools-original-rule-providers")
+    var originalRuleProviders: Map<String,RuleProviderOverride>? = null,
+
+    @SerialName("roytools-preset")
+    var routingPreset: String? = null,
+
+    @SerialName("roytools-original-rules")
+    var originalRules: List<String>? = null,
+
     @SerialName("log-level")
     var logLevel: LogMessage.Level? = null,
 
@@ -80,6 +95,16 @@ data class ConfigurationOverride(
     @SerialName("geox-url")
     val geoxurl: GeoXUrl = GeoXUrl(),
 ) : Parcelable {
+    @Serializable
+    data class RuleProviderOverride(
+        val type:String?=null,
+        val behavior:String?=null,
+        val format:String?=null,
+        val path:String?=null,
+        val url:String?=null,
+        val interval:Long?=null,
+        val proxy:String?=null,
+    )
     @Serializable
     data class Dns(
         @SerialName("enable")

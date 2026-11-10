@@ -57,7 +57,7 @@ class RefreshPanel(private val activity: Activity) : android.content.ContextWrap
 
     fun onStart() {
         OneSetup.configure(this)
-        if (!attemptedReconnect && !Shizuku.pingBinder() &&
+        if (AdaptiveHzActionHandler.getCurrentMode(this) != AdaptiveHzMode.OFF && !attemptedReconnect && !Shizuku.pingBinder() &&
             getSharedPreferences("wireless_setup", MODE_PRIVATE).getBoolean("paired", false)) {
             attemptedReconnect = true
             startForegroundService(Intent(this, WirelessSetupService::class.java)

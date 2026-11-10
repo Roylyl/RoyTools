@@ -236,6 +236,7 @@ object AdaptiveHzActionHandler {
         onComplete: ((RefreshRateApplyResult) -> Unit)? = null,
         onSettled: (() -> Unit)? = null
     ) {
+        com.mahmutalperenunal.adaptivehz.WirelessSetupService.cancelForDisabledMode(context)
         requestMode(
             context = context,
             mode = AdaptiveHzMode.OFF,

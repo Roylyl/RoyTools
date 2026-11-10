@@ -417,6 +417,12 @@ class WirelessSetupService : Service() {
             val port = texts.firstNotNullOfOrNull { pattern.find(it)?.groupValues?.get(1)?.toIntOrNull() }
             if (port != null && port in 1..65535) listener(port)
         }
+        fun cancelForDisabledMode(context: android.content.Context) {
+            context.stopService(android.content.Intent(context,WirelessSetupService::class.java))
+            val manager=context.getSystemService(android.app.NotificationManager::class.java)
+            manager.cancel(ID);manager.cancel(ID+1);manager.cancel(LEGACY_PAIR_ID)
+            com.github.kr328.clash.common.util.NotificationGroups.refresh(context,com.github.kr328.clash.common.util.NotificationGroups.WIRELESS)
+        }
         private const val CHANNEL = "wireless_activation_progress"
         private const val PAIR_CHANNEL = "wireless_pairing_heads_up"
         private const val LEGACY_PAIR_ID = 2003

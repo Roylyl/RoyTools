@@ -52,7 +52,7 @@ object ProxyWidgetState {
         if (!running) return snapshot
 
         val override = runCatching { Clash.queryOverride(Clash.OverrideSlot.Session) }.getOrNull()
-        snapshot.putString(KEY_MODE, when (override?.mode) {
+        snapshot.putString(KEY_MODE, override?.routingPreset?.takeUnless{it=="roylyl"} ?: when (override?.mode) {
             TunnelState.Mode.Rule -> "rule"
             TunnelState.Mode.Global -> "global"
             TunnelState.Mode.Direct -> "direct"
@@ -81,9 +81,17 @@ object ProxyWidgetState {
         return try {
             // Preserve the other session overrides and all persisted selector choices.
             val override = Clash.queryOverride(Clash.OverrideSlot.Session)
-            if (override.mode != mode) {
+            if (override.mode != mode || override.routingPreset != null || value=="rule") {
+                com.github.kr328.clash.core.model.RoutingPresets.clear(override)
+                if(value=="rule") {
+                    val groups=Clash.queryGroupNames(false).ifEmpty{Clash.queryGroup("GLOBAL",ProxySort.Default).proxies.filter{it.isGroup}.map{it.name}}
+                    val target=groups.firstOrNull{it!="GLOBAL" && it!="DIRECT" && it!="REJECT"} ?: Clash.queryGroup("GLOBAL",ProxySort.Default).now
+                    com.github.kr328.clash.core.model.BundledRoutingRules.apply(context,override,target,groups)
+                }
+                if(value=="global"){val global=Clash.queryGroup("GLOBAL",ProxySort.Default);if(global.now in listOf("DIRECT","REJECT"))global.proxies.firstOrNull{it.isGroup && it.name!="GLOBAL"}?.let{Clash.patchSelector("GLOBAL",it.name)}}
                 override.mode = mode
                 Clash.patchOverride(Clash.OverrideSlot.Session, override)
+                ProxyModePreferences.save(context,override)
                 context.sendOverrideChanged()
             }
             query(context).apply {

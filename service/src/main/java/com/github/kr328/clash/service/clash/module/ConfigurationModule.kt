@@ -50,6 +50,7 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
                 if (current == loaded && changed != null && changed != loaded)
                     continue
 
+                val newProfile=loaded!=current
                 loaded = current
 
                 val active = ImportedDao().queryByUUID(current)
@@ -57,6 +58,20 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
 
                 Clash.setAgeSecretKey(active.ageSecretKey?.takeIf { it.isNotBlank() })
 
+                val profileDirectory=service.importedDir.resolve(active.uuid.toString())
+                if(newProfile){
+                    val saved=com.github.kr328.clash.service.util.ProxyModePreferences.read(service)
+                    val session=Clash.queryOverride(Clash.OverrideSlot.Session)
+                    com.github.kr328.clash.core.model.RoutingPresets.clear(session)
+                    session.mode=null
+                    Clash.patchOverride(Clash.OverrideSlot.Session,session)
+                    Clash.load(profileDirectory).await()
+                    com.github.kr328.clash.service.util.ProxyModePreferences.apply(service,session,saved)
+                    Clash.patchOverride(Clash.OverrideSlot.Session,session)
+                }
+                if(Clash.queryOverride(Clash.OverrideSlot.Session).routingPreset=="roylyl") {
+                    com.github.kr328.clash.core.model.BundledRoutingRules.install(service,service.importedDir.resolve(active.uuid.toString()))
+                }
                 Clash.load(service.importedDir.resolve(active.uuid.toString())).await()
 
                 val remove = SelectionDao().querySelections(active.uuid)

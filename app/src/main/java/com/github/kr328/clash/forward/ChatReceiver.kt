@@ -10,6 +10,7 @@ object ChatReceiver {
     private val scope=CoroutineScope(SupervisorJob()+Dispatchers.IO)
     private var job: Job?=null
     @Volatile var connection="连接中…";private set
+    @Volatile var failureReason="";private set
     @Volatile var failed=false;private set
     @Volatile var visible=false
     @Synchronized fun start(context: Context) {
@@ -39,7 +40,19 @@ object ChatReceiver {
                     }
                     failed=false;connection="已连接"
                 }catch(e:CancellationException){throw e}
-                catch(e:Exception){failed=true;connectedToken="";connection=if(e is TelegramForward.ApiError)e.message.orEmpty() else "连接失败，正在重试";delay(5000)}
+                catch(e:Exception){
+                    failed=true;connectedToken=""
+                    failureReason=when(e){
+                        is TelegramForward.ApiError->e.message.orEmpty()
+                        is java.net.SocketTimeoutException->"Telegram连接超时，请更换代理节点后重试"
+                        is java.net.UnknownHostException->"无法解析Telegram域名，请检查代理DNS"
+                        is javax.net.ssl.SSLException->"Telegram安全连接失败，请检查代理节点和系统时间"
+                        is java.net.ConnectException->"无法连接Telegram，请检查代理节点"
+                        else->"Telegram连接失败（"+e.javaClass.simpleName+"），将自动重试"
+                    }
+                    com.github.kr328.clash.common.log.Log.w("Chat接收失败："+e.javaClass.simpleName+if(e is TelegramForward.ApiError)" HTTP="+e.code else "")
+                    connection=failureReason;delay(5000)
+                }
                 delay(300)
             }
         }

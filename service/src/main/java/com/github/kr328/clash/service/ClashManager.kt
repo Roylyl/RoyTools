@@ -28,7 +28,9 @@ class ClashManager(private val context: Context) : IClashManager,
     override fun queryTrafficNow(): Long = Clash.queryTrafficNow()
 
     override fun queryProxyGroupNames(excludeNotSelectable: Boolean): List<String> {
-        return Clash.queryGroupNames(excludeNotSelectable)
+        return Clash.queryGroupNames(excludeNotSelectable).ifEmpty {
+            Clash.queryGroup("GLOBAL",ProxySort.Default).proxies.filter{it.isGroup && (!excludeNotSelectable || it.type=="Selector")}.map{it.name}
+        }
     }
 
     override fun queryProxyGroup(name: String, proxySort: ProxySort): ProxyGroup {
@@ -60,7 +62,12 @@ class ClashManager(private val context: Context) : IClashManager,
     }
 
     override fun patchOverride(slot: Clash.OverrideSlot, configuration: ConfigurationOverride) {
+        if(configuration.mode==TunnelState.Mode.Global){
+            val global=Clash.queryGroup("GLOBAL",ProxySort.Default)
+            if(global.now in listOf("DIRECT","REJECT"))global.proxies.firstOrNull{it.isGroup && it.name!="GLOBAL"}?.let{patchSelector("GLOBAL",it.name)}
+        }
         Clash.patchOverride(slot, configuration)
+        if(slot==Clash.OverrideSlot.Session)com.github.kr328.clash.service.util.ProxyModePreferences.save(context,configuration)
 
         context.sendOverrideChanged()
     }

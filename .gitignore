@@ -156,3 +156,8 @@ Desktop.ini
 /chat-history*.jsonl
 *.db-wal
 *.db-shm
+
+# Personal proxy exports, including files copied into nested folders
+**/Roylyl-*.yaml
+**/Roylyl-*.yml
+**/roylyl-verge-*/providers/

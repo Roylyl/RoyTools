@@ -40,8 +40,19 @@ object TelegramForward {
 }
 
 class ForwardListener : NotificationListenerService() {
-    override fun onListenerConnected() { super.onListenerConnected(); ChatReceiver.start(this) }
-    private val recent = LinkedHashMap<String, String>()
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        ForwardRecovery.connected=true
+        ChatReceiver.start(this)
+    }
+    override fun onListenerDisconnected() {
+        super.onListenerDisconnected()
+        ForwardRecovery.connected=false
+        ForwardRecovery.ensure(this)
+    }
+    override fun onDestroy() { ForwardRecovery.connected=false;super.onDestroy() }
+    override fun onNotificationRemoved(sbn:StatusBarNotification) { recent.removed(sbn.key) }
+    private val recent = ForwardDeduplicator()
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         val p = TelegramForward.prefs(this)
         if (!p.getBoolean("enabled", false)) return
@@ -54,17 +65,19 @@ class ForwardListener : NotificationListenerService() {
             ?: n.extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)?.joinToString("\n").orEmpty()
         if (title.isBlank() && body.isBlank()) return
         val content = "$title\n$body"
-        if (recent[sbn.key] == content) return
-        recent[sbn.key] = content
-        if (recent.size > 200) recent.remove(recent.keys.first())
+        if (recent.duplicate(sbn.key, content)) return
+
         val app = try { packageManager.getApplicationLabel(packageManager.getApplicationInfo(sbn.packageName, 0)).toString() } catch (_: Exception) { sbn.packageName }
-        val message = "$app\n$content".take(3900)
+        val message = forwardPayload("$app\n$content")
         val job = OneTimeWorkRequestBuilder<ForwardWorker>()
             .setInputData(workDataOf("message" to message, "created" to System.currentTimeMillis(), "generation" to p.getLong("generation", 0)))
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .setBackoffCriteria(BackoffPolicy.LINEAR, 30, TimeUnit.SECONDS)
             .addTag("notification-forward").build()
-        WorkManager.getInstance(this).enqueueUniqueWork("notification-forward-queue", ExistingWorkPolicy.APPEND_OR_REPLACE, job)
+        try {
+            WorkManager.getInstance(this).enqueue(job)
+            recent.accepted(sbn.key,content)
+        }catch(_:Exception){p.edit().putString("status","通知入队失败，请重新打开应用").apply()}
     }
 }
 
@@ -73,16 +86,30 @@ class ForwardWorker(context: Context, params: WorkerParameters): Worker(context,
         val p = TelegramForward.prefs(applicationContext)
         if (!p.getBoolean("enabled", false) || p.getLong("generation", 0) != inputData.getLong("generation", -1)) return Result.success()
         if (System.currentTimeMillis() - inputData.getLong("created", 0) > TimeUnit.HOURS.toMillis(24)) return Result.success()
+        if(System.currentTimeMillis()<p.getLong("forward_retry_after",0))return Result.retry()
         return try {
-            val sent = TelegramForward.call(p.getString("token", "").orEmpty(), "sendMessage", JSONObject()
+            val sent = synchronized(ForwardDeliveryGate.lock) {
+                if(isStopped || !p.getBoolean("enabled",false) || p.getLong("generation",0)!=inputData.getLong("generation",-1))return Result.success()
+                if(System.currentTimeMillis()<p.getLong("forward_retry_after",0))return Result.retry()
+                val wait=1200L-(android.os.SystemClock.elapsedRealtime()-ForwardDeliveryGate.lastSent)
+                if(wait>0)Thread.sleep(wait)
+                if(isStopped)return Result.retry()
+                try { TelegramForward.call(p.getString("token", "").orEmpty(), "sendMessage", JSONObject()
                 .put("chat_id", p.getString("chat", "")).put("text", inputData.getString("message")))
+                }catch(e:TelegramForward.ApiError){
+                    if(e.code==429)p.edit().putLong("forward_retry_after",System.currentTimeMillis()+maxOf(e.retryAfter,30)*1000L).apply()
+                    throw e
+                }finally{ForwardDeliveryGate.lastSent=android.os.SystemClock.elapsedRealtime()}
+            }
             runCatching { ChatHistory.append(applicationContext, sent.getJSONObject("result"), false, inputData.getString("message").orEmpty()) }
             p.edit().putString("status", "最近一次转发成功").apply()
             Result.success()
         } catch (e: Exception) {
             p.edit().putString("status", if (e is TelegramForward.ApiError) e.message else "连接Telegram失败，请检查网络，将自动重试").apply()
             if (e is TelegramForward.ApiError && e.code in listOf(400,401,403)) Result.success()
-            else if (runAttemptCount < 5) Result.retry() else Result.success()
+            else Result.retry()
         }
     }
 }
+
+private object ForwardDeliveryGate { val lock=Any();var lastSent=0L }

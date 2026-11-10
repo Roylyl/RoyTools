@@ -133,7 +133,7 @@ class ForwardPanel(private val activity: android.app.Activity) {
             !prefs.getBoolean("enabled", false) -> "已关闭 · 开启后转发新通知"
             else -> "已开启 · " + prefs.getString("status", "等待新通知")
         }
-        if (authorized()) android.service.notification.NotificationListenerService.requestRebind(ComponentName(activity, ForwardListener::class.java))
+        ForwardRecovery.ensure(activity)
     }
     private fun save(requireChat: Boolean = true): Boolean {
         val t = token.text.toString().trim(); val c = chat.text.toString().trim()
