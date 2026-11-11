@@ -59,7 +59,7 @@ class UpdateActivity : AppCompatActivity(), CoroutineScope by MainScope() {
             isAppearanceLightStatusBars = !night
             isAppearanceLightNavigationBars = !night
         }
-        overridePendingTransition(com.github.kr328.clash.design.R.anim.roytools_push_in,
+        if (savedInstanceState == null) overridePendingTransition(com.github.kr328.clash.design.R.anim.roytools_push_in,
             com.github.kr328.clash.design.R.anim.roytools_push_out)
         title = getString(R.string.update_title)
         offeredDownload = savedInstanceState?.getLong("offered_download", -1) ?: -1

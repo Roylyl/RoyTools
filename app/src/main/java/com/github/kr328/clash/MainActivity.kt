@@ -69,8 +69,20 @@ class MainActivity : BaseActivity<MainDesign>() {
 
     private fun selectTabHome(tab: Int) {
         val reselectingMusic = selectedTab == TAB_MUSIC && tab == TAB_MUSIC && musicPanel != null
-        val returning = (selectedTab == TAB_SETTINGS && settingsPage != SettingsPage.Home) ||
-            (selectedTab == TAB_MUSIC && musicPanel?.isSecondary == true)
+        if (selectedTab == tab) {
+            when (tab) {
+                TAB_PROXY -> { design?.resetProxyScroll(); return }
+                TAB_REFRESH -> { refreshPanel?.scrollToTop(); return }
+                TAB_FORWARD -> { forwardPanel?.goHome(); return }
+                TAB_SETTINGS -> if (settingsPage == SettingsPage.Home) {
+                    design?.scrollVisiblePageToTop(); return
+                }
+            }
+        }
+        // Music and forwarding own their inner transitions. An outer return
+        // animation belongs only to reselecting the settings module itself.
+        val returning = selectedTab == TAB_SETTINGS && tab == TAB_SETTINGS &&
+            settingsPage != SettingsPage.Home
         when (tab) {
             TAB_MUSIC -> musicPanel?.goHome()
             TAB_FORWARD -> forwardPanel?.goHome()
@@ -114,7 +126,8 @@ class MainActivity : BaseActivity<MainDesign>() {
             }
             TAB_PROXY -> current.showProxy()
             TAB_REFRESH -> {
-                val panel = refreshPanel ?: com.mahmutalperenunal.adaptivehz.RefreshPanel(this)
+                val panel = refreshPanel ?: com.mahmutalperenunal.adaptivehz.RefreshPanel(this,
+                    android.view.ContextThemeWrapper(this, DesignR.style.ThemeOverlay_RoyTools_MaterialSwitch))
                     .also { refreshPanel = it }
                 current.showRefresh(panel.view)
                 current.headerTitle(null)
@@ -272,6 +285,7 @@ class MainActivity : BaseActivity<MainDesign>() {
     private fun toggleProxy(current: MainDesign) {
         if (proxyActionJob?.isActive == true) return
         proxyActionJob = launch {
+            current.setProxyChanging(true)
             try {
                 if (clashRunning) stopClashService() else current.startClash()
             } catch (error: TimeoutCancellationException) {
@@ -283,6 +297,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                 current.showExceptionToast(error)
             } finally {
                 if (currentCoroutineContext().isActive) readProxyStatus(current)
+                withContext(kotlinx.coroutines.NonCancellable) { current.setProxyChanging(false) }
             }
         }
     }
@@ -297,11 +312,10 @@ class MainActivity : BaseActivity<MainDesign>() {
                             val override = queryOverride(Clash.OverrideSlot.Session)
                             val preset=when(request){MainDesign.Request.ModeRule->"roylyl";MainDesign.Request.ModeMusic->"music";MainDesign.Request.ModeAI->"ai";else->null}
                             if(preset!=null){
-                                val target=queryProxyGroupNames(false).firstOrNull{it!="GLOBAL" && it!="DIRECT" && it!="REJECT"}
-                                    ?: queryProxyGroup("GLOBAL",com.github.kr328.clash.core.model.ProxySort.Default).now.takeIf{it!="DIRECT" && it!="REJECT" && it!="GLOBAL"}
-                                    ?: error("请先选择可用代理节点")
+                                val groups=queryProxyGroupNames(false)
+                                val target=com.github.kr328.clash.core.model.RoutingPresets.target(override,groups,queryProxyGroup("GLOBAL",com.github.kr328.clash.core.model.ProxySort.Default))
                                 if(preset=="roylyl")com.github.kr328.clash.core.model.BundledRoutingRules.apply(this@MainActivity,override,target,queryProxyGroupNames(false))
-                                else com.github.kr328.clash.core.model.RoutingPresets.apply(override,preset,target)
+                                else com.github.kr328.clash.core.model.RoutingPresets.apply(override,preset,target,if(preset=="ai")com.github.kr328.clash.core.model.RoutingPresets.loadAI(this@MainActivity) else emptyList())
                             }else com.github.kr328.clash.core.model.RoutingPresets.clear(override)
                             override.mode = when (request) {
                                 MainDesign.Request.ModeMusic,MainDesign.Request.ModeAI -> TunnelState.Mode.Rule

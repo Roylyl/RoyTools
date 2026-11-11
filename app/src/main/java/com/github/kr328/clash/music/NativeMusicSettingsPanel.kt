@@ -144,7 +144,7 @@ internal class NativeMusicSettingsPanel(
             addView(downloadedTracks, rowParams())
             addView(deleteAll, rowParams())
         }
-        card("音乐缓存", "完整保存的歌曲可离线播放。").apply {
+        card("音乐缓存", "完整保存后可离线播放，不会自动删除；达到上限后停止新增缓存。").apply {
             addView(row(label("缓存上限", 16f, textColor), budgetButton), rowParams())
             val preloadCopy = LinearLayout(activity).apply {
                 orientation = LinearLayout.VERTICAL
@@ -154,7 +154,7 @@ internal class NativeMusicSettingsPanel(
             addView(row(preloadCopy, preloadSwitch), rowParams())
             addView(row(audioStatus, clearAudio), rowParams())
         }
-        card("歌词缓存", "单独保存，更新后重新验证。").apply {
+        card("歌词缓存", "按曲目版本保存，优先读取本地歌词。").apply {
             addView(downloadLyrics, rowParams())
             addView(row(lyricStatus, clearLyrics), rowParams())
         }

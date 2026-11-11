@@ -1,8 +1,10 @@
 package com.github.kr328.clash
 
 import android.content.res.Configuration
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.appcompat.app.AppCompatActivity
@@ -53,6 +55,28 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
     private var deferRunning = false
     private val nextRequestKey = AtomicInteger(0)
     private var dayNight: DayNight = DayNight.Day
+    private var lastPageLaunch: String? = null
+    private var lastPageLaunchAt = 0L
+
+    @Suppress("DEPRECATION")
+    override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
+        // Guard repeated ordinary page clicks only. Result contracts, permission
+        // requests and external pickers must always retain their own callbacks.
+        if (requestCode == -1 && intent.component?.packageName == packageName) {
+            val signature = intent.toUri(0)
+            val now = SystemClock.uptimeMillis()
+            if (isFinishing || isDestroyed ||
+                signature == lastPageLaunch && now - lastPageLaunchAt < 400L) return
+            lastPageLaunch = signature
+            lastPageLaunchAt = now
+        }
+        super.startActivityForResult(intent, requestCode, options)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        lastPageLaunch = null
+    }
 
     protected abstract suspend fun main()
 
@@ -86,7 +110,7 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (javaClass.name != "com.github.kr328.clash.MainActivity") {
+        if (savedInstanceState == null && javaClass.name != "com.github.kr328.clash.MainActivity") {
             overridePendingTransition(R.anim.roytools_push_in, R.anim.roytools_push_out)
         }
         applyDayNight()

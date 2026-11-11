@@ -4,7 +4,7 @@
   let placementFrame = null;
   function placePending() {
     placementFrame = null;
-    const active = [...pendingPlacement].map(img => records.get(img)).filter(record => record && record.img.isConnected && !record.overlay.hidden);
+    const active = [...pendingPlacement].map(img => records.get(img)).filter(record => record && record.img.isConnected && !record.overlay.hidden && record.overlay.hasAttribute('data-visible'));
     pendingPlacement.clear();
     // Finish style reads before changing hosts, then measure every image before writing overlays.
     const staticHosts = new Set(active.map(record => record.host).filter(host => getComputedStyle(host).position === 'static'));
@@ -22,9 +22,14 @@
       ? { retry: '重新載入圖片', failed: '圖片未載入 · 點擊重試' }
       : { retry: '重新加载图片', failed: '图片未加载 · 点击重试' };
   const visibility = new IntersectionObserver(entries => entries.forEach(({ target, isIntersecting }) => {
-    records.get(target)?.overlay.toggleAttribute('data-visible', isIntersecting && !document.hidden);
+    const record=records.get(target),visible=isIntersecting && !document.hidden;
+    record?.overlay.toggleAttribute('data-visible',visible);
+    if(visible && record && !record.overlay.hidden)record.place();
   }));
-  const sizing = new ResizeObserver(entries => entries.forEach(({target}) => records.get(target)?.place()));
+  const sizing = new ResizeObserver(entries => entries.forEach(({target}) => {
+    const record=records.get(target);
+    if(record?.overlay.hasAttribute('data-visible') && !record.overlay.hidden)record.place();
+  }));
   function release(img) {
     if (img.isConnected) return;
     const record = records.get(img);
@@ -59,7 +64,7 @@
     };
     function failed() {
       generation++;
-      img.dataset.imageState = 'error';
+      img.dataset.coverReady='false';img.dataset.imageState = 'error';
       img.removeAttribute('aria-busy');
       overlay.hidden = false; overlay.setAttribute('data-error', '');
       overlay.replaceChildren();
@@ -80,7 +85,7 @@
     function start() {
       generation++;
       if (!img.getAttribute('src') && !img.getAttribute('srcset')) { overlay.hidden = true; return; }
-      if (img.complete && img.naturalWidth) { img.dataset.imageState = 'ready'; img.removeAttribute('aria-busy'); overlay.hidden = true; return; }
+      if (img.dataset.coverReady === 'true' || img.complete && img.naturalWidth) { img.dataset.imageState = 'ready'; img.removeAttribute('aria-busy'); overlay.hidden = true; return; }
       img.dataset.imageState = 'loading'; img.setAttribute('aria-busy', 'true');
       overlay.hidden = false; overlay.removeAttribute('data-error'); overlay.setAttribute('aria-hidden', 'true');
       const orbit = document.createElement('span'); orbit.className = 'image-placeholder-orbit'; overlay.replaceChildren(orbit); place();

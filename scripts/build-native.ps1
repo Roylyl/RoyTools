@@ -14,7 +14,7 @@ param(
     [string]$GoRoot = (Join-Path $env:LOCALAPPDATA 'RoyToolsBuild\go'),
     [string]$AndroidSdk = (Join-Path $env:LOCALAPPDATA 'Android\Sdk'),
     [ValidateRange(21, 99)][int]$Api = 24,
-    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '2.1.1',
+    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '2.1.2',
     [ValidatePattern('^\d{8}$')][string]$BuildDate = (Get-Date -Format 'yyyyMMdd')
 )
 

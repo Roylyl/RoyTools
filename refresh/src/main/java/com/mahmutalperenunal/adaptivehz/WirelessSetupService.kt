@@ -10,6 +10,7 @@ import androidx.core.app.RemoteInput
 import androidx.lifecycle.Observer
 import moe.shizuku.manager.adb.*
 import rikka.shizuku.Shizuku
+import com.mahmutalperenunal.adaptivehz.core.prefs.AdaptiveHzPrefs
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.Locale
@@ -21,7 +22,7 @@ class WirelessSetupService : Service() {
     private val busy = AtomicBoolean(false)
     @Volatile private var destroyed = false
     private fun postIfActive(action: () -> Unit) {
-        main.post { if (!destroyed) action() }
+        main.post { if (!destroyed && AdaptiveHzPrefs.isControlsEnabled(this)) action() }
     }
     private var pairPort = -1
     private var connectPort = -1
@@ -34,6 +35,11 @@ class WirelessSetupService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        if (!AdaptiveHzPrefs.isControlsEnabled(this)) {
+            cancelForDisabledMode(this)
+            stopSelf()
+            return
+        }
         endpointListener = { port ->
             postIfActive {
                 if (connectPort != port) {
@@ -67,6 +73,11 @@ class WirelessSetupService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!AdaptiveHzPrefs.isControlsEnabled(this)) {
+            cancelForDisabledMode(this)
+            stopSelf()
+            return START_NOT_STICKY
+        }
         if (intent?.action == ACTION_PORT) {
             val port = RemoteInput.getResultsFromIntent(intent)?.getCharSequence("port")?.toString()?.trim()?.toIntOrNull()
             if (port == null || port !in 1..65535) {
@@ -339,6 +350,7 @@ class WirelessSetupService : Service() {
     }
 
     private fun notifyPort() {
+        if (!AdaptiveHzPrefs.isControlsEnabled(this)) return
         if (pairing && pairPort > 0) {
             // A failed reconnect must not replace an open pairing-code reply action
             // with a connection-port field while the user is entering the code.
@@ -352,6 +364,7 @@ class WirelessSetupService : Service() {
     }
 
     private fun notify(title: String, message: String, input: Boolean = false) {
+        if (!AdaptiveHzPrefs.isControlsEnabled(this)) return
         getSystemService(NotificationManager::class.java).notify(ID, notification(title, message, input))
         NotificationGroups.refresh(this, NotificationGroups.WIRELESS)
     }
@@ -362,6 +375,11 @@ class WirelessSetupService : Service() {
     }
 
     private fun finish(title: String, message: String) {
+        if (!AdaptiveHzPrefs.isControlsEnabled(this)) {
+            cancelForDisabledMode(this)
+            stopSelf()
+            return
+        }
         cancelPairNotification()
         stopForeground(STOP_FOREGROUND_REMOVE)
         val result = NotificationCompat.Builder(this, CHANNEL)

@@ -55,6 +55,18 @@ class ClashManager(private val context: Context) : IClashManager,
 
             if (it) {
                 SelectionDao().setSelected(Selection(current, group, name))
+                val target=if(group=="GLOBAL")name else group
+                if(target !in setOf("GLOBAL","DIRECT","REJECT")) {
+                    context.getSharedPreferences("proxy_mode",Context.MODE_PRIVATE).edit().putString("target_"+current,target).apply()
+                    val config=Clash.queryOverride(Clash.OverrideSlot.Session)
+                    config.routingTarget=target
+                    when(val preset=config.routingPreset) {
+                        "roylyl" -> BundledRoutingRules.apply(context,config,target,queryProxyGroupNames(false))
+                        "music","ai" -> RoutingPresets.apply(config,preset,target,if(preset=="ai")RoutingPresets.loadAI(context) else emptyList())
+                    }
+                    if(config.routingPreset!=null)patchOverride(Clash.OverrideSlot.Session,config)
+                    else Clash.patchOverride(Clash.OverrideSlot.Session,config)
+                }
             } else {
                 SelectionDao().removeSelected(current, group)
             }
@@ -62,10 +74,6 @@ class ClashManager(private val context: Context) : IClashManager,
     }
 
     override fun patchOverride(slot: Clash.OverrideSlot, configuration: ConfigurationOverride) {
-        if(configuration.mode==TunnelState.Mode.Global){
-            val global=Clash.queryGroup("GLOBAL",ProxySort.Default)
-            if(global.now in listOf("DIRECT","REJECT"))global.proxies.firstOrNull{it.isGroup && it.name!="GLOBAL"}?.let{patchSelector("GLOBAL",it.name)}
-        }
         Clash.patchOverride(slot, configuration)
         if(slot==Clash.OverrideSlot.Session)com.github.kr328.clash.service.util.ProxyModePreferences.save(context,configuration)
 

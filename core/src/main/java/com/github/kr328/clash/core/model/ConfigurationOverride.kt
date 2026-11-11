@@ -47,6 +47,12 @@ data class ConfigurationOverride(
     @SerialName("roytools-preset")
     var routingPreset: String? = null,
 
+    @SerialName("roytools-routing-target")
+    var routingTarget: String? = null,
+
+    @SerialName("roytools-original-find-process-mode")
+    var originalFindProcessMode: FindProcessMode? = null,
+
     @SerialName("roytools-original-rules")
     var originalRules: List<String>? = null,
 

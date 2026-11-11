@@ -5,23 +5,25 @@ import kotlinx.serialization.json.*
 import java.io.File
 
 object BundledRoutingRules {
-    private const val ASSET="roylyl-rules-2.5.0"
+    private const val ASSET="roylyl-rules-2.5.1"
     fun apply(c:Context,override:ConfigurationOverride,target:String,groups:List<String>) {
         require(target !in listOf("DIRECT","REJECT","GLOBAL") && target.isNotBlank() && !target.contains(','))
         val rules=Json.parseToJsonElement(c.assets.open("$ASSET/rules.json").bufferedReader().use{it.readText()}).jsonObject.getValue("rules").jsonArray.map{it.jsonPrimitive.content}
-        if(override.routingPreset==null){override.originalRules=override.rules;override.originalRuleProviders=override.ruleProviders}
+        if(override.routingPreset==null){override.originalRules=override.rules;override.originalRuleProviders=override.ruleProviders;override.originalFindProcessMode=override.findProcessMode}
+        override.findProcessMode=override.originalFindProcessMode
         override.rules=mapRules(rules,groups.toSet(),target)
         val providers=(override.originalRuleProviders ?: emptyMap()).toMutableMap()
         providers["WeChatIPs"]=provider("ipcidr","text","wechat-ip.txt")
         providers["Mainland"]=provider("domain","mrs","cn.mrs")
         override.ruleProviders=providers
         override.routingPreset="roylyl"
+        override.routingTarget=target
     }
     fun mapRules(rules:List<String>,groups:Set<String>,target:String):List<String> = rules.map{rule->
         val parts=rule.split(',').toMutableList()
         val index=if(parts.last()=="no-resolve")parts.lastIndex-1 else parts.lastIndex
         val policy=parts[index]
-        if(policy !in setOf("DIRECT","REJECT","REJECT-DROP","PASS") && policy !in groups)parts[index]=target
+        if(policy !in setOf("DIRECT","REJECT","REJECT-DROP","PASS"))parts[index]=target
         parts.joinToString(",")
     }
     private fun provider(behavior:String,format:String,name:String)=ConfigurationOverride.RuleProviderOverride(type="file",behavior=behavior,format=format,path="$ASSET/$name")

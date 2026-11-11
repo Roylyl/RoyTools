@@ -15,6 +15,9 @@ html[data-theme="dark"] {
   --control-active:#2c2c2e;color-scheme:dark;
 }
 html,body { background:var(--bg)!important;color:var(--text)!important;-webkit-tap-highlight-color:transparent; }
+html.native-embedded,html.native-embedded body { overflow-x:hidden; }
+html.native-embedded #content { position:relative;z-index:1;min-height:100vh;min-height:100dvh;background:var(--bg); }
+.content-navigation-backdrop { position:fixed;inset:0;background:var(--bg);pointer-events:none;z-index:0; }
 body { background-image:none!important;font-size:14px;line-height:1.5; }
 button,input,select,textarea { font-family:inherit;letter-spacing:0; }
 button { font-size:16px;font-weight:500; }
@@ -40,6 +43,8 @@ select,.filters select,#settings-dialog select { background-color:var(--panel)!i
 .album-card h3,.album-card strong,.album-card .album-title { color:var(--text)!important;font-size:14px; }
 .album-card p,.album-card small { color:var(--muted)!important;font-size:12px; }
 .album-card img { border-radius:12px;box-shadow:none!important; }
+/* Keep the grid's retained cards, but lay out/paint only those near the viewport. */
+html.native-embedded .album-card { content-visibility:auto;contain-intrinsic-size:auto 280px; }
 #songs { overflow:hidden;background:var(--panel);border-radius:var(--card-radius); }
 .track-row { border-color:var(--line)!important;background:transparent!important;color:var(--text);-webkit-tap-highlight-color:transparent; }
 .track-row.current,.track-row.queue-current { background:var(--soft)!important;box-shadow:inset 3px 0 var(--blue)!important; }
@@ -265,3 +270,13 @@ html[data-theme="dark"] #songs .download-row .download-delete { color:#ff453a; }
 
 /* Queue spacers own scroll positioning; retained rows must not shift the anchor. */
 #queue-list,#full-queue-list { overflow-anchor:none; }
+
+/* Playlist navigation floats above the fixed mini player. */
+.playlist-navigation { position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(116px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;z-index:25; }
+.playlist-navigation[hidden],.full-open .playlist-navigation { display:none; }
+.playlist-navigation button { display:grid;place-items:center;width:46px;height:46px;min-width:46px;padding:11px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--blue);box-shadow:0 3px 14px #00000018; }
+.playlist-navigation svg { width:23px;height:23px; }
+#remove-pending { color:#d70015; }
+html[data-theme="dark"] #remove-pending { color:#ff6961; }
+
+body:has(#queue-panel:not([hidden])) .playlist-navigation { display:none; }

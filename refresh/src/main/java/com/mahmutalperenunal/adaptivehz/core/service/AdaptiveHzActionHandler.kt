@@ -169,6 +169,13 @@ object AdaptiveHzActionHandler {
     ) {
         val appContext = context.applicationContext
         val requestedAt = SystemClock.elapsedRealtime()
+        if (mode != AdaptiveHzMode.OFF && !AdaptiveHzPrefs.isControlsEnabled(appContext)) {
+            mainHandler.post {
+                onComplete?.invoke(RefreshRateApplyResult.NoOperation)
+                onSettled?.invoke()
+            }
+            return
+        }
         AdaptiveHzPrefs.syncLegacyStateFromMode(
             appContext,
             mode
@@ -236,6 +243,8 @@ object AdaptiveHzActionHandler {
         onComplete: ((RefreshRateApplyResult) -> Unit)? = null,
         onSettled: (() -> Unit)? = null
     ) {
+        AdaptiveHzPrefs.setControlMode(context, AdaptiveHzPrefs.getControlMode(context))
+        AdaptiveHzPrefs.setControlsEnabled(context, false)
         com.mahmutalperenunal.adaptivehz.WirelessSetupService.cancelForDisabledMode(context)
         requestMode(
             context = context,

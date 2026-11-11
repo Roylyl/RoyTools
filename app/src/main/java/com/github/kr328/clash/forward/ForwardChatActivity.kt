@@ -88,7 +88,7 @@ class ForwardChatActivity: AppCompatActivity(), CoroutineScope by MainScope() {
         theme.applyStyle(if(dark) com.github.kr328.clash.design.R.style.AppThemeDark else com.github.kr328.clash.design.R.style.AppThemeLight, true)
         setContentView(R.layout.roytools_forward_chat)
         com.github.kr328.clash.common.ui.TouchFeedback.install(window)
-        overridePendingTransition(com.github.kr328.clash.design.R.anim.roytools_push_in, com.github.kr328.clash.design.R.anim.roytools_push_out)
+        if (state == null) overridePendingTransition(com.github.kr328.clash.design.R.anim.roytools_push_in, com.github.kr328.clash.design.R.anim.roytools_push_out)
         status = findViewById(R.id.chat_status); messages = findViewById(R.id.chat_messages); scroll = findViewById(R.id.chat_scroll)
         status.setOnClickListener { toast(ChatReceiver.failureReason) }
         findViewById<View>(R.id.chat_back).setOnClickListener { finish() }
@@ -126,6 +126,11 @@ class ForwardChatActivity: AppCompatActivity(), CoroutineScope by MainScope() {
             }
         }
         if(state == null)handleShare(intent)
+    }
+    private var openingMedia = false
+    override fun onResume() {
+        super.onResume()
+        openingMedia = false
     }
     override fun onStart() {
         super.onStart()
@@ -226,7 +231,12 @@ class ForwardChatActivity: AppCompatActivity(), CoroutineScope by MainScope() {
         retry.setOnClickListener{load()}
         if(type!="document")load()
         frame.setOnClickListener {
-            if(type!="document")startActivity(android.content.Intent(this,ChatMediaActivity::class.java).putExtra("file_id",record.optString("file_id")).putExtra("kind",type))
+            if(type!="document"){
+                if(!openingMedia){
+                    openingMedia=true
+                    startActivity(android.content.Intent(this,ChatMediaActivity::class.java).putExtra("file_id",record.optString("file_id")).putExtra("kind",type))
+                }
+            }
             else launch{try{
                 val file=ChatMediaCache.get(this@ForwardChatActivity,record.optString("file_id"))
                 val uri=androidx.core.content.FileProvider.getUriForFile(this@ForwardChatActivity,packageName+".update-files",file)

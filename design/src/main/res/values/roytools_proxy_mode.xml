@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="roytools_proxy_running_mode">运行中·%1$s</string>
+    <string name="roytools_proxy_mode_default">默认模式</string>
+    <string name="roytools_enable_proxy_hint">打开右上方开关以启动代理</string>
 </resources>

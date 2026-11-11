@@ -48,12 +48,14 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     private val tabIcons = mutableListOf<ImageView>()
     private val tabLabels = mutableListOf<TextView>()
     private var trackingProxyMode = false
+    private var proxyChanging = false
     private val proxyModes = listOf(Request.ModeDefault, Request.ModeRule, Request.ModeMusic, Request.ModeAI, Request.ModeGlobal, Request.ModeDirect)
     override val root: View get() = shell
     private fun dp(value: Int) = (context.resources.displayMetrics.density * value).toInt()
 
     init {
         binding.self = this
+        binding.proxyEnabled.setOnClickListener { request(Request.ToggleStatus) }
         binding.uploadSpeed = "0.00KB/s"
         binding.downloadSpeed = "0.00KB/s"
         binding.mode = context.getString(R.string.rule_mode)
@@ -185,6 +187,12 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     }
     fun showProxy() = showPage(binding.root, TAB_PROXY)
     fun resetProxyScroll() { (binding.root as? ScrollView)?.scrollTo(0, 0) }
+    fun scrollVisiblePageToTop() {
+        for (index in pageHost.childCount - 1 downTo 0) {
+            val child = pageHost.getChildAt(index)
+            if (child.visibility == View.VISIBLE) { (child as? ScrollView)?.scrollTo(0, 0); return }
+        }
+    }
     fun animateReturnToHome() {
         pageHost.clearAnimation()
         pageHost.startAnimation(AnimationUtils.loadAnimation(context, R.anim.roytools_pop_in))
@@ -203,6 +211,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     suspend fun setProfileName(name: String?) = withContext(Dispatchers.Main) { binding.profileName = name }
     suspend fun setClashRunning(running: Boolean) = withContext(Dispatchers.Main) {
         binding.clashRunning = running
+        if (!proxyChanging) binding.proxyEnabled.isChecked = running
+        binding.proxyEnabled.isEnabled = !proxyChanging
         binding.proxyModeSlider.isEnabled = running
         binding.proxyModeSlider.alpha = if (running) 1f else 0.45f
         for (index in 0 until binding.proxyModeLabels.childCount) binding.proxyModeLabels.getChildAt(index).isEnabled = running
@@ -211,6 +221,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             binding.downloadSpeed = "0.00KB/s"
         }
     }
+    suspend fun setProxyChanging(changing: Boolean) = withContext(Dispatchers.Main) {
+        proxyChanging = changing
+        binding.proxyEnabled.isEnabled = !changing
+        if (!changing) binding.proxyEnabled.isChecked = binding.clashRunning
+    }
     suspend fun setTrafficRates(value: Long) = withContext(Dispatchers.Main) {
         binding.uploadSpeed = if (binding.clashRunning) value.trafficUploadRate() else "0.00KB/s"
         binding.downloadSpeed = if (binding.clashRunning) value.trafficDownloadRate() else "0.00KB/s"
@@ -218,6 +233,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     suspend fun setForwarded(value: Long) = withContext(Dispatchers.Main) { binding.forwarded = value.trafficTotal() }
     suspend fun setProxyMode(override: TunnelState.Mode?, preset: String? = null) = withContext(Dispatchers.Main) {
         if(preset=="music")binding.mode="音乐模式" else if(preset=="ai")binding.mode="AI模式"
+        else if(override==null)binding.mode=context.getString(R.string.roytools_proxy_mode_default)
         if (!trackingProxyMode) binding.proxyModeSlider.progress = if(preset=="music")2 else if(preset=="ai")3 else when (override) {
             TunnelState.Mode.Rule -> 1
             TunnelState.Mode.Global -> 4

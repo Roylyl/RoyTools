@@ -25,7 +25,7 @@ class ChatMediaActivity:AppCompatActivity(),CoroutineScope by MainScope(){
         root.addView(back,FrameLayout.LayoutParams((48*density).toInt(),(48*density).toInt(),Gravity.TOP or Gravity.START).apply{
             setMargins((16*density).toInt(),(8*density).toInt(),0,0)
         })
-        overridePendingTransition(com.github.kr328.clash.design.R.anim.roytools_push_in,com.github.kr328.clash.design.R.anim.roytools_push_out)
+        if (state == null) overridePendingTransition(com.github.kr328.clash.design.R.anim.roytools_push_in,com.github.kr328.clash.design.R.anim.roytools_push_out)
         launch {try{
             val file=ChatMediaCache.get(this@ChatMediaActivity,intent.getStringExtra("file_id").orEmpty())
             progress.visibility=View.GONE

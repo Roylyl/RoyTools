@@ -34,8 +34,6 @@ internal object MusicArtwork {
     private const val LEGACY_COVER_PATH = "/music/share-covers/"
     private const val LEGACY_COVER_HOST = "roylyl.github.io"
     private const val MAX_BYTES = 16L * 1024 * 1024
-    private const val MAX_CACHE_BYTES = 64L * 1024 * 1024
-    private const val MAX_CACHE_FILES = 256
     private const val MAX_BITMAP_BYTES = 8 * 1024 * 1024
     private const val BITMAP_EDGE = 320
     private val cacheLock = Any()
@@ -100,7 +98,7 @@ internal object MusicArtwork {
             if (decode(context, url) == null || generation != cacheGeneration.get()) return@synchronized null
             val original = if (request.legacy) legacyCoverPaths?.get(request.relative) else null
             val source = original?.copy(revision = request.revision ?: original.revision) ?: request
-            val directory = File(context.applicationContext.cacheDir, "music-artwork").canonicalFile
+            val directory = File(context.applicationContext.filesDir, "music-artwork").canonicalFile
             val cached = File(directory, source.cachePath).canonicalFile
             if (!cached.path.startsWith(directory.path + File.separator) || !cached.isFile) return@synchronized null
             runCatching {
@@ -111,7 +109,7 @@ internal object MusicArtwork {
                 }
                 WebResourceResponse(mime, null, 200, "OK",
                     headers + ("Content-Length" to cached.length().toString()), cached.inputStream())
-            }.getOrNull()
+            }.onFailure { Log.w("原生封面读取失败", it) }.getOrNull()
         }
         // Do not fall through to a second network request when the shared fetch fails.
         return response ?: WebResourceResponse("text/plain", "UTF-8", 502, "Artwork unavailable",
@@ -132,10 +130,20 @@ internal object MusicArtwork {
                 }
                 val relative = source.cachePath
                 val bitmapKey = "$generation:$relative"
-                val directory = File(context.applicationContext.cacheDir, "music-artwork").canonicalFile
+                val directory = File(context.applicationContext.filesDir, "music-artwork").canonicalFile
                 val cached = File(directory, relative).canonicalFile
                 if (!cached.path.startsWith(directory.path + File.separator)) return@runCatching null
-                if (cached.isFile && cached.length() in 1L..MAX_BYTES) {
+                // Reuse originals downloaded by earlier versions instead of fetching again.
+                if (!cached.isFile) {
+                    val legacyRoot = File(context.applicationContext.cacheDir, "music-artwork").canonicalFile
+                    val legacy = File(legacyRoot, relative).canonicalFile
+                    if (legacy.path.startsWith(legacyRoot.path + File.separator) && legacy.isFile) {
+                        cached.parentFile?.mkdirs()
+                        if (!legacy.renameTo(cached)) runCatching { legacy.copyTo(cached, overwrite = false) }
+                    }
+                }
+                if (cached.isFile) {
+                    if (cached.length() !in 1L..MAX_BYTES) return@runCatching null
                     bitmaps.get(bitmapKey)?.takeUnless { it.isRecycled }?.let { return@runCatching it }
                     decodeFile(cached, BITMAP_EDGE)?.let { bitmap ->
                         if (generation != cacheGeneration.get()) return@runCatching null
@@ -143,8 +151,9 @@ internal object MusicArtwork {
                         bitmaps.put(bitmapKey, bitmap)
                         return@runCatching bitmap
                     }
+                    // A decode failure (including memory pressure) must not discard the original.
+                    return@runCatching null
                 }
-                cached.delete()
                 // Old saved notifications contain the website's derived JPG URL. Resolve
                 // those covers through the bundled track metadata, then fetch the original.
                 val parent = cached.parentFile ?: return@runCatching null
@@ -157,13 +166,13 @@ internal object MusicArtwork {
                         if (generation != cacheGeneration.get()) return@runCatching null
                         temporary.renameTo(cached)
                     }
-                    if (stored) trimCache(directory, cached)
+                    if (!stored) return@runCatching null
                     bitmaps.put(bitmapKey, bitmap)
                     bitmap
                 } finally {
                     temporary.delete()
                 }
-            }.getOrNull()
+            }.onFailure { Log.w("原生封面下载或解码失败", it) }.getOrNull()
         }
     }
 
@@ -205,14 +214,15 @@ internal object MusicArtwork {
     /** Under cacheLock; a new decode can finish pending cleanup before writing fresh artwork. */
     private fun clearInvalidatedCache(context: Context, generation: Long) {
         if (generation <= clearedGeneration) return
-        val cacheRoot = context.cacheDir.canonicalFile
-        val target = File(cacheRoot, "music-artwork").absoluteFile
-        if (target.canonicalFile != target || target.parentFile != cacheRoot) {
-            throw IOException("封面缓存目录超出应用缓存路径")
-        }
         bitmaps.evictAll()
-        if (target.exists()) {
-            // Do not follow links outside this application's artwork cache.
+        for (root in listOf(context.filesDir, context.cacheDir)) {
+            val cacheRoot = root.canonicalFile
+            val target = File(cacheRoot, "music-artwork").absoluteFile
+            if (target.canonicalFile != target || target.parentFile != cacheRoot) {
+                throw IOException("封面缓存目录超出应用存储路径")
+            }
+            if (!target.exists()) continue
+            // Do not follow links outside this application's artwork storage.
             Files.walkFileTree(target.toPath(), object : SimpleFileVisitor<Path>() {
                 override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
                     Files.deleteIfExists(file)
@@ -241,7 +251,10 @@ internal object MusicArtwork {
             connection.readTimeout = 8000
             connection.instanceFollowRedirects = false
             connection.setRequestProperty("Accept", "image/jpeg,image/png,image/webp")
-            if (connection.responseCode != HttpURLConnection.HTTP_OK || connection.contentLengthLong > MAX_BYTES) return false
+            if (connection.responseCode != HttpURLConnection.HTTP_OK || connection.contentLengthLong > MAX_BYTES) {
+                Log.w("封面服务器返回${connection.responseCode}，文件长度${connection.contentLengthLong}")
+                return false
+            }
             var received = 0L
             connection.inputStream.use { input ->
                 destination.outputStream().use { output ->
@@ -275,16 +288,4 @@ internal object MusicArtwork {
         return BitmapFactory.decodeFile(file.path, options)
     }
 
-    private fun trimCache(directory: File, keep: File) {
-        val files = directory.walkTopDown().filter { it.isFile && !it.name.endsWith(".part") }
-            .toList().sortedBy { it.lastModified() }
-        var total = files.sumOf { it.length() }
-        var count = files.size
-        for (file in files) {
-            if (total <= MAX_CACHE_BYTES && count <= MAX_CACHE_FILES) break
-            if (file == keep) continue
-            val length = file.length()
-            if (file.delete()) { total -= length; count-- }
-        }
-    }
 }

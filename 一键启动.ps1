@@ -2,13 +2,13 @@
 .SYNOPSIS
 通过ADB安装本机生成的RoyTools，并按需激活刷新率后台。
 .EXAMPLE
-.\一键启动.ps1 -Apk 'D:\Downloads\RoyTools-2.1.1.apk' -Serial 'YOUR_DEVICE_SERIAL' -InstallOnly
+.\一键启动.ps1 -Apk 'D:\Downloads\RoyTools-2.1.2.apk' -Serial 'YOUR_DEVICE_SERIAL' -InstallOnly
 .NOTES
 不卸载旧版、不清除数据，签名不匹配时安装失败并保留手机原应用。
 #>
 [CmdletBinding()]
 param(
-    [string]$Apk = (Join-Path $PSScriptRoot 'RoyTools-2.1.1.apk'),
+    [string]$Apk = (Join-Path $PSScriptRoot 'RoyTools-2.1.2.apk'),
     [string]$Serial = $env:ANDROID_SERIAL,
     [switch]$InstallOnly
 )

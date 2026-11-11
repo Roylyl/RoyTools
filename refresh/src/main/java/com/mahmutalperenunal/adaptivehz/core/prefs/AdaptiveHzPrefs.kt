@@ -37,6 +37,8 @@ object AdaptiveHzPrefs {
 
     const val KEY_ADB_GRANTED = "adb_granted"
     const val KEY_APP_ENABLED = "app_enabled"
+    const val KEY_CONTROLS_ENABLED = "refresh_controls_enabled"
+    private const val KEY_CONTROL_MODE = "refresh_control_mode"
     const val KEY_DYNAMIC_ENABLED = "dynamic_enabled"
     const val KEY_MANUAL_TARGET = "manual_target"
     const val KEY_KEEP_ALIVE_ENABLED = "keep_alive_enabled"
@@ -117,7 +119,24 @@ object AdaptiveHzPrefs {
     }
 
     fun isAppEnabled(context: Context): Boolean {
-        return prefs(context).getBoolean(KEY_APP_ENABLED, true)
+        return isControlsEnabled(context) && prefs(context).getBoolean(KEY_APP_ENABLED, true)
+    }
+
+    fun isControlsEnabled(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_CONTROLS_ENABLED, false)
+
+    fun setControlsEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit { putBoolean(KEY_CONTROLS_ENABLED, enabled) }
+    }
+
+    fun getControlMode(context: Context): AdaptiveHzMode {
+        val saved = prefs(context).getString(KEY_CONTROL_MODE, null)
+        return runCatching { AdaptiveHzMode.valueOf(saved.orEmpty()) }.getOrNull()
+            ?.takeUnless { it == AdaptiveHzMode.OFF } ?: AdaptiveHzMode.ADAPTIVE
+    }
+
+    fun setControlMode(context: Context, mode: AdaptiveHzMode) {
+        if (mode != AdaptiveHzMode.OFF) prefs(context).edit { putString(KEY_CONTROL_MODE, mode.name) }
     }
 
     fun setAppEnabled(context: Context, enabled: Boolean) {
@@ -159,6 +178,7 @@ object AdaptiveHzPrefs {
     }
 
     fun getCurrentMode(context: Context): AdaptiveHzMode {
+        if (!isControlsEnabled(context)) return AdaptiveHzMode.OFF
         val raw = prefs(context).getString(KEY_CURRENT_MODE, null)
 
         if (raw != null) {
@@ -182,7 +202,10 @@ object AdaptiveHzPrefs {
     }
 
     fun setCurrentMode(context: Context, mode: AdaptiveHzMode) {
-        prefs(context).edit { putString(KEY_CURRENT_MODE, mode.name) }
+        prefs(context).edit {
+            putString(KEY_CURRENT_MODE, mode.name)
+            if (mode != AdaptiveHzMode.OFF) putString(KEY_CONTROL_MODE, mode.name)
+        }
     }
 
     fun isQuickSettingsTileAdded(context: Context): Boolean {
@@ -315,7 +338,7 @@ object AdaptiveHzPrefs {
         val appContext = context.applicationContext
         val sharedPreferences = prefs(appContext)
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == KEY_CURRENT_MODE) {
+            if (key == KEY_CURRENT_MODE || key == KEY_CONTROLS_ENABLED) {
                 onChanged(getCurrentMode(appContext))
             }
         }

@@ -433,6 +433,7 @@ private class MusicEngine(context: Context) {
     private fun backgroundColor() = if (theme == "dark") Color.rgb(18, 18, 20) else Color.rgb(242, 242, 247)
     private fun applyBackground() {
         val color = backgroundColor()
+        owner.get()?.view?.setBackgroundColor(color)
         if (appliedBackground != color) {
             appliedBackground = color
             web.setBackgroundColor(color)

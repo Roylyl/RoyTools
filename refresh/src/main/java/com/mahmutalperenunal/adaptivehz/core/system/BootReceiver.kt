@@ -69,7 +69,8 @@ class BootReceiver : BroadcastReceiver() {
 
     // Restores the persisted mode and background services after device startup.
     private fun handleBootCompleted(context: Context) {
-        if (context.getSharedPreferences("wireless_setup", Context.MODE_PRIVATE).getBoolean("paired", false)) {
+        if (AdaptiveHzPrefs.isControlsEnabled(context) && AdaptiveHzPrefs.getCurrentMode(context) != AdaptiveHzMode.OFF &&
+            context.getSharedPreferences("wireless_setup", Context.MODE_PRIVATE).getBoolean("paired", false)) {
             runCatching {
                 context.startForegroundService(Intent(context,
                     com.mahmutalperenunal.adaptivehz.WirelessSetupService::class.java)

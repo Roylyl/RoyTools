@@ -1,8 +1,9 @@
 'use strict';
 importScripts('./lyric-parser.js');
-const AUDIO='roylyl-music-audio-v2',META='roylyl-music-audio-meta-v1',SHELL='roylyl-music-shell-20261110-27';
-const FILES=['/music/','/music/index.html','/music/music.css?v=20261110-android-27','/music/roytools.css?v=20261110-android-27','/music/app.js?v=20261110-android-27','/music/playback-feedback.js?v=20261110-android-27','/music/lyric-parser.js?v=20261110-android-27','/music/image-loading.css?v=20260927-1','/music/image-loading.js?v=20261110-1','/music/catalog-sync.js?v=20261110-android-27','/music/data/catalog.json?v=20261110-android-27','/music/favicon.svg','/music/placeholder.svg'];
+const AUDIO='roylyl-music-audio-v2',META='roylyl-music-audio-meta-v1',SHELL='roylyl-music-shell-20261111-35';
+const FILES=['/music/','/music/index.html','/music/music.css?v=20261111-android-35','/music/roytools.css?v=20261111-android-35','/music/app.js?v=20261111-android-35','/music/playback-feedback.js?v=20261111-android-35','/music/lyric-parser.js?v=20261111-android-35','/music/image-loading.css?v=20260927-1','/music/image-loading.js?v=20261111-3','/music/catalog-sync.js?v=20261111-android-35','/music/data/catalog.json?v=20261111-android-35','/music/favicon.svg','/music/placeholder.svg'];
 const metaKey='/music/__audio_index__',configKey='/music/__audio_config__',freshKey='/music/__audio_recovery__';
+let indexNeedsRepair=false;
 let generation=0,budget=-1,preloadEnabled=true,writeQueue=Promise.resolve(),configRevision=0,configRead,freshRead,optionalEpoch=0,lastKeptSource='';
 const inflight=new Map(),playingRequests=new Map(),protectedSources=new Map();
 const sourceEpoch=new Map(),recoveryRequests=new Map(),freshSources=new Set(),shellClients=new Map();
@@ -64,7 +65,7 @@ async function saveConfig(){await (await caches.open(META)).put(configKey,new Re
 async function readIndex(){
   try{
     const saved=await (await caches.open(META)).match(metaKey);
-    if(saved){const index=await saved.json();if(index&&typeof index==='object'&&!Array.isArray(index))return index;}
+    if(saved){const index=await saved.json();if(index&&typeof index==='object'&&!Array.isArray(index)&&!indexNeedsRepair)return index;}
     // Legacy Cache.put entries were atomic complete responses. Migrate their
     // exposed sizes once; settings never reads every audio body to total usage.
     const index={},cache=await caches.open(AUDIO);
@@ -73,22 +74,11 @@ async function readIndex(){
       if(fullResponse(hit))index[key.url]={bytes:size,used:0,version:new URL(key.url).searchParams.get('v')||'',complete:true};
       else await cache.delete(key);
     }
-    await saveIndex(index);return index;
+    try{await saveIndex(index);indexNeedsRepair=false;}catch{indexNeedsRepair=true;}return index;
   }catch{return {};}
 }
 async function saveIndex(index){await (await caches.open(META)).put(metaKey,new Response(JSON.stringify(index),{headers:{'Content-Type':'application/json'}}));}
 const indexBytes=index=>Object.values(index).reduce((n,x)=>n+(Number.isSafeInteger(x.bytes)&&x.bytes>0?x.bytes:0),0);
-async function trimToBudget(){
-  await serial(async()=>{
-    if(budget===-1)return;
-    const index=await readIndex(),cache=await caches.open(AUDIO);let used=indexBytes(index);
-    for(const [key,item] of Object.entries(index).sort((a,b)=>(a[1].used||0)-(b[1].used||0))){
-      if(!exceedsBudget(used))break;if(protectedSource(key)&&budget>0)continue;
-      await cache.delete(key);used-=item.bytes;delete index[key];
-    }
-    await saveIndex(index);
-  });
-}
 async function stats(port){await serial(async()=>{
   const index=await readIndex(),keys=new Set((await (await caches.open(AUDIO)).keys()).map(key=>key.url));let changed=false;
   for(const source of Object.keys(index))if(!keys.has(source)){delete index[source];changed=true;}
@@ -122,7 +112,7 @@ self.addEventListener('message',event=>{
     if(manualBatch?.kind==='audio'&&budget!==-1&&(previousBudget===-1||budget<previousBudget))stopManualBatch(manualBatch,'budget','缓存上限已调整，下载已停止','budget-exceeded');
     preloadEnabled=data.preload!==false;if(!budget||!preloadEnabled){optionalEpoch++;lastKeptSource='';}protectedSources.set(event.source?.id||'current',data.current||'');
     for(const [key,job] of inflight)if(job.optional&&(!budget||(!preloadEnabled&&job.preload))||job.playback&&!protectedSource(key))cancelJob(key,job);
-    run((async()=>{await serial(saveConfig);await trimToBudget();port?.postMessage({ok:true});})());
+    run((async()=>{await serial(saveConfig);port?.postMessage({ok:true});})());
   }
   if(data.type==='AUDIO_STATS')run(stats(port));
   if(data.type==='AUDIO_DOWNLOADS')run(audioDownloads(port));
@@ -279,7 +269,7 @@ async function cachedAsset(kind,source){
   if(kind==='covers')return hit.status===200;
   const saved=Number(hit.headers.get('X-Roylyl-Cached-At')||0),age=saved>0?Math.max(0,Date.now()-saved):Infinity;
   if((hit.status===404||hit.status===410)&&age<86400000)return 'missing';
-  return hit.status===200&&age<86400000;
+  return hit.status===200;
 }
 async function storeAsset(kind,source,response,version,signal,batch,outcome){
   const fail=(code,reason)=>{Object.assign(outcome,{code,reason});return false;};
@@ -507,25 +497,16 @@ async function storeFull(source,response,version,signal,epoch=sourceEpoch.get(so
       if(exceedsBudget(size))return fail('budget-exceeded','缓存空间不足，请提高缓存上限后重试');
       const cache=await caches.open(AUDIO),index=await readIndex();
       const existing=await cache.match(source);
-      if(index[source]&&fullResponse(existing)&&existing.headers.get('X-Roylyl-Audio-Complete')==='1')return true;
-      // An incomplete/legacy entry may have a stale index record. Its bytes
-      // cannot be counted twice while a verified replacement is committed.
-      if(index[source]){delete index[source];await cache.delete(source);}
-      let used=indexBytes(index);
-      for(const [key,item] of Object.entries(index).sort((a,b)=>(a[1].used||0)-(b[1].used||0))){
-        if(!exceedsBudget(used+size))break;if(key===source||protectedSource(key))continue;
-        await cache.delete(key);used-=item.bytes;delete index[key];
-      }
-      // Persist evictions even if quota or protected content prevents this write.
-      await saveIndex(index);
-      if(exceedsBudget(used+size))return fail('budget-exceeded','缓存空间不足，请提高缓存上限后重试');
+      if(!freshSources.has(source)&&index[source]&&fullResponse(existing)&&existing.headers.get('X-Roylyl-Audio-Complete')==='1')return true;
+      // Capacity limits stop new writes. User-owned saved songs are never evicted.
+      const used=indexBytes(index)-(index[source]?.bytes||0);
+      if(exceedsBudget(used+size))return fail('budget-exceeded','缓存已达到上限，已有歌曲会保留；请提高上限或手动清理');
       const headers=new Headers(response.headers);headers.set('Content-Length',String(body.size));headers.set('X-Roylyl-Audio-Complete','1');
       try{await cache.put(source,new Response(body,{status:200,headers}));}
       catch(error){return fail(error?.name==='QuotaExceededError'?'quota':'storage',
         error?.name==='QuotaExceededError'?'设备存储空间不足，下载已停止':'无法保存歌曲，请检查存储空间');}
-      if(version!==generation||signal.aborted||epoch!==(sourceEpoch.get(source)||0)){await cache.delete(source);return fail('cancelled','下载已取消');}
       index[source]={bytes:body.size,used:Date.now(),version:new URL(source).searchParams.get('v')||'',complete:true};
-      try{await saveIndex(index);}catch{await cache.delete(source);return fail('storage','无法保存音乐缓存记录，请检查存储空间');}
+      try{await saveIndex(index);}catch{indexNeedsRepair=true;return fail('storage','歌曲已保存，但缓存记录写入失败，请检查存储空间');}
       try{for(const c of await self.clients.matchAll())try{c.postMessage({type:'AUDIO_CACHED',source});}catch{}}catch{}
       return true;
     });
@@ -557,11 +538,8 @@ async function audioFetch(event){
       else inflight.delete(original); // Do not interrupt another tab's playback.
       playingRequests.delete(original);
       repair={attempt,done:serial(async()=>{
-        // Persist the bypass before deleting the bad entry or requesting audio,
-        // so worker suspension cannot make the original HTTP cache usable again.
-        try{await saveFreshSources();}catch{/* The in-memory bypass still applies; remove known bad audio even when metadata storage is full. */}
-        const cache=await caches.open(AUDIO),index=await readIndex();
-        await cache.delete(original);delete index[original];await saveIndex(index);
+        // Keep the saved recording until a complete replacement is committed.
+        try{await saveFreshSources();}catch{/* The in-memory bypass still applies. */}
       }).catch(()=>{})};recoveryRequests.set(original,repair);
     }
     await repair.done;

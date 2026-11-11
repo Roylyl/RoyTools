@@ -13,16 +13,12 @@ object ProxyModePreferences {
     fun read(c:Context)=c.getSharedPreferences("proxy_mode",Context.MODE_PRIVATE).getString("choice","default").orEmpty()
     fun apply(c:Context,config:ConfigurationOverride,choice:String){
         RoutingPresets.clear(config)
+        config.routingTarget=c.getSharedPreferences("proxy_mode",Context.MODE_PRIVATE).getString("target_"+com.github.kr328.clash.service.store.ServiceStore(c).activeProfile,null)
         if(choice in listOf("rule","music","ai")){
             val groups=Clash.queryGroupNames(false).ifEmpty{Clash.queryGroup("GLOBAL",ProxySort.Default).proxies.filter{it.isGroup}.map{it.name}}
-            val target=groups.firstOrNull{it!="GLOBAL" && it!="DIRECT" && it!="REJECT"}
-                ?: Clash.queryGroup("GLOBAL",ProxySort.Default).now
+            val target=RoutingPresets.target(config,groups,Clash.queryGroup("GLOBAL",ProxySort.Default))
             if(choice=="rule")BundledRoutingRules.apply(c,config,target,groups)
-            else RoutingPresets.apply(config,choice,target)
-        }
-        if(choice=="global"){
-            val global=Clash.queryGroup("GLOBAL",ProxySort.Default)
-            if(global.now in listOf("DIRECT","REJECT"))global.proxies.firstOrNull{it.isGroup && it.name!="GLOBAL"}?.let{Clash.patchSelector("GLOBAL",it.name)}
+            else RoutingPresets.apply(config,choice,target,if(choice=="ai")RoutingPresets.loadAI(c) else emptyList())
         }
         config.mode=when(choice){"rule","music","ai"->TunnelState.Mode.Rule;"global"->TunnelState.Mode.Global;"direct"->TunnelState.Mode.Direct;else->null}
     }

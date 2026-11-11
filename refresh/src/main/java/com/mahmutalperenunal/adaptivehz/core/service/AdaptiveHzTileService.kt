@@ -69,6 +69,10 @@ class AdaptiveHzTileService : TileService() {
     private fun toggleAdaptive() {
         if (changingMode) return
         val appContext = applicationContext
+        if (!AdaptiveHzPrefs.isControlsEnabled(appContext)) {
+            openRefreshSettings()
+            return
+        }
         val nextMode = if (AdaptiveHzPrefs.getCurrentMode(appContext) == AdaptiveHzMode.ADAPTIVE) {
             AdaptiveHzMode.OFF
         } else {
@@ -92,7 +96,7 @@ class AdaptiveHzTileService : TileService() {
                 context = appContext,
                 mode = nextMode,
                 onComplete = { result ->
-                    if (AdaptiveHzPrefs.getCurrentMode(appContext) == nextMode &&
+                    if (AdaptiveHzPrefs.isControlsEnabled(appContext) && AdaptiveHzPrefs.getCurrentMode(appContext) == nextMode &&
                         !result.isOperationalSuccess && result != RefreshRateApplyResult.NoOperation
                     ) {
                         failedMode = nextMode

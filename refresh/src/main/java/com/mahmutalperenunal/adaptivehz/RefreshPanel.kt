@@ -4,6 +4,8 @@ import android.Manifest
 import android.app.Activity
 import android.app.Dialog
 import android.content.Intent
+import android.content.Context
+import com.google.android.material.materialswitch.MaterialSwitch
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
@@ -25,7 +27,7 @@ import com.github.kr328.clash.common.ui.TouchFeedback
 import com.github.kr328.clash.common.R as CommonR
 import kotlin.math.roundToInt
 
-class RefreshPanel(private val activity: Activity) : android.content.ContextWrapper(activity) {
+class RefreshPanel(private val activity: Activity, private val switchContext: Context = activity) : android.content.ContextWrapper(activity) {
     val view = FrameLayout(this)
     private val blue get() = themeColor(androidx.appcompat.R.attr.colorPrimary, Color.rgb(0, 122, 255))
     private val primaryTextColor get() = themeColor(android.R.attr.textColorPrimary, Color.BLACK)
@@ -42,6 +44,10 @@ class RefreshPanel(private val activity: Activity) : android.content.ContextWrap
     private val muted get() = themeColor(android.R.attr.textColorSecondary, Color.rgb(116, 116, 124))
     private val handler = Handler(Looper.getMainLooper())
     private var attemptedReconnect = false
+    private var stoppedWhileDisabled = false
+    private var updatingSwitch = false
+    private var masterSwitch: MaterialSwitch? = null
+    private val controlledCards = mutableListOf<View>()
     private var trackingMode = false
     private var modeSlider: SeekBar? = null
     private var modeHint: TextView? = null
@@ -56,8 +62,15 @@ class RefreshPanel(private val activity: Activity) : android.content.ContextWrap
     }
 
     fun onStart() {
-        OneSetup.configure(this)
-        if (AdaptiveHzActionHandler.getCurrentMode(this) != AdaptiveHzMode.OFF && !attemptedReconnect && !Shizuku.pingBinder() &&
+        val enabled = AdaptiveHzPrefs.isControlsEnabled(this)
+        if (!enabled) {
+            WirelessSetupService.cancelForDisabledMode(this)
+            if (!stoppedWhileDisabled) {
+                stoppedWhileDisabled = true
+                AdaptiveHzActionHandler.turnOffAsync(this)
+            }
+        } else OneSetup.configure(this)
+        if (enabled && AdaptiveHzActionHandler.getCurrentMode(this) != AdaptiveHzMode.OFF && !attemptedReconnect && !Shizuku.pingBinder() &&
             getSharedPreferences("wireless_setup", MODE_PRIVATE).getBoolean("paired", false)) {
             attemptedReconnect = true
             startForegroundService(Intent(this, WirelessSetupService::class.java)
@@ -85,13 +98,14 @@ class RefreshPanel(private val activity: Activity) : android.content.ContextWrap
             setTextColor(color)
             setLineSpacing(dp(3).toFloat(), 1f)
         }
-    private fun card(): LinearLayout = LinearLayout(this).apply {
+    private fun card(controlled: Boolean = true): LinearLayout = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         background = rounded(surfaceColor)
         val padding = dimension(CommonR.dimen.roytools_card_padding)
         setPadding(padding, padding, padding, padding)
         layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dimension(CommonR.dimen.roytools_section_spacing) }
         content.addView(this)
+        if (controlled) controlledCards.add(this)
     }
     private fun button(parent: LinearLayout, label: String, action: () -> Unit) {
         parent.addView(MaterialButton(this).apply {
@@ -101,6 +115,7 @@ class RefreshPanel(private val activity: Activity) : android.content.ContextWrap
     }
 
     private fun render() {
+        controlledCards.clear()
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(bgColor)
@@ -122,7 +137,30 @@ class RefreshPanel(private val activity: Activity) : android.content.ContextWrap
     }
 
     private fun controls() {
-        val statusCard = card()
+        val statusCard = card(false)
+        val heading = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; minimumHeight = dp(48) }
+        heading.addView(text("刷新率控制", 18).apply { setTypeface(null, Typeface.BOLD) },
+            LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = dp(16) })
+        masterSwitch = MaterialSwitch(switchContext).apply {
+            contentDescription = "刷新率总开关"
+            minimumHeight = dp(48)
+            isChecked = AdaptiveHzPrefs.isControlsEnabled(this@RefreshPanel)
+            setOnCheckedChangeListener { _, checked ->
+                if (!updatingSwitch) {
+                    AdaptiveHzPrefs.setControlsEnabled(this@RefreshPanel, checked)
+                    if (checked) {
+                        stoppedWhileDisabled = false
+                        applyMode(AdaptiveHzPrefs.getControlMode(this@RefreshPanel))
+                    } else {
+                        stoppedWhileDisabled = true
+                        attemptedReconnect = false
+                        AdaptiveHzActionHandler.turnOffAsync(this@RefreshPanel, onSettled = { refreshStatus() })
+                    }
+                    refreshStatus()
+                }
+            }
+        }.also { heading.addView(it, LinearLayout.LayoutParams(-2, -2)) }
+        statusCard.addView(heading)
         state = text("", 14, blue)
         rate = text("", 48).apply { setTypeface(null, Typeface.BOLD) }
         statusCard.addView(state)
@@ -131,7 +169,7 @@ class RefreshPanel(private val activity: Activity) : android.content.ContextWrap
         modes.addView(text("刷新率模式", 18).apply { setTypeface(null, Typeface.BOLD) })
         val slider = ModeSlider().apply {
             progress = modeIndex()
-            contentDescription = "刷新率模式，关闭、60Hz、120Hz、自适应"
+            contentDescription = "刷新率模式，自适应、60Hz、120Hz"
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar, position: Int, fromUser: Boolean) {
                     if (fromUser) {
@@ -154,7 +192,7 @@ class RefreshPanel(private val activity: Activity) : android.content.ContextWrap
         modeSlider = slider
         modes.addView(slider, LinearLayout.LayoutParams(-1, dp(56)))
         val labels = LinearLayout(this)
-        listOf("关闭", "60Hz", "120Hz", "自适应").forEachIndexed { index, label ->
+        listOf("自适应", "60Hz", "120Hz").forEachIndexed { index, label ->
             labels.addView(text(label, 13, muted).apply {
                 gravity = Gravity.CENTER
                 minHeight = dp(48)
@@ -188,13 +226,14 @@ class RefreshPanel(private val activity: Activity) : android.content.ContextWrap
     private fun hasWritePermission() =
         checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
 
-    private fun modeIndex(): Int = when (AdaptiveHzPrefs.getCurrentMode(this)) {
-        AdaptiveHzMode.OFF -> 0
+    private fun modeIndex(): Int = when (AdaptiveHzPrefs.getControlMode(this)) {
         AdaptiveHzMode.FORCE_MIN -> 1
         AdaptiveHzMode.FORCE_MAX -> 2
-        AdaptiveHzMode.ADAPTIVE -> 3
+        else -> 0
     }
     private fun applyMode(mode: AdaptiveHzMode) {
+        if (!AdaptiveHzPrefs.isControlsEnabled(this)) return
+        AdaptiveHzPrefs.setControlMode(this, mode)
         if (mode != AdaptiveHzMode.OFF) OneSetup.configure(this)
         val permitted = when (mode) {
             // Stopping must stay available even when the helper service has disconnected.
@@ -208,7 +247,7 @@ class RefreshPanel(private val activity: Activity) : android.content.ContextWrap
             return
         }
         AdaptiveHzActionHandler.applyModeAsync(this, mode, onComplete = { result ->
-            if (!result.isOperationalSuccess) {
+            if (!result.isOperationalSuccess && AdaptiveHzPrefs.isControlsEnabled(this)) {
                 val message = if (mode == AdaptiveHzMode.OFF)
                     "已停止自动控制，恢复系统刷新率失败，请配置辅助服务后重试"
                 else "刷新率设置未生效，请配置辅助服务后重试"
@@ -218,8 +257,8 @@ class RefreshPanel(private val activity: Activity) : android.content.ContextWrap
     }
 
     private fun applyModeAt(position: Int) {
-        applyMode(listOf(AdaptiveHzMode.OFF, AdaptiveHzMode.FORCE_MIN,
-            AdaptiveHzMode.FORCE_MAX, AdaptiveHzMode.ADAPTIVE)[position])
+        applyMode(listOf(AdaptiveHzMode.ADAPTIVE,
+            AdaptiveHzMode.FORCE_MIN, AdaptiveHzMode.FORCE_MAX)[position])
     }
 
     private fun configuration() {
@@ -260,12 +299,13 @@ class RefreshPanel(private val activity: Activity) : android.content.ContextWrap
         delay.addView(ends)
         val activation = card()
         activation.addView(text("辅助服务", 18).apply { setTypeface(null, Typeface.BOLD) })
-        activation.addView(text("内置Shizuku服务端，专供本应用使用。无root设备重启后需重新激活。", 14, muted))
+        activation.addView(text("刷新率控制所需的辅助服务。", 14, muted))
         button(activation, "配置辅助服务") { phoneActivation() }
 
     }
 
     private fun phoneActivation() {
+        if (!AdaptiveHzPrefs.isControlsEnabled(this)) return
         startForegroundService(Intent(this, WirelessSetupService::class.java))
         modal("手机激活", """1.连接Wi-Fi，打开无线调试。
 2.选择“使用配对码配对设备”。
@@ -308,7 +348,9 @@ class RefreshPanel(private val activity: Activity) : android.content.ContextWrap
         return java.text.DecimalFormat("0.##").format(milliseconds / 1000.0) + "秒"
     }
 
-    private inner class ModeSlider : com.github.kr328.clash.common.ui.FourStepSlider(this@RefreshPanel)
+    private inner class ModeSlider : com.github.kr328.clash.common.ui.FourStepSlider(this@RefreshPanel) {
+        init { max = 2; tickCount = 3 }
+    }
 
     private inner class DelaySlider : com.github.kr328.clash.common.ui.CapsuleSlider(this@RefreshPanel) {
         init {
@@ -322,8 +364,19 @@ class RefreshPanel(private val activity: Activity) : android.content.ContextWrap
         val rateLabel = if (activeHz == null) "—" else "${activeHz}Hz"
         if (rate.text.toString() != rateLabel) rate.text = rateLabel
         if (!trackingMode) modeSlider?.progress = modeIndex()
-        modeHint?.visibility = if (ready()) View.GONE else View.VISIBLE
+        modeSlider?.contentDescription = "刷新率模式：${listOf("自适应", "60Hz", "120Hz")[modeIndex()]}，可选自适应、60Hz、120Hz"
+        val enabled = AdaptiveHzPrefs.isControlsEnabled(this)
+        updatingSwitch = true
+        masterSwitch?.isChecked = enabled
+        updatingSwitch = false
+        fun enableTree(node: View) {
+            node.isEnabled = enabled
+            if (node is android.view.ViewGroup) for (i in 0 until node.childCount) enableTree(node.getChildAt(i))
+        }
+        for (card in controlledCards) { enableTree(card); card.alpha = if (enabled) 1f else 0.45f }
+        modeHint?.visibility = if (enabled && !ready()) View.VISIBLE else View.GONE
         val stateLabel = when {
+            !enabled -> "刷新率控制已关闭"
             !Shizuku.pingBinder() -> "辅助服务待激活"
             checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) != PackageManager.PERMISSION_GRANTED ->
                 "辅助服务缺少系统设置权限"
@@ -331,6 +384,11 @@ class RefreshPanel(private val activity: Activity) : android.content.ContextWrap
             else -> "辅助服务运行中"
         }
         if (state.text.toString() != stateLabel) state.text = stateLabel
+        // Complete the requested mode automatically when an explicit setup finishes.
+        if (enabled && !trackingMode && AdaptiveHzPrefs.getCurrentMode(this) == AdaptiveHzMode.OFF) {
+            val selected = AdaptiveHzPrefs.getControlMode(this)
+            if (if (selected == AdaptiveHzMode.ADAPTIVE) ready() else hasWritePermission()) applyMode(selected)
+        }
     }
     init { render() }
 }

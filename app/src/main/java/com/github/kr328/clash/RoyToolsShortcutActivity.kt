@@ -144,6 +144,10 @@ class RoyToolsShortcutActivity : ComponentActivity() {
     }
 
     private fun applyRefreshMode(mode: AdaptiveHzMode) {
+        if (mode != AdaptiveHzMode.OFF && !com.mahmutalperenunal.adaptivehz.core.prefs.AdaptiveHzPrefs.isControlsEnabled(this)) {
+            openRefreshPage("")
+            return
+        }
         val requestId = ++latestRefreshRequestId
         scope.launch {
             if (requestId != latestRefreshRequestId) {
@@ -203,7 +207,9 @@ class RoyToolsShortcutActivity : ComponentActivity() {
 
     private fun executeRefreshMode(mode: AdaptiveHzMode) {
         AdaptiveHzActionHandler.applyModeAsync(this, mode, onComplete = { result ->
-            if (!isFinishing && !isDestroyed) {
+            if (!com.mahmutalperenunal.adaptivehz.core.prefs.AdaptiveHzPrefs.isControlsEnabled(this)) {
+                finish()
+            } else if (!isFinishing && !isDestroyed) {
                 when (result) {
                     is RefreshRateApplyResult.Failure,
                     is RefreshRateApplyResult.WriteRejected,
@@ -227,7 +233,7 @@ class RoyToolsShortcutActivity : ComponentActivity() {
     }
 
     private fun openRefreshPage(message: String) {
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+        if (message.isNotBlank()) Toast.makeText(this, message, Toast.LENGTH_LONG).show()
         startActivity(Intent(this, MainActivity::class.java)
             .putExtra("roytools_tab", "refresh")
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))

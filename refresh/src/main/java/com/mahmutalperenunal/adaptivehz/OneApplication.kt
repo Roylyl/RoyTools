@@ -53,6 +53,7 @@ object OneSetup {
     }
 
     fun configure(context: Context) {
+        if (!AdaptiveHzPrefs.isControlsEnabled(context)) return
         if (context.checkSelfPermission(android.Manifest.permission.WRITE_SECURE_SETTINGS) !=
             PackageManager.PERMISSION_GRANTED) return
         AdaptiveHzPrefs.setAdbGranted(context, true)
