@@ -1,0 +1,7 @@
++.apple-mapkit.com
++.mi.com
++.xiaomi.com
++.xiaomi.net
++.miui.com
++.micloud.com
++.mi-img.com

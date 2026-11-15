@@ -1,0 +1,15 @@
++.apple.com
++.apple.com.cn
++.apple.cn
++.icloud.com
++.icloud.com.cn
++.icloud-content.com
++.icloud-content.com.cn
++.mzstatic.com
++.aaplimg.com
++.cdn-apple.com
++.apple-cloudkit.com
++.apple-dns.net
++.apple-dns.cn
++.apple-dns.com
++.apple-dns.com.cn

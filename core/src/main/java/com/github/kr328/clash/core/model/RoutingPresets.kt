@@ -21,7 +21,15 @@ object RoutingPresets {
     fun apply(override:ConfigurationOverride,preset:String,target:String,aiRules:List<String> = emptyList()){
         val next=rules(preset,target,aiRules)
         if(override.routingPreset==null){override.originalRules=override.rules;override.originalRuleProviders=override.ruleProviders;override.originalFindProcessMode=override.findProcessMode}
-        override.ruleProviders=override.originalRuleProviders
+        override.ruleProviders=if(preset=="ai") {
+            val providers=(override.originalRuleProviders ?: emptyMap()).toMutableMap()
+            for(rule in aiRules) if(rule.startsWith("RULE-SET,roytools-ai-direct-")) {
+                val name=rule.split(',')[1]
+                val file=name.removePrefix("roytools-ai-")
+                providers[name]=ConfigurationOverride.RuleProviderOverride(type="file",behavior="domain",format="text",path="ai-routing/$file.txt")
+            }
+            providers
+        } else override.originalRuleProviders
         override.findProcessMode=if(preset=="music") ConfigurationOverride.FindProcessMode.Strict else override.originalFindProcessMode
         override.rules=next;override.routingPreset=preset;override.routingTarget=target
     }
