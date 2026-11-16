@@ -9,12 +9,16 @@ object BundledRoutingRules {
     private const val ASSET="roylyl-rules-3.0.1"
     fun apply(c:Context,override:ConfigurationOverride,target:String,groups:List<String>) {
         require(target !in listOf("DIRECT","REJECT","GLOBAL") && target.isNotBlank() && !target.contains(','))
-        val rules=Json.parseToJsonElement(c.assets.open("$ASSET/rules.json").bufferedReader().use{it.readText()}).jsonObject.getValue("rules").jsonArray.map{it.jsonPrimitive.content}
+        val bundle=RoutingRuleStore.current(c)
+        val rules=bundle.rules(bundle.rule,"roytools-rule")
         if(override.routingPreset==null){override.originalRules=override.rules;override.originalRuleProviders=override.ruleProviders;override.originalFindProcessMode=override.findProcessMode}
         override.findProcessMode=override.originalFindProcessMode
         override.rules=mapRules(rules,groups.toSet(),target)
         val providers=(override.originalRuleProviders ?: emptyMap()).toMutableMap()
-        addProviders(c, providers, ASSET, "roytools-rule")
+        for(rule in rules) if(rule.startsWith("RULE-SET,roytools-rule-direct-")) {
+            val name=rule.split(',')[1]
+            providers[name]=ConfigurationOverride.RuleProviderOverride(type="file",behavior="domain",format="text",path="$ASSET/${name.removePrefix("roytools-rule-")}.txt")
+        }
 
 
         override.ruleProviders=providers
@@ -29,16 +33,8 @@ object BundledRoutingRules {
         parts.joinToString(",")
     }
 
-    fun addProviders(c:Context, providers:MutableMap<String,ConfigurationOverride.RuleProviderOverride>, asset:String, prefix:String) {
-        val json=Json.parseToJsonElement(c.assets.open("$asset/rules.json").bufferedReader().use { it.readText() }).jsonObject
-        val count=json.getValue("providers").jsonPrimitive.int
-        for(i in 1..count) {
-            val name="direct-${i.toString().padStart(2,'0')}"
-            providers["$prefix-$name"]=ConfigurationOverride.RuleProviderOverride(type="file",behavior="domain",format="text",path="$asset/$name.txt")
-        }
-    }
-
     fun install(c:Context,profile:File) {
+        RoutingRuleStore.installAll(c,profile)
         for(asset in listOf("ai-routing",ASSET)) {
             val json=Json.parseToJsonElement(c.assets.open("$asset/rules.json").bufferedReader().use { it.readText() }).jsonObject
             val directory=File(profile,"providers/$asset").apply { check(mkdirs()||isDirectory) }

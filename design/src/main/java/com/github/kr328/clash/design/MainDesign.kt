@@ -30,7 +30,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         const val TAB_SETTINGS = 3
     }
     enum class Request {
-        ToggleStatus, OpenLanSharing, OpenProxy, OpenProfiles, OpenAppSettings,
+        ToggleStatus, CheckRoutingRules, OpenLanSharing, OpenProxy, OpenProfiles, OpenAppSettings,
         OpenNetworkSettings, OpenOverrideSettings, OpenProviders,
         ModeDefault, ModeRule, ModeMusic, ModeAI, ModeGlobal, ModeDirect, AddProxyTile, AddProxyWidget
     }

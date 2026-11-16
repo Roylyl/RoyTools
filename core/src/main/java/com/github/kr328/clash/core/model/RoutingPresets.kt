@@ -17,7 +17,7 @@ object RoutingPresets {
             else -> error("未知代理模式")
         }
     }
-    fun loadAI(context:Context):List<String> = Json.parseToJsonElement(context.assets.open("ai-routing/rules.json").bufferedReader().use{it.readText()}).jsonObject.getValue("rules").jsonArray.map{it.jsonPrimitive.content}
+    fun loadAI(context:Context):List<String> = RoutingRuleStore.current(context).let { it.rules(it.ai,"roytools-ai") }
     fun apply(override:ConfigurationOverride,preset:String,target:String,aiRules:List<String> = emptyList()){
         val next=rules(preset,target,aiRules)
         if(override.routingPreset==null){override.originalRules=override.rules;override.originalRuleProviders=override.ruleProviders;override.originalFindProcessMode=override.findProcessMode}

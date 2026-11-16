@@ -74,6 +74,11 @@ class ClashManager(private val context: Context) : IClashManager,
     }
 
     override fun patchOverride(slot: Clash.OverrideSlot, configuration: ConfigurationOverride) {
+        if (slot == Clash.OverrideSlot.Session && configuration.routingPreset in setOf("ai", "roylyl")) {
+            store.activeProfile?.let { id ->
+                BundledRoutingRules.install(context, java.io.File(context.filesDir, "imported/$id"))
+            }
+        }
         Clash.patchOverride(slot, configuration)
         if(slot==Clash.OverrideSlot.Session)com.github.kr328.clash.service.util.ProxyModePreferences.save(context,configuration)
 

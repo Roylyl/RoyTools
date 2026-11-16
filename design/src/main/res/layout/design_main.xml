@@ -50,6 +50,7 @@
                 <com.google.android.material.button.MaterialButton style="@style/RoyTools.SecondaryButton" android:text="@string/profiles" android:onClick="@{() -&gt; self.request(Request.OpenProfiles)}" />
                 <com.google.android.material.button.MaterialButton style="@style/RoyTools.SecondaryButton" android:text="@string/roytools_proxy_nodes" android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}" android:onClick="@{() -&gt; self.request(Request.OpenProxy)}" />
                 <com.google.android.material.button.MaterialButton style="@style/RoyTools.SecondaryButton" android:text="@string/lan_sharing" android:onClick="@{() -&gt; self.request(Request.OpenLanSharing)}" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/check_routing_rules" style="@style/RoyTools.SecondaryButton" android:text="检查规则更新" android:onClick="@{() -&gt; self.request(Request.CheckRoutingRules)}" />
             </LinearLayout>
             <LinearLayout style="@style/RoyTools.Card">
                 <TextView style="@style/RoyTools.CardTitle" android:text="代理设置" />

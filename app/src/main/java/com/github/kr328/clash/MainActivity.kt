@@ -54,6 +54,22 @@ import com.github.kr328.clash.log.exportModuleLog
 import com.github.kr328.clash.design.dialog.RoyToolsDialogBuilder
 
 class MainActivity : BaseActivity<MainDesign>() {
+    private val routingUpdater by lazy { com.github.kr328.clash.update.RoutingRuleUpdateController(this, this) }
+
+    private suspend fun applyUpdatedRoutingRules() {
+        if (!clashRunning) return
+        proxyModeLock.withLock {
+            withClash {
+                val config = queryOverride(Clash.OverrideSlot.Session)
+                val preset = config.routingPreset
+                if (preset != "ai" && preset != "roylyl") return@withClash
+                val target = com.github.kr328.clash.core.model.RoutingPresets.target(config, queryProxyGroupNames(false), queryProxyGroup("GLOBAL", com.github.kr328.clash.core.model.ProxySort.Default))
+                if (preset == "roylyl") com.github.kr328.clash.core.model.BundledRoutingRules.apply(this@MainActivity, config, target, queryProxyGroupNames(false))
+                else com.github.kr328.clash.core.model.RoutingPresets.apply(config, "ai", target, com.github.kr328.clash.core.model.RoutingPresets.loadAI(this@MainActivity))
+                patchOverride(Clash.OverrideSlot.Session, config)
+            }
+        }
+    }
     private enum class SettingsPage { Home, Theme, About, Background }
     private var forwardPanel: com.github.kr328.clash.forward.ForwardPanel? = null
     private var selectedTab = 0
@@ -381,6 +397,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                     Log.d("主页处理操作：$it")
                     when (it) {
                         MainDesign.Request.ToggleStatus -> toggleProxy(design)
+                        MainDesign.Request.CheckRoutingRules -> routingUpdater.check { applyUpdatedRoutingRules() }
                         MainDesign.Request.OpenLanSharing ->
                             startActivity(OverrideSettingsActivity::class.intent.putExtra(
                                 OverrideSettingsActivity.EXTRA_LAN_ONLY, true
