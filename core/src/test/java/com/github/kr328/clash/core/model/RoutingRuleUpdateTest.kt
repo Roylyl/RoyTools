@@ -14,10 +14,18 @@ class RoutingRuleUpdateTest {
     @Test fun repositoryBundleAndManifestAreConsumable() {
         val root = File("..").canonicalFile
         val bundle = RoutingRuleBundle.parse(File(root, "routing-rules.json").readText())
-        assertEquals("3.0.1", bundle.version)
+        assertTrue(RoutingRuleBundle.compareVersions(bundle.version, "3.0.1") >= 0)
         assertEquals("MATCH,DIRECT", bundle.ai.rules.last())
         assertEquals("MATCH,Other-AutoFallback", bundle.rule.rules.last())
-        assertTrue(bundle.rules(bundle.ai, "roytools-ai").first().contains("-v3-0-1"))
+        for ((section, prefix) in listOf(bundle.ai to "roytools-ai", bundle.rule to "roytools-rule")) {
+            val transformed = bundle.rules(section, prefix)
+            assertEquals(section.rules.size, transformed.size)
+            section.rules.zip(transformed).forEach { (original, updated) ->
+                if (original.startsWith("RULE-SET,")) {
+                    assertEquals(original.split(',')[1] + "-v${bundle.version.replace('.', '-')}", updated.split(',')[1])
+                } else assertEquals(original, updated)
+            }
+        }
         val bytes = File(root, "routing-rules.json").readBytes()
         val manifest = Json.parseToJsonElement(File(root, "routing-version.json").readText()).jsonObject
         assertEquals(bundle.version, manifest.getValue("version").jsonPrimitive.content)

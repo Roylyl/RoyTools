@@ -1,6 +1,6 @@
 {
-  "version": "3.0.1",
-  "bytes": 3693081,
-  "sha256": "895532c8f4927b4bb14aa1b7f931d2de2376beeea67c99a140a04699c2cfeab7",
-  "notes": "AI与规则采用3.0.1规则库；AI模式未匹配流量直连，保留当前所选节点。"
+  "version": "3.1.0",
+  "bytes": 1939067,
+  "sha256": "08f51eebae923c95d1d5db2806ca4ffaa6bbd23c71a20e2998be4ee5d3257d1c",
+  "notes": "AI与规则更新至3.1.0；保留源规则顺序，AI未匹配流量直连，沿用当前所选节点。"
 }

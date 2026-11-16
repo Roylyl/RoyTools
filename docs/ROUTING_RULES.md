@@ -6,7 +6,7 @@
 
 |文件|用途|
 |---|---|
-|[routing-rules.json](../routing-rules.json)|完整规则包，当前规则版本3.0.1，包含AI、规则两套主规则及配套域名表。|
+|[routing-rules.json](../routing-rules.json)|完整规则包，当前规则版本3.1.0，包含AI、规则两套主规则及配套域名表。|
 |[routing-version.json](../routing-version.json)|版本号、更新说明、规则包字节数及下载校验值。应用检查更新时只读取这个小文件。|
 
 固定下载源为`https://raw.githubusercontent.com/Roylyl/RoyTools/main/`。首次发布时必须将两个JSON文件一起上传到main分支；仅修改电脑上的文件不会改变手机收到的版本。
@@ -39,7 +39,17 @@ AI模式必须以`MATCH,DIRECT`结束，未匹配流量直连。规则中的非�
 
 ## 发布新规则
 
-1. 编辑根目录`routing-rules.json`，修改两套规则或域名表，将`version`递增，例如从`3.0.1`改为`3.0.2`。规则版本独立于应用版本。
+如果源文件是Shadowrocket配置，可以直接转换。转换器只提取两份配置的`[Rule]`段，自动生成规则包和版本信息，并展开配套域名表核对规则顺序：
+
+```powershell
+.\scripts\convert-routing-rules.ps1 -AIConfig '路径\AIforHK-3.1.0.conf' -RuleConfig '路径\Roylyl-3.1.0.conf' -Version 3.1.0
+```
+
+3.1.0包含454条AI规则和113704条规则模式规则。AI源文件本身以直连兜底；规则模式中的连续直连域名压缩为6个配套域名表，展开后顺序与源文件完全一致。
+
+手动编辑已转换的JSON时：
+
+1. 编辑根目录`routing-rules.json`，修改两套规则或域名表，将`version`递增，例如从`3.1.0`改为`3.1.1`。规则版本独立于应用版本。
 2. 在仓库根目录运行：
 
 ```powershell
