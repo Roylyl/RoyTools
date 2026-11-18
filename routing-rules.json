@@ -1,5 +1,5 @@
 {
-  "version": "3.1.1",
+  "version": "3.1.4",
   "ai": {
     "rules": [
       "DOMAIN-SUFFIX,chatgpt.com,PROXY",
@@ -42,7 +42,9 @@
       "DOMAIN-SUFFIX,chat.com,PROXY",
       "DOMAIN-SUFFIX,anthropic.com,PROXY",
       "DOMAIN-SUFFIX,claude.ai,PROXY",
+      "DOMAIN-SUFFIX,claude.app,PROXY",
       "DOMAIN-SUFFIX,claude.com,PROXY",
+      "DOMAIN-SUFFIX,claudemcpcontent.com,PROXY",
       "DOMAIN-SUFFIX,claudeusercontent.com,PROXY",
       "DOMAIN,cdn.usefathom.com,PROXY",
       "DOMAIN,servd-anthropic-website.b-cdn.net,PROXY",
@@ -1394,6 +1396,9 @@
       "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
       "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
       "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+      "IP-CIDR6,::1/128,DIRECT,no-resolve",
+      "IP-CIDR6,fc00::/7,DIRECT,no-resolve",
+      "IP-CIDR6,fe80::/10,DIRECT,no-resolve",
       "DOMAIN,voice.telephony.goog,PROXY",
       "DOMAIN-SUFFIX,0emm.com,PROXY",
       "DOMAIN-SUFFIX,1e100.net,PROXY",
