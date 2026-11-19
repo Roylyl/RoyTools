@@ -17,6 +17,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+$androidProject = Join-Path $PSScriptRoot 'android'
 function Test-Jdk21([string]$Path) {
     if (-not $Path -or -not (Test-Path -LiteralPath (Join-Path $Path 'bin\javac.exe') -PathType Leaf)) { return $false }
     $release = Join-Path $Path 'release'
@@ -36,16 +37,16 @@ if (-not (Test-Path -LiteralPath (Join-Path $AndroidSdk 'platforms\android-35\an
     throw '未找到Android SDK35，请设置ANDROID_HOME或传入-AndroidSdk。'
 }
 foreach ($library in @('libclash.so','libbridge.so')) {
-    if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot "core\src\main\jniLibs\arm64-v8a\$library") -PathType Leaf)) {
-        throw '缺少arm64原生库，请先按docs/BUILDING.md运行scripts/build-native.ps1。'
+    if (-not (Test-Path -LiteralPath (Join-Path $androidProject "core\src\main\jniLibs\arm64-v8a\$library") -PathType Leaf)) {
+        throw '缺少arm64原生库，请先按docs/BUILDING.md运行android/scripts/build-native.ps1。'
     }
 }
-if ($BuildType -eq 'Release' -and -not $env:ROYTOOLS_KEYSTORE_PATH -and -not (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'signing.properties'))) {
+if ($BuildType -eq 'Release' -and -not $env:ROYTOOLS_KEYSTORE_PATH -and -not (Test-Path -LiteralPath (Join-Path $androidProject 'signing.properties'))) {
     throw 'Release尚未配置签名。请使用仓库外密钥和签名环境变量，或本机signing.properties。'
 }
 $previousJava = $env:JAVA_HOME
 $previousAndroid = $env:ANDROID_HOME
-Push-Location -LiteralPath $PSScriptRoot
+Push-Location -LiteralPath $androidProject
 try {
     $env:JAVA_HOME = $JavaHome
     $env:ANDROID_HOME = $AndroidSdk

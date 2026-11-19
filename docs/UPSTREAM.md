@@ -12,15 +12,15 @@ RoyTools整合的是收到的Clash-Meta-Plus本地修改工程，继续保留其
 
 ## 代理核心
 
-历史记录将恢复的核心定位为[MetaCubeX/mihomo](https://github.com/MetaCubeX/mihomo)提交[`ac017cdd246ce8bd547653d927e7bf77d7ee73d5`](https://github.com/MetaCubeX/mihomo/tree/ac017cdd246ce8bd547653d927e7bf77d7ee73d5)，源码位于[`core/src/foss/golang/clash`](../core/src/foss/golang/clash)。其[GPLv3许可证](../core/src/foss/golang/clash/LICENSE)与内部第三方声明保留。
+历史记录将恢复的核心定位为[MetaCubeX/mihomo](https://github.com/MetaCubeX/mihomo)提交[`ac017cdd246ce8bd547653d927e7bf77d7ee73d5`](https://github.com/MetaCubeX/mihomo/tree/ac017cdd246ce8bd547653d927e7bf77d7ee73d5)，源码位于[`core/src/foss/golang/clash`](../android/core/src/foss/golang/clash)。其[GPLv3许可证](../android/core/src/foss/golang/clash/LICENSE)与内部第三方声明保留。
 
 RoyTools在该副本增加按本地自然日和网络类型统计代理业务用量的代码、Android JNI桥及持久化修改，不能描述为未经修改的上游核心。构建入口为[`scripts/build-native.ps1`](../scripts/build-native.ps1)，标签、模块替换及依赖以随附Go清单为准。Go工具链来源为[MetaCubeX/go](https://github.com/MetaCubeX/go)，Android运行时补丁保留在[补丁目录](../.github/patch)。对应源码应包含构建材料，不能只发布预编译`.so`。
 
 ## 刷新率与内置Shizuku
 
-[Adaptive-Hz](https://github.com/mahmutaunal/Adaptive-Hz)提供刷新率引擎基础，采用MIT，[完整许可证](../vendor/Adaptive-Hz-LICENSE)保留。RoyTools增加汉化、统一页面、四档模式、0.25秒步进、无线辅助配置及通知和快捷入口。
+[Adaptive-Hz](https://github.com/mahmutaunal/Adaptive-Hz)提供刷新率引擎基础，采用MIT，[完整许可证](../android/vendor/Adaptive-Hz-LICENSE)保留。RoyTools增加汉化、统一页面、四档模式、0.25秒步进、无线辅助配置及通知和快捷入口。
 
-[Shizuku](https://github.com/RikkaApps/Shizuku)的server、starter、common和所需manager源码位于[`vendor/Shizuku`](../vendor/Shizuku)，主体采用[Apache-2.0](../vendor/Shizuku/LICENSE)。API、server-shared及rish等来自[Shizuku-API](https://github.com/RikkaApps/Shizuku-API)，采用[MIT](../vendor/Shizuku/API-LICENSE)。Maven API/provider直接版本为13.1.5；vendor源码缺少独立Git元数据，不能仅凭该版本推断全部文件来自同一精确修订。
+[Shizuku](https://github.com/RikkaApps/Shizuku)的server、starter、common和所需manager源码位于[`vendor/Shizuku`](../android/vendor/Shizuku)，主体采用[Apache-2.0](../android/vendor/Shizuku/LICENSE)。API、server-shared及rish等来自[Shizuku-API](https://github.com/RikkaApps/Shizuku-API)，采用[MIT](../android/vendor/Shizuku/API-LICENSE)。Maven API/provider直接版本为13.1.5；vendor源码缺少独立Git元数据，不能仅凭该版本推断全部文件来自同一精确修订。
 
 RoyTools做了应用身份、包名、服务接入及配对配置修改，用于本应用内部功能。本项目不是Shizuku官方发行版本，原权利人保留版权。`libadb.so`与BoringSSL的历史版本溯源缺口见[第三方说明](../THIRD_PARTY.md#boringssl与无线配对原生库)。
 

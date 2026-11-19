@@ -1,5 +1,5 @@
 # Builds validation artifacts only. Releases and signing remain local and explicit.
-name: Build RoyTools
+name: Build RoyTools Android
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       version:
         description: 'Version (major.minor.patch)'
         required: true
-        default: '1.0.0'
+        default: '2.2.0'
         type: string
 
 permissions:
@@ -51,6 +51,7 @@ jobs:
         run: sdkmanager 'platform-tools' 'platforms;android-35' 'build-tools;35.0.0'
 
       - name: Build ARM64 Debug validation APK
+        working-directory: android
         # Native libraries correspond to the included modified source.
         # To regenerate them, follow docs/BUILDING.md; this workflow never
         # accesses a release keystore or falls back from Release to Debug.
@@ -76,7 +77,7 @@ jobs:
 
           root = pathlib.Path.cwd()
           version = os.environ['ROYTOOLS_VERSION']
-          apks = list((root / 'app/build/outputs/apk/meta/debug').glob(f'RoyTools-{version}-meta-arm64-v8a-debug.apk'))
+          apks = list((root / 'android/app/build/outputs/apk/meta/debug').glob(f'RoyTools-{version}-meta-arm64-v8a-debug.apk'))
           if len(apks) != 1:
               raise SystemExit(f'Expected one ARM64 Debug APK, found {len(apks)}')
           shutil.copy2(apks[0], root / 'dist' / f'RoyTools-{version}-arm64-v8a-ci-debug.apk')
@@ -88,7 +89,7 @@ jobs:
               'APK signature: temporary runner Debug key; validation artifact only.',
               'Android minimum: 31; target SDK: 35; Java: 21; ABI: arm64-v8a.',
               'Native libraries: included modified-source builds; see docs/BUILDING.md.',
-              'Geo inputs: downloaded to app/build/generated/geoAssets during the build.',
+              'Geo inputs: downloaded to android/app/build/generated/geoAssets during the build.',
               'No release publication, signing secrets, device data or subscriptions are used.',
           ]
           (root / 'dist/BUILD-INFO.txt').write_text('\n'.join(details) + '\n', encoding='utf-8')

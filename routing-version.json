@@ -1,6 +1,12 @@
 {
-  "version": "3.1.4",
+  "version": "3.1.5",
   "bytes": 1897322,
-  "sha256": "eacb252368d270df8eafcdbddf4d9d604a81619c6f55c3fe630ce2fba8fb2832",
-  "notes": "AI与规则更新至3.1.4；保留源规则顺序，AI未匹配流量直连，沿用当前所选节点。"
+  "sha256": "dd665e2ff97e2dc79ad62f2048add369b953305a097b37736ef45c51b4d225b9",
+  "notes": "AI与规则更新至3.1.5；保留源规则顺序，AI未匹配流量直连，沿用当前所选节点。",
+  "music": {
+    "domainSuffixes": [
+      "roylyl.github.io",
+      "raw.githubusercontent.com"
+    ]
+  }
 }

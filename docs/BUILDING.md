@@ -1,6 +1,8 @@
 # 构建RoyTools
 
-工程当前仅生成arm64-v8a安装包，运行环境为Android12及以上。构建需要JDK21和Android SDK35；Gradle会下载项目依赖。普通APK构建直接使用仓库中附带的`libclash.so`与`libbridge.so`，无需重新编译Go核心。
+Android工程位于`android/`，iOS工程位于`ios/`。应用版本均为2.2.0。规则更新文件保留在仓库根目录，规则版本独立发布。
+
+Android为arm64-v8a安装包，运行环境为Android12及以上。构建需要JDK21和Android SDK35。普通APK构建直接使用仓库附带的`libclash.so`与`libbridge.so`。
 
 ## Windows本机构建
 
@@ -36,7 +38,7 @@ $env:ROYTOOLS_GEO_DIR = 'D:\BuildInputs\RoyToolsGeo'
 |`ROYTOOLS_KEY_ALIAS`|签名alias|
 |`ROYTOOLS_KEY_PASSWORD`|alias密码|
 
-也可复制根目录`signing.properties.example`为本机`signing.properties`，填写`keystore.file`、`keystore.password`、`key.alias`、`key.password`。环境变量优先于同名配置文件；`keystore.file`支持仓库外的绝对路径。配置文件和密钥均不得提交。
+也可复制`android/signing.properties.example`为本机`android/signing.properties`，填写`keystore.file`、`keystore.password`、`key.alias`、`key.password`。环境变量优先于同名配置文件。`keystore.file`支持仓库外的绝对路径。配置文件和密钥均不得提交。
 
 ```powershell
 .\构建.ps1 -Version 2.2.0 -BuildType Release
@@ -57,7 +59,7 @@ if runtime.GOOS == "android" {
 ```
 
 ```powershell
-.\scripts\build-native.ps1 -GoRoot 'D:\Toolchains\go' -AndroidSdk $env:ANDROID_HOME -Api 24 -Version 2.2.0 -BuildDate 20261104
+.\android\scripts\build-native.ps1 -GoRoot 'D:\Toolchains\go' -AndroidSdk $env:ANDROID_HOME -Api 24 -Version 2.2.0 -BuildDate 20261104
 .\构建.ps1 -Version 2.2.0 -BuildType Release
 ```
 
@@ -68,3 +70,7 @@ if runtime.GOOS == "android" {
 ## 手动CI
 
 `.github/workflows/build.yaml`仅支持手动触发，构建Debug验证包与对应源码归档，不创建GitHub Release、不推送标签、不使用发行签名secret。公开发行版由维护者在本机选择版本号、使用保管的密钥构建并上传。
+
+## iOS构建
+
+使用macOS与Xcode26或更新版本。应用支持iOS17及以上，iOS26上使用原生Liquid Glass标签栏和控件。构建入口、实时活动和代理接入状态见[iOS工程说明](../ios/README.md)。

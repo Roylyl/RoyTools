@@ -8,10 +8,10 @@
 |---|---|---|
 |Clash-Meta-Plus本地修改分支|代理Android工程、配置、VPN、通知和设置基础|收到的分支采用GPLv3，沿用根[LICENSE](LICENSE)与原[NOTICE](NOTICE)。历史来源见[UPSTREAM.md](docs/UPSTREAM.md)。|
 |[ClashMetaForAndroid](https://github.com/MetaCubeX/ClashMetaForAndroid)|Clash-Meta-Plus的Android上游，承接Clash for Android|[上游GPLv3许可证](https://github.com/MetaCubeX/ClashMetaForAndroid/blob/main/LICENSE)。保留原作者及贡献者声明，不冒充官方版本。|
-|[mihomo](https://github.com/MetaCubeX/mihomo)|代理核心及修改后的当日代理业务用量统计|GPLv3：[本地许可证](core/src/foss/golang/clash/LICENSE)、[固定来源提交的许可证](https://github.com/MetaCubeX/mihomo/blob/ac017cdd246ce8bd547653d927e7bf77d7ee73d5/LICENSE)。|
-|[Adaptive-Hz](https://github.com/mahmutaunal/Adaptive-Hz)|刷新率引擎与辅助服务|MIT，Copyright(c)2025 Mahmut Alperen Ünal。[完整许可证](vendor/Adaptive-Hz-LICENSE)、[上游许可证](https://github.com/mahmutaunal/Adaptive-Hz/blob/main/LICENSE)。|
-|[Shizuku](https://github.com/RikkaApps/Shizuku)|内置服务端、starter、无线配对和所需manager代码|主体Apache-2.0：[完整许可证](vendor/Shizuku/LICENSE)、[上游许可证](https://github.com/RikkaApps/Shizuku/blob/master/LICENSE)。|
-|[Shizuku-API](https://github.com/RikkaApps/Shizuku-API)|API、provider、server-shared及rish等接口|MIT，Copyright(c)2021 RikkaW。[完整许可证](vendor/Shizuku/API-LICENSE)、[上游许可证](https://github.com/RikkaApps/Shizuku-API/blob/master/LICENSE)。Gradle直接使用api/provider13.1.5。|
+|[mihomo](https://github.com/MetaCubeX/mihomo)|代理核心及修改后的当日代理业务用量统计|GPLv3：[本地许可证](android/core/src/foss/golang/clash/LICENSE)、[固定来源提交的许可证](https://github.com/MetaCubeX/mihomo/blob/ac017cdd246ce8bd547653d927e7bf77d7ee73d5/LICENSE)。|
+|[Adaptive-Hz](https://github.com/mahmutaunal/Adaptive-Hz)|刷新率引擎与辅助服务|MIT，Copyright(c)2025 Mahmut Alperen Ünal。[完整许可证](android/vendor/Adaptive-Hz-LICENSE)、[上游许可证](https://github.com/mahmutaunal/Adaptive-Hz/blob/main/LICENSE)。|
+|[Shizuku](https://github.com/RikkaApps/Shizuku)|内置服务端、starter、无线配对和所需manager代码|主体Apache-2.0：[完整许可证](android/vendor/Shizuku/LICENSE)、[上游许可证](https://github.com/RikkaApps/Shizuku/blob/master/LICENSE)。|
+|[Shizuku-API](https://github.com/RikkaApps/Shizuku-API)|API、provider、server-shared及rish等接口|MIT，Copyright(c)2021 RikkaW。[完整许可证](android/vendor/Shizuku/API-LICENSE)、[上游许可证](https://github.com/RikkaApps/Shizuku-API/blob/master/LICENSE)。Gradle直接使用api/provider13.1.5。|
 |[RikkaX](https://github.com/RikkaApps/RikkaX)|preference-multiprocess1.0.0与parcelablelist2.0.1|对应版本本地Maven POM及[上游根许可证](https://github.com/RikkaApps/RikkaX/blob/master/LICENSE)均声明MIT，Copyright(c)2017 Rikka。[完整副本](docs/licenses/RikkaX-MIT.txt)。|
 |[Roylyl Music网页](https://github.com/Roylyl/roylyl.github.io/tree/main/music)|网页播放、缓存、筛选、曲库及歌单交互，经Android适配|网页代码采用仓库[GPLv3许可证](https://github.com/Roylyl/roylyl.github.io/blob/main/LICENSE)。歌曲、歌词、封面另见下文。|
 |[ASRtestII](https://github.com/Roylyl/ASRtestII)|用户指定的配色、页面布局、圆角、控件及品牌排版参考|本地参考工程及[公开许可证](https://github.com/Roylyl/ASRtestII/blob/main/LICENSE)均为Apache-2.0。[完整副本](docs/licenses/ASRtestII-Apache-2.0.txt)。参考不表示引入其ASR模型、音频或全部依赖。|
@@ -28,19 +28,19 @@
 
 ## 其他运行时与构建依赖
 
-直接版本见[Gradle版本目录](gradle/libs.versions.toml)及各模块`build.gradle.kts`；Go模块、替换规则与依赖见：
+直接版本见[Gradle版本目录](android/gradle/libs.versions.toml)及各模块`build.gradle.kts`；Go模块、替换规则与依赖见：
 
-- [核心go.mod](core/src/foss/golang/clash/go.mod)及同目录`go.sum`。
-- [Android桥go.mod](core/src/main/golang/go.mod)及同目录`go.sum`。
-- [foss整合模块go.mod](core/src/foss/golang/go.mod)及同目录`go.sum`。
+- [核心go.mod](android/core/src/foss/golang/clash/go.mod)及同目录`go.sum`。
+- [Android桥go.mod](android/core/src/main/golang/go.mod)及同目录`go.sum`。
+- [foss整合模块go.mod](android/core/src/foss/golang/go.mod)及同目录`go.sum`。
 
 Kotlin、kotlinx、AndroidX、Material Components、WorkManager、KAIDL、Quickie、Bouncy Castle、HiddenApiBypass及Go运行时、sing系列、WireGuard、gVisor等组件均有独立条款。当前直接声明包括Material1.12.0、WorkManager2.9.1、Bouncy Castle1.80；直接声明和实际解析版本可能不同，本表不是全部传递依赖的完整许可清单。
 
-保留[kcptun的MIT许可证](core/src/foss/golang/clash/transport/kcptun/LICENSE.md)、[faketcp的既有来源说明](core/src/foss/golang/clash/transport/hysteria/conns/faketcp/LICENSE)及各文件版权头。faketcp的一行来源链接不能替代完整许可证。新增或升级依赖时应保留适用的完整许可、版权和NOTICE；构建成功、依赖清单与模块校验记录不等于完成许可审计。
+保留[kcptun的MIT许可证](android/core/src/foss/golang/clash/transport/kcptun/LICENSE.md)、[faketcp的既有来源说明](android/core/src/foss/golang/clash/transport/hysteria/conns/faketcp/LICENSE)及各文件版权头。faketcp的一行来源链接不能替代完整许可证。新增或升级依赖时应保留适用的完整许可、版权和NOTICE；构建成功、依赖清单与模块校验记录不等于完成许可审计。
 
 ## Geo数据库与规则
 
-[构建任务](app/build.gradle.kts)从[MetaCubeX/meta-rules-dat](https://github.com/MetaCubeX/meta-rules-dat)获取`geoip.metadb`、`geosite.dat`、`ASN.mmdb`及`BundleMRS.7z`。这些是第三方数据，不是RoyTools原创，也不因应用代码采用GPLv3而自动取得同样的授权。
+[构建任务](android/app/build.gradle.kts)从[MetaCubeX/meta-rules-dat](https://github.com/MetaCubeX/meta-rules-dat)获取`geoip.metadb`、`geosite.dat`、`ASN.mmdb`及`BundleMRS.7z`。这些是第三方数据，不是RoyTools原创，也不因应用代码采用GPLv3而自动取得同样的授权。
 
 meta-rules-dat的[许可证](https://github.com/MetaCubeX/meta-rules-dat/blob/master/LICENSE)与其[来源和生成说明](https://github.com/MetaCubeX/meta-rules-dat)应结合阅读。下载地址包含浮动`latest`，发行时应记录实际来源、取得日期及生成版本，不能拿应用版本代替数据版本，也不能把聚合仓库的许可证概括为所有外部数据的统一条款。
 

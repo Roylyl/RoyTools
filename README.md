@@ -4,11 +4,12 @@
 
 <h1 align="center">RoyTools</h1>
 
-<p align="center">音乐、代理、通知转发与Chat、自适应刷新率，一个应用集中管理。</p>
+<p align="center">RoyTools的Android与iOS工程。两端共用云端曲库和代理规则更新源。</p>
 
 <p align="center">
   <a href="https://github.com/Roylyl/RoyTools/releases/latest"><img src="https://img.shields.io/github/v/release/Roylyl/RoyTools?style=flat-square&amp;display_name=tag&amp;label=%E7%89%88%E6%9C%AC&amp;color=007AFF" alt="最新发行版本"></a>
   <a href="#快速开始"><img src="https://img.shields.io/badge/Android-12%2B-007AFF?style=flat-square" alt="Android12及以上"></a>
+  <a href="#ios工程"><img src="https://img.shields.io/badge/iOS-17%2B-555555?style=flat-square" alt="iOS17及以上"></a>
   <a href="#快速开始"><img src="https://img.shields.io/badge/ABI-arm64--v8a-555555?style=flat-square" alt="arm64-v8a架构"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/Roylyl/RoyTools?style=flat-square&amp;label=%E8%AE%B8%E5%8F%AF&amp;color=555555" alt="开源许可证"></a>
   <a href="https://github.com/Roylyl/RoyTools/releases"><img src="https://img.shields.io/github/downloads/Roylyl/RoyTools/total?style=flat-square&amp;label=%E7%B4%AF%E8%AE%A1%E4%B8%8B%E8%BD%BD&amp;color=007AFF" alt="发行附件累计下载量"></a>
@@ -36,6 +37,10 @@
 |开启代理|打开“代理→配置”，点右上角“＋”。选择“URL”填写自己的订阅地址，或选择“文件”导入配置。保存并选中配置，返回代理首页打开卡片右上方的总开关，首次使用时允许系统VPN请求。|
 |转发通知到iPhone|打开“通知转发→转发设置”，填写Telegram机器人Token、获取Chat ID并授予通知使用权，测试成功后开启转发。|
 |自动调节刷新率|打开“刷新率”页右上方的总开关，点“配置辅助服务”，按[手机配对步骤](#手机配对)激活。首次开启默认使用自适应模式。|
+
+## iOS工程
+
+iOS版支持iOS17及以上，在iOS26上使用系统Liquid Glass样式。底部包含音乐、代理、灵动岛和设置。音乐读取现有云端曲库。代理使用Mihomo和系统Packet Tunnel，支持导入HTTPS订阅或本地YAML，并检查仓库规则更新。构建与签名见[iOS工程说明](ios/README.md)。
 
 ## 音乐
 
@@ -84,7 +89,7 @@ APK只附带首次浏览所需的曲库索引，音频、歌词和专辑封面�
 
 ### 规则更新
 
-代理首页“局域网共享”下面提供“检查规则更新”。已是最新版时显示当前规则版本；发现新版后弹窗确认，下载窗口显示进度并支持取消。更新保留订阅和选中节点，断网继续使用本地规则。规则版本独立于应用版本，首次安装内置3.0.1。
+Android代理首页“局域网共享”下面提供“检查规则更新”。已是最新版时显示当前规则版本，发现新版后弹窗确认。音乐、AI和规则模式从仓库获取分流数据，沿用选中的节点，断网时使用本地规则。规则版本独立于应用版本。
 
 规则数据保存在仓库根目录的[routing-rules.json](routing-rules.json)，发布方式见[规则更新说明](docs/ROUTING_RULES.md)。
 

@@ -7,14 +7,14 @@
 cmake-build-*/
 .gradle-settings-cache/
 .gradletasknamecache
-/core/src/main/cpp/version.h
+/android/core/src/main/cpp/version.h
 
 # Local Python helpers and Go test executables
 __pycache__/
 *.py[cod]
 .venv/
-/core/src/*/golang/**/*.test
-/core/src/*/golang/**/*.test.exe
+/android/core/src/*/golang/**/*.test
+/android/core/src/*/golang/**/*.test.exe
 
 # IDE state and local machine configuration
 .idea/
@@ -49,10 +49,10 @@ __pycache__/
 /credentials/
 **/google-services.json
 /tracker.properties
-/fastlane/Appfile
-/fastlane/Matchfile
-/fastlane/report.xml
-/fastlane/Preview.html
+/android/fastlane/Appfile
+/android/fastlane/Matchfile
+/android/fastlane/report.xml
+/android/fastlane/Preview.html
 
 # Build outputs and local distribution bundles
 *.apk
@@ -65,8 +65,8 @@ __pycache__/
 /outputs/
 /dist/
 /artifacts/
-/app/foss/release/
-/app/premium/release/
+/android/app/foss/release/
+/android/app/premium/release/
 
 # Local device QA, screenshots and personal configuration exports
 /UI预览/
@@ -94,7 +94,7 @@ __pycache__/
 !/*.example.yaml
 !/*.example.yml
 !/*.example.conf
-/app/src/main/assets/music/share-covers/
+/android/app/src/main/assets/music/share-covers/
 /Roylyl-*.yaml
 /Roylyl-*.yml
 /logcat*.txt
@@ -108,10 +108,10 @@ __pycache__/
 /*.har
 
 # Generated Geo data; keep source assets and legal notices trackable
-/app/src/main/assets/geoip.metadb
-/app/src/main/assets/geosite.dat
-/app/src/main/assets/ASN.mmdb
-/app/src/main/assets/BundleMRS.7z
+/android/app/src/main/assets/geoip.metadb
+/android/app/src/main/assets/geosite.dat
+/android/app/src/main/assets/ASN.mmdb
+/android/app/src/main/assets/BundleMRS.7z
 
 # Local scratch work and temporary helpers
 /.codex/
@@ -138,10 +138,22 @@ Desktop.ini
 *.swo
 
 # Keep the Gradle wrapper and public source fixtures
-!gradle/wrapper/gradle-wrapper.jar
+!/android/gradle/wrapper/gradle-wrapper.jar
 # These inherited example.org TLS files are public test fixtures, not user keys.
-!/core/src/foss/golang/clash/test/config/example.org-key.pem
-!/core/src/foss/golang/clash/test/config/example.org.pem
+!/android/core/src/foss/golang/clash/test/config/example.org-key.pem
+!/android/core/src/foss/golang/clash/test/config/example.org.pem
+
+# Xcode outputs and local signing data
+DerivedData/
+.build/
+xcuserdata/
+*.xcuserstate
+*.ipa
+*.xcarchive
+*.mobileprovision
+*.developerprofile
+/ios/Engine/RoyToolsCore.xcframework/
+/ios/Engine/GeoData/
 # JSON/YAML inside the source tree remains available for build configuration and fixtures.
 
 # Telegram credentials and device Chat data exports

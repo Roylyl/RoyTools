@@ -8,7 +8,7 @@ import zipfile
 
 root = Path(__file__).resolve().parent.parent
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--version', default='2.1.3', help='major.minor.patch')
+parser.add_argument('--version', default='2.2.0', help='major.minor.patch')
 arguments = parser.parse_args()
 if not re.fullmatch(r'\d+\.\d+\.\d+', arguments.version):
     parser.error('--version must be major.minor.patch')
@@ -38,7 +38,7 @@ for entry in candidates:
             raise SystemExit('Source file escaped project root.')
         files.append(path)
 required = ['README.md', 'LICENSE', 'NOTICE', 'THIRD_PARTY.md', 'CHANGELOG.md',
-            'core/src/foss/golang/clash/LICENSE', 'gradle/wrapper/gradle-wrapper.jar']
+            'android/core/src/foss/golang/clash/LICENSE', 'android/gradle/wrapper/gradle-wrapper.jar']
 for name in required:
     if root / name not in files:
         raise SystemExit(f'Required source/notice missing or ignored: {name}')

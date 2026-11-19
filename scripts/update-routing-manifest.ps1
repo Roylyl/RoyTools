@@ -1,12 +1,34 @@
 <#
-修改根目录routing-rules.json中的规则及version后运行本脚本，生成配套版本信息。
+修改规则包、音乐域名和规则版本后运行本脚本，生成配套版本信息。
 两个JSON文件需要一起发布到main分支。脚本不提交或推送。
 #>
 [CmdletBinding()]
-param([string]$Notes = '更新AI与规则模式的分流规则')
+param([string]$Notes = '更新音乐、AI与规则模式的分流规则')
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 $bundlePath = Join-Path $repo 'routing-rules.json'
+$musicPath = Join-Path $repo 'shared/routing/music.json'
+$musicText = [IO.File]::ReadAllText($musicPath)
+if (-not $musicText.TrimStart().StartsWith('{')) { throw '音乐配置必须是JSON对象' }
+$music = $musicText | ConvertFrom-Json
+$musicKeys = @($music.PSObject.Properties.Name)
+if ($musicKeys.Count -ne 1 -or $musicKeys[0] -cne 'domainSuffixes' -or $music.domainSuffixes -isnot [array]) {
+    throw '音乐配置必须只包含domainSuffixes数组'
+}
+$suffixes = $music.domainSuffixes
+if ($suffixes.Count -lt 1 -or $suffixes.Count -gt 32) { throw '音乐域名后缀必须有1至32项' }
+$seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+foreach ($suffix in $suffixes) {
+    if ($suffix -isnot [string] -or $suffix.Length -gt 253) { throw '音乐域名后缀必须是有效的DNS域名' }
+    $labels = $suffix.Split('.')
+    if ($labels.Count -lt 2 -or $labels[-1] -cnotmatch '\A(?:[a-z]+|xn--[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)\z') {
+        throw '音乐域名后缀必须是有效的DNS域名'
+    }
+    foreach ($label in $labels) {
+        if ($label -cnotmatch '\A[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\z') { throw '音乐域名后缀必须是小写ASCII标签' }
+    }
+    if (-not $seen.Add($suffix)) { throw '音乐域名后缀不能重复' }
+}
 # Git normalizes text to LF. Hash the exact UTF-8/LF bytes that GitHub will serve.
 $text = [IO.File]::ReadAllText($bundlePath).Replace("`r`n", "`n").Replace("`r", "`n").TrimStart([char]0xfeff)
 [IO.File]::WriteAllText($bundlePath, $text, [Text.UTF8Encoding]::new($false))
@@ -23,6 +45,7 @@ $manifest = [ordered]@{
     bytes = (Get-Item -LiteralPath $bundlePath).Length
     sha256 = (Get-FileHash -LiteralPath $bundlePath -Algorithm SHA256).Hash.ToLowerInvariant()
     notes = $Notes
+    music = [ordered]@{ domainSuffixes = $suffixes }
 }
-[IO.File]::WriteAllText((Join-Path $repo 'routing-version.json'), (($manifest | ConvertTo-Json).Replace("`r`n", "`n")) + "`n")
+[IO.File]::WriteAllText((Join-Path $repo 'routing-version.json'), (($manifest | ConvertTo-Json -Depth 4).Replace("`r`n", "`n")) + "`n")
 Write-Host "规则发布文件已生成：$($bundle.version)。请将routing-rules.json和routing-version.json一起发布。"

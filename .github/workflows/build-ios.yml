@@ -1,0 +1,77 @@
+name: Build RoyTools for iOS
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'ios/**'
+      - 'android/core/src/foss/golang/clash/**'
+      - 'routing-rules.json'
+      - 'routing-version.json'
+      - '.github/workflows/build-ios.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.10'
+          cache: false
+      - name: Test Mihomo profile and packet bridge
+        shell: bash
+        working-directory: ios/Engine
+        env:
+          GOWORK: 'off'
+        run: go test -mod=readonly -tags with_gvisor,roytools_packet_engine ./...
+      - name: Build the iOS proxy core
+        shell: bash
+        run: bash ios/scripts/build-engine.sh
+      - name: Prepare GeoIP, GeoSite and ASN databases
+        shell: bash
+        run: bash ios/scripts/fetch-geodata.sh
+      - name: Compile the app and extensions for simulator and device
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          build_dir="${RUNNER_TEMP}/RoyToolsBuild"
+          for sdk in iphonesimulator iphoneos; do
+            if [[ "$sdk" == iphonesimulator ]]; then
+              destination='generic/platform=iOS Simulator'
+            else
+              destination='generic/platform=iOS'
+            fi
+            xcodebuild -project ios/RoyTools.xcodeproj -scheme RoyTools \
+              -configuration Debug -destination "$destination" \
+              -derivedDataPath "$build_dir" CODE_SIGNING_ALLOWED=NO build
+            app="$build_dir/Build/Products/Debug-$sdk/RoyTools.app"
+            tunnel="$app/PlugIns/RoyToolsPacketTunnel.appex"
+            widget="$app/PlugIns/RoyToolsIslandWidget.appex"
+            test -f "$app/routing-rules.json"
+            test -f "$app/routing-version.json"
+            read_plist() { /usr/libexec/PlistBuddy -c "Print :$1" "$2"; }
+            app_version="$(read_plist CFBundleShortVersionString "$app/Info.plist")"
+            for extension in "$widget" "$tunnel"; do
+              executable="$(read_plist CFBundleExecutable "$extension/Info.plist")"
+              xcrun lipo -verify_arch arm64 "$extension/$executable"
+              test "$app_version" = "$(read_plist CFBundleShortVersionString "$extension/Info.plist")"
+            done
+            app_id="$(read_plist CFBundleIdentifier "$app/Info.plist")"
+            test "$(read_plist CFBundleIdentifier "$tunnel/Info.plist")" = "$app_id.packettunnel"
+            test "$(read_plist NSExtension:NSExtensionPointIdentifier "$tunnel/Info.plist")" = 'com.apple.networkextension.packet-tunnel'
+            for data in geoip.metadb geoip.dat geosite.dat ASN.mmdb; do test -s "$tunnel/GeoData/$data"; done
+          done
+
+          for target in App Tunnel; do
+            entitlements="ios/Config/$target.entitlements"
+            test "$(read_plist com.apple.developer.networking.networkextension:0 "$entitlements")" = 'packet-tunnel-provider'
+            test "$(read_plist com.apple.security.application-groups:0 "$entitlements")" = 'group.com.roylyl.tools'
+          done

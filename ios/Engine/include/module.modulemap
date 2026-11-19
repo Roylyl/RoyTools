@@ -1,0 +1,4 @@
+module RoyToolsCore {
+    header "RoyToolsCore.h"
+    export *
+}
