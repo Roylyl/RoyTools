@@ -23,9 +23,6 @@ import com.github.kr328.clash.design.R as DesignR
 import com.github.kr328.clash.design.util.resolveThemedColor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -47,6 +44,7 @@ internal class NativeMiniPlayer(context: Context, private val onAction: (String)
         clipToOutline = true
         scaleType = ImageView.ScaleType.CENTER_CROP
     }
+    private val artwork = MusicArtworkBinding(cover, CoroutineScope(Dispatchers.Main.immediate), Dispatchers.IO)
     private fun label(size: Float, tint: Int) = TextView(context).apply {
         textSize = size
         setTextColor(tint)
@@ -70,8 +68,6 @@ internal class NativeMiniPlayer(context: Context, private val onAction: (String)
         setOnClickListener { onAction("openPlayer") }
     }
     private val play = ImageButton(context)
-    private var artJob: Job? = null
-    private var artUrl: String? = null
     private var current: MusicPlayback.State? = null
     private val slop = ViewConfiguration.get(context).scaledTouchSlop
     private var x0 = 0f
@@ -125,32 +121,29 @@ internal class NativeMiniPlayer(context: Context, private val onAction: (String)
             play.contentDescription = action
             play.setImageResource(if (state.playing) R.drawable.ic_music_pause else R.drawable.ic_music_play)
         }
-        if (artUrl == state.artwork) return
-        artUrl = state.artwork
-        artJob?.cancel()
-        if (state.artwork.isBlank()) {
-            cover.setImageDrawable(null)
-            return
-        }
-        val app = context.applicationContext
-        val url = state.artwork
-        artJob = CoroutineScope(Dispatchers.Main.immediate).launch {
-            val bitmap = withContext(Dispatchers.IO) { MusicArtwork.decode(app, url) }
-            if (artUrl == url) cover.setImageBitmap(bitmap)
-        }
+        artwork.bind(state.artwork)
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (visibility == VISIBLE) current?.let { artwork.bind(it.artwork) }
     }
 
     override fun onDetachedFromWindow() {
-        artJob?.cancel()
-        artUrl = null
+        artwork.cancel()
         super.onDetachedFromWindow()
     }
 
-    // Intercept a horizontal drag even if it began over a child button. Plain taps
-    // continue to the original Android click handler and retain accessibility semantics.
+    // Drag only the artwork and metadata. The play and queue buttons keep their own taps.
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
         when (ev.actionMasked) {
-            MotionEvent.ACTION_DOWN -> { x0 = ev.x; y0 = ev.y; swiping = false; ignoreSwipe = false }
+            MotionEvent.ACTION_DOWN -> {
+                x0 = ev.x
+                y0 = ev.y
+                swiping = false
+                val rowLeft = (info.parent as View).left
+                ignoreSwipe = x0 < rowLeft + info.left || x0 >= rowLeft + info.right
+            }
             MotionEvent.ACTION_POINTER_DOWN -> ignoreSwipe = true
             MotionEvent.ACTION_MOVE -> {
                 val dx = abs(ev.x - x0)

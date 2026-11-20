@@ -2,15 +2,17 @@ package com.github.kr328.clash.forward
 
 import android.graphics.*
 import android.graphics.drawable.Drawable
+import android.view.View
 
 class ChatBubbleDrawable(private val color: Int, private val outgoing: Boolean, private val density: Float): Drawable() {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = this@ChatBubbleDrawable.color }
     override fun draw(canvas: Canvas) {
         val r = 19*density; val tail=6*density
         val l=bounds.left.toFloat(); val t=bounds.top.toFloat(); val right=bounds.right.toFloat(); val b=bounds.bottom.toFloat()
-        canvas.drawRoundRect(if(outgoing) l else l+tail,t,if(outgoing) right-tail else right,b,r,r,paint)
+        val tailOnRight = outgoing == (layoutDirection != View.LAYOUT_DIRECTION_RTL)
+        canvas.drawRoundRect(if(tailOnRight) l else l+tail,t,if(tailOnRight) right-tail else right,b,r,r,paint)
         val path=Path()
-        if(outgoing) {
+        if(tailOnRight) {
             path.moveTo(right-19*density,b-19*density)
             path.cubicTo(right-8*density,b-17*density,right-10*density,b-4*density,right,b)
             path.cubicTo(right-10*density,b+1*density,right-18*density,b-4*density,right-22*density,b-9*density)

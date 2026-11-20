@@ -15,9 +15,9 @@
 
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:baselineAligned="false" android:paddingHorizontal="@dimen/dialog_padding">
 
-                <com.google.android.material.button.MaterialButton android:id="@+id/generate_view" style="@style/RoyTools.DialogSecondaryButton" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minHeight="48dp" android:paddingTop="0dp" android:paddingBottom="0dp" android:text="@string/age_key_generate" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/generate_view" style="@style/RoyTools.DialogButton" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minHeight="48dp" android:paddingTop="0dp" android:paddingBottom="0dp" android:text="@string/age_key_generate" />
 
-                <com.google.android.material.button.MaterialButton android:id="@+id/copy_secret_key_view" style="@style/RoyTools.DialogSecondaryButton" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minHeight="48dp" android:paddingTop="0dp" android:paddingBottom="0dp" android:text="@string/age_key_copy" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/copy_secret_key_view" style="@style/RoyTools.DialogButton" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minHeight="48dp" android:paddingTop="0dp" android:paddingBottom="0dp" android:text="@string/age_key_copy" />
             </LinearLayout>
 
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingHorizontal="@dimen/dialog_padding">
@@ -30,9 +30,9 @@
 
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:baselineAligned="false" android:paddingHorizontal="@dimen/dialog_padding" android:paddingBottom="@dimen/dialog_button_margin">
 
-                <com.google.android.material.button.MaterialButton android:id="@+id/to_public_key_view" style="@style/RoyTools.DialogSecondaryButton" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minHeight="48dp" android:paddingTop="0dp" android:paddingBottom="0dp" android:text="@string/age_key_to_public" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/to_public_key_view" style="@style/RoyTools.DialogButton" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minHeight="48dp" android:paddingTop="0dp" android:paddingBottom="0dp" android:text="@string/age_key_to_public" />
 
-                <com.google.android.material.button.MaterialButton android:id="@+id/copy_public_key_view" style="@style/RoyTools.DialogSecondaryButton" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minHeight="48dp" android:paddingTop="0dp" android:paddingBottom="0dp" android:text="@string/age_key_copy" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/copy_public_key_view" style="@style/RoyTools.DialogButton" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minHeight="48dp" android:paddingTop="0dp" android:paddingBottom="0dp" android:text="@string/age_key_copy" />
             </LinearLayout>
         </LinearLayout>
     </ScrollView>

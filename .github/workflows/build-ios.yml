@@ -54,7 +54,7 @@ jobs:
               -derivedDataPath "$build_dir" CODE_SIGNING_ALLOWED=NO build
             app="$build_dir/Build/Products/Debug-$sdk/RoyTools.app"
             tunnel="$app/PlugIns/RoyToolsPacketTunnel.appex"
-            widget="$app/PlugIns/RoyToolsIslandWidget.appex"
+            widget="$app/PlugIns/RoyToolsWidgets.appex"
             test -f "$app/routing-rules.json"
             test -f "$app/routing-version.json"
             read_plist() { /usr/libexec/PlistBuddy -c "Print :$1" "$2"; }

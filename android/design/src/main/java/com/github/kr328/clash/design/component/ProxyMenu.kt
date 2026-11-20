@@ -3,6 +3,7 @@ package com.github.kr328.clash.design.component
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.Rect
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
 import android.view.Gravity
@@ -80,8 +81,11 @@ class ProxyMenu(
                 item.subMenu?.let { showOptions(item.title ?: "", it) }
             }
         }
-        val available = menuView.rootView.width.takeIf { it > 0 } ?: context.resources.displayMetrics.widthPixels
-        popup = PopupWindow(content, minOf(dp(280), available - dp(32)), ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
+        val bounds = Rect()
+        menuView.getWindowVisibleDisplayFrame(bounds)
+        val available = bounds.width().takeIf { it > 0 } ?: context.resources.displayMetrics.widthPixels
+        val width = (available - dp(32)).coerceIn(1, dp(280))
+        popup = PopupWindow(content, width, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
             setBackgroundDrawable(rounded(surface, menuRadius, withAlpha(muted, 24)))
             elevation = dp(8).toFloat()
             isOutsideTouchable = true

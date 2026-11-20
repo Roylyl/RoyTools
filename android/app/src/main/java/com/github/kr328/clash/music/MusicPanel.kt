@@ -18,8 +18,6 @@ import android.os.Message
 import android.view.View
 import android.view.ViewGroup
 import android.view.Gravity
-import android.view.animation.Animation
-import android.view.animation.AnimationUtils
 import android.webkit.JavascriptInterface
 import android.webkit.JsResult
 import android.webkit.PermissionRequest
@@ -51,6 +49,9 @@ class MusicPanel(activity: Activity) {
         internal fun cancelDownloads(context: Context) {
             MusicEngine.get(context.applicationContext).settingsCommand("cancelDownload", null)
         }
+        internal fun musicDownloadCommand(context: Context, action: String, value: Any? = null) {
+            MusicEngine.get(context.applicationContext).settingsCommand(action, value)
+        }
         fun clearDiagnosticLogs(context: Context) {
             context.applicationContext.getSharedPreferences("roytools_music_native", Context.MODE_PRIVATE)
                 .edit().putLong("logs_cleared_at", System.currentTimeMillis()).apply()
@@ -64,7 +65,8 @@ class MusicPanel(activity: Activity) {
     internal var started = false
         private set
     private var nativeSettings: NativeMusicSettingsPanel? = null
-    private var nativeSettingsVisible = false
+    private var nativeLibrary: NativeMusicLibraryPanel? = null
+    private var nativePlayer: NativeMusicPlayerPanel? = null
     private var miniIdentity: String? = null
     private val miniPlayer = NativeMiniPlayer(activity) { action -> engine.dispatch(action, null) }
 
@@ -73,9 +75,11 @@ class MusicPanel(activity: Activity) {
             field = value
             value?.invoke(engine.navigationTitle, engine.navigationDepth)
         }
-
+    var onNavigationMotion: ((String?) -> Unit)? = null
     val isSecondary: Boolean get() = engine.navigationDepth > 0
     val navigationPageKey: String? get() = engine.navigationPageKey
+    val canLocatePlaylistTrack: Boolean get() = engine.canLocatePlaylistTrack
+    val inPlayerFlow: Boolean get() = engine.inPlayerFlow
 
     init {
         engine.bind(this, activity)
@@ -90,11 +94,9 @@ class MusicPanel(activity: Activity) {
 
     fun onStart() {
         val activity = hostActivity ?: return
-        val entering = !started
         started = true
         engine.bind(this, activity)
         engine.refresh()
-        if (entering) engine.checkCatalog()
         updateKeepScreenOn()
         updateMiniPlayer()
     }
@@ -102,10 +104,12 @@ class MusicPanel(activity: Activity) {
     /** Do not call WebView.onPause or pauseTimers: HTMLAudio remains the playback engine. */
     fun onStop() {
         started = false
+        engine.cancelNavigationMotion(this)
         view.keepScreenOn = false
         updateMiniPlayer()
-        hostActivity?.let(MusicDownloadCoordinator::dismiss)
         nativeSettings?.closeDialogs()
+        nativeLibrary?.closeDialogs()
+        nativePlayer?.closeDialogs()
         engine.closeDialogs()
         engine.refreshPulse()
     }
@@ -113,20 +117,47 @@ class MusicPanel(activity: Activity) {
     fun onDestroy() {
         started = false
         view.keepScreenOn = false
-        nativeSettings?.let { it.view.clearAnimation(); it.dispose(); view.removeView(it.view) }
+        nativeSettings?.let { it.dispose(); view.removeView(it.view) }
         nativeSettings = null
+        nativeLibrary?.let { it.dispose(); view.removeView(it.view) }
+        nativeLibrary = null
+        nativePlayer?.let { it.dispose(); view.removeView(it.view) }
+        nativePlayer = null
         engine.release(this)
         onNavigationChanged = null
+        onNavigationMotion = null
         hostActivity = null
     }
 
     fun goHome() = engine.goHome()
     fun openPlayer() = engine.dispatch("openPlayer", null)
-    fun handleBack(callback: (Boolean) -> Unit) = engine.handleBack(this, callback)
+    fun headerAction(action: String, anchor: View) {
+        if (!engine.overlayOpen && engine.showsNativePlayer && action == "player-options") {
+            nativePlayer?.showMore(anchor)
+        } else if (engine.showsNativeLibrary && action == "playlist-top") {
+            nativeLibrary?.scrollToTop()
+        } else if (engine.showsNativeLibrary && action == "playlist-current") {
+            engine.libraryAction("locate", null)
+        } else {
+            engine.headerAction(action)
+        }
+    }
+
+    fun handleBack(callback: (Boolean) -> Unit) {
+        if (!engine.overlayOpen &&
+            ((engine.showsNativeLibrary && nativeLibrary?.handleBack() == true) ||
+                (engine.showsNativePlayer && nativePlayer?.handleBack() == true))) {
+            callback(true)
+        } else {
+            engine.handleBack(this, callback)
+        }
+    }
 
     internal fun navigationChanged(title: String?, depth: Int) {
         updateKeepScreenOn()
         updateNativeSettings()
+        updateNativeLibrary()
+        updateNativePlayer()
         updateMiniPlayer()
         onNavigationChanged?.invoke(title, depth)
     }
@@ -137,6 +168,18 @@ class MusicPanel(activity: Activity) {
     }
 
     internal fun playbackChanged() = updateMiniPlayer()
+
+    internal fun libraryChanged() {
+        updateNativeLibrary()
+        updateMiniPlayer()
+    }
+
+    internal fun playerChanged() = updateNativePlayer()
+
+    internal fun locateLibraryTrack(trackId: String) {
+        val panel = nativeLibrary ?: return
+        if (trackId.isEmpty()) panel.scrollToTop() else panel.locateCurrent(trackId)
+    }
 
     private fun updateMiniPlayer() {
         val state = MusicPlayback.state
@@ -157,9 +200,10 @@ class MusicPanel(activity: Activity) {
 
     private fun updateNativeSettings() {
         val state = engine.settingsState
-        val show = engine.navigationPageKey == "settings" && state?.overlayOpen != true
+        val cachePage = engine.navigationPageKey == "cacheSettings"
+        val show = engine.showsNativeSettings
         if (!show) {
-            nativeSettings?.let { setSettingsVisible(it, false) }
+            nativeSettings?.setVisible(false)
             return
         }
         val activity = hostActivity ?: return
@@ -167,38 +211,59 @@ class MusicPanel(activity: Activity) {
             nativeSettings = it
             view.addView(it.view, FrameLayout.LayoutParams(-1, -1))
         }
+        panel.showCachePage(cachePage)
         panel.render(state)
-        // Keep the settings surface opaque and full-height; reserve scrolling
-        // space inside it instead of exposing the underlying WebView at the bottom.
+        // Reserve scroll space for the floating player within the settings surface.
         val reserve = if (state?.hasCurrent == true) dp(90) else 0
         if (panel.view.paddingBottom != reserve) {
             panel.view.setPadding(panel.view.paddingLeft, panel.view.paddingTop, panel.view.paddingRight, reserve)
         }
         panel.view.clipToPadding = false
-        setSettingsVisible(panel, true)
+        panel.setVisible(true)
+        panel.view.importantForAccessibility = if (engine.overlayOpen)
+            View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS else View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
+        engine.placeNativeSurface(panel.view)
     }
 
-    private fun setSettingsVisible(panel: NativeMusicSettingsPanel, visible: Boolean) {
-        val changed = nativeSettingsVisible != visible
-        nativeSettingsVisible = visible
-        if (!changed) return
-        panel.view.clearAnimation()
-        if (visible) {
-            panel.setVisible(true)
-            if (changed && started) panel.view.startAnimation(AnimationUtils.loadAnimation(view.context,
-                com.github.kr328.clash.design.R.anim.roytools_push_in))
-        } else if (changed && started && engine.navigationPageKey != "player" && engine.settingsState?.overlayOpen != true) {
-            panel.closeDialogs()
-            val animation = AnimationUtils.loadAnimation(view.context, com.github.kr328.clash.design.R.anim.roytools_pop_out)
-            animation.setAnimationListener(object : Animation.AnimationListener {
-                override fun onAnimationStart(animation: Animation?) = Unit
-                override fun onAnimationRepeat(animation: Animation?) = Unit
-                override fun onAnimationEnd(animation: Animation?) {
-                    if (!nativeSettingsVisible) panel.setVisible(false)
-                }
-            })
-            panel.view.startAnimation(animation)
-        } else panel.setVisible(false)
+    private fun updateNativeLibrary() {
+        val state = engine.libraryState?.takeIf { engine.showsNativeLibrary }
+        if (state == null) {
+            nativeLibrary?.setVisible(false)
+            return
+        }
+        val activity = hostActivity ?: return
+        val panel = nativeLibrary ?: NativeMusicLibraryPanel(activity) { action, value, _ ->
+            engine.libraryAction(action, value)
+        }.also {
+            nativeLibrary = it
+            view.addView(it.view, FrameLayout.LayoutParams(-1, -1))
+        }
+        panel.setVisible(true)
+        panel.render(state)
+        val list = panel.view
+        val bottom = if (engine.miniPlayerVisible) dp(90) else 0
+        if (list.paddingBottom != bottom) list.setPadding(list.paddingLeft, list.paddingTop, list.paddingRight, bottom)
+        list.importantForAccessibility = if (engine.overlayOpen)
+            View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS else View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
+        engine.placeNativeSurface(list)
+    }
+
+    private fun updateNativePlayer() {
+        val state = engine.playerState?.takeIf { engine.showsNativePlayer }
+        if (state == null) {
+            nativePlayer?.setVisible(false)
+            return
+        }
+        val activity = hostActivity ?: return
+        val panel = nativePlayer ?: NativeMusicPlayerPanel(activity, engine::playerAction).also {
+            nativePlayer = it
+            view.addView(it.view, FrameLayout.LayoutParams(-1, -1))
+        }
+        panel.render(state)
+        panel.setVisible(true)
+        panel.view.importantForAccessibility = if (engine.overlayOpen)
+            View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS else View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
+        engine.placeNativeSurface(panel.view)
     }
 }
 
@@ -218,8 +283,10 @@ private class MusicEngine(context: Context) {
     private var ready = false
     private var visualReady = false
     private var visualRequest = 0L
+    private var navigationFrame = 0L
+    private var lastMotionId = 0
+    private var pendingNativeMotion: String? = null
     private var appliedTheme: String? = null
-    private var appliedBackground: Int? = null
     @Volatile private var generation = 0
     private var probing = false
     private var pulseScheduled = false
@@ -232,8 +299,23 @@ private class MusicEngine(context: Context) {
         private set
     var navigationPageKey: String? = null
         private set
+    val showsNativeSettings: Boolean get() = navigationPageKey == "settings" || navigationPageKey == "cacheSettings"
+    var libraryState: MusicLibraryState? = null
+        private set
+    val showsNativeLibrary: Boolean
+        get() = libraryState?.pageKey?.let { it == navigationPageKey } == true
+    var playerState: MusicPlayerPageState? = null
+        private set
+    val showsNativePlayer: Boolean get() = navigationPageKey == "player" && playerState != null
+    var canLocatePlaylistTrack = false
+        private set
     var miniPlayerVisible = false
         private set
+    var overlayOpen = false
+        private set
+    var inPlayerFlow = false
+        private set
+    private var surfaceColor: Int? = null
     var settingsState: MusicSettingsState? = null
         private set
     private lateinit var web: WebView
@@ -264,8 +346,8 @@ private class MusicEngine(context: Context) {
         }
         webContext.baseContext = activity
         theme = effectiveTheme(activity)
-        applyBackground()
         panel.view.setBackgroundColor(backgroundColor())
+        updateSurfaceBackground()
         if (web.parent !== panel.view) {
             (web.parent as? ViewGroup)?.removeView(web)
             panel.view.addView(web, 0, FrameLayout.LayoutParams(-1, -1))
@@ -307,13 +389,38 @@ private class MusicEngine(context: Context) {
 
     fun goHome() = enqueue("home", null)
 
-    fun checkCatalog() = evaluate("window.RoyToolsMusicApp.checkCatalog?.()")
+    fun placeNativeSurface(surface: View) {
+        val host = web.parent as? FrameLayout ?: return
+        if (surface.parent !== host) return
+        val nativeAbove = host.indexOfChild(surface) > host.indexOfChild(web)
+        if (overlayOpen && nativeAbove) web.bringToFront()
+        else if (!overlayOpen && !nativeAbove) surface.bringToFront()
+    }
+
+    fun libraryAction(action: String, value: String?) {
+        val page = navigationPageKey?.takeIf { showsNativeLibrary } ?: return
+        val encodedValue = value?.let(JSONObject::quote) ?: "null"
+        evaluate("window.RoyToolsMusicApp.libraryAction(${JSONObject.quote(page)},${JSONObject.quote(action)},$encodedValue)")
+    }
+
+    fun playerAction(action: String, value: String?) {
+        val state = playerState?.takeIf { showsNativePlayer && !overlayOpen } ?: return
+        val encodedValue = value?.let(JSONObject::quote) ?: "null"
+        evaluate("window.RoyToolsMusicApp.playerAction(${JSONObject.quote(state.trackId)},${JSONObject.quote(action)},$encodedValue)")
+    }
+
+    fun headerAction(action: String) {
+        if (action in setOf("player-options", "playlist-top", "playlist-current")) {
+            evaluate("window.RoyToolsMusicApp.headerAction(${JSONObject.quote(action)})")
+        }
+    }
 
     fun settingsCommand(action: String, value: Any?) {
         when (action) {
-            "preload" -> if (value !is Boolean) return
+            "preload", "saveWhileListening" -> if (value !is Boolean) return
             "budget" -> if (value !is Long || value !in MusicSettingsState.budgets) return
-            "sync", "clearAudio", "clearLyrics", "clearCovers", "downloadAll", "cancelDownload", "openDownloads", "clearAll", "downloadLyrics", "downloadCovers", "checkCatalog" -> Unit
+            "sync", "clearAudio", "clearLyrics", "clearCovers", "downloadAll", "cancelDownload", "openDownloads",
+            "openActiveDownloads", "openCacheSettings", "clearAll", "downloadLyrics", "downloadCovers", "checkCatalog" -> Unit
             else -> return
         }
         if (!ready) {
@@ -353,6 +460,25 @@ private class MusicEngine(context: Context) {
         }
     }
 
+    fun cancelNavigationMotion(panel: MusicPanel) {
+        if (owner.get() !== panel) return
+        navigationFrame++
+        panel.onNavigationMotion?.invoke(null)
+    }
+
+    private fun animateNavigationWhenReady(panel: MusicPanel, page: Int, direction: String) {
+        val target = web
+        val frame = navigationFrame
+        if (!target.isShown) return
+        target.postVisualStateCallback(frame, object : WebView.VisualStateCallback() {
+            override fun onComplete(requestId: Long) {
+                if (target === web && page == generation && frame == navigationFrame &&
+                    trustedPage && owner.get() === panel && panel.started && target.isShown
+                ) panel.onNavigationMotion?.invoke(direction)
+            }
+        })
+    }
+
     private fun applyTheme() {
         if (!ready || !trustedPage || appliedTheme == theme) return
         appliedTheme = theme
@@ -388,6 +514,8 @@ private class MusicEngine(context: Context) {
             if (value == "true") {
                 ready = true
                 applyTheme()
+                evaluate("window.RoyToolsMusicApp.enableNativeLibrary?.()")
+                evaluate("window.RoyToolsMusicApp.enableNativePlayer?.()")
                 while (commands.isNotEmpty()) {
                     val (action, position) = commands.removeFirst()
                     enqueue(action, position)
@@ -431,13 +559,16 @@ private class MusicEngine(context: Context) {
     private fun currentActivity(): Activity? = owner.get()?.hostActivity?.takeUnless { it.isFinishing || it.isDestroyed }
 
     private fun backgroundColor() = if (theme == "dark") Color.rgb(18, 18, 20) else Color.rgb(242, 242, 247)
-    private fun applyBackground() {
-        val color = backgroundColor()
-        owner.get()?.view?.setBackgroundColor(color)
-        if (appliedBackground != color) {
-            appliedBackground = color
-            web.setBackgroundColor(color)
-        }
+
+    private fun updateSurfaceBackground() {
+        val nativeUnderlay = showsNativeSettings || showsNativeLibrary || showsNativePlayer
+        val importance = if (nativeUnderlay && !overlayOpen)
+            View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS else View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
+        if (web.importantForAccessibility != importance) web.importantForAccessibility = importance
+        val color = if (nativeUnderlay) Color.TRANSPARENT else backgroundColor()
+        if (surfaceColor == color) return
+        web.setBackgroundColor(color)
+        surfaceColor = color
     }
 
     private fun createWebView(): WebView = WebView(webContext).apply {
@@ -458,7 +589,9 @@ private class MusicEngine(context: Context) {
             if (Build.VERSION.SDK_INT >= 33) isAlgorithmicDarkeningAllowed = false
         }
         setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false)
+        // Keep the song browser opaque so Chromium can replace the whole backing surface.
         setBackgroundColor(backgroundColor())
+        surfaceColor = null
         alpha = 0f
         isHorizontalScrollBarEnabled = false
         isVerticalScrollBarEnabled = false
@@ -478,6 +611,13 @@ private class MusicEngine(context: Context) {
             override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
                 closeDialogs()
                 generation++
+                libraryState = null
+                playerState = null
+                pendingNativeMotion = null
+                owner.get()?.libraryChanged()
+                owner.get()?.playerChanged()
+                lastMotionId = 0
+                owner.get()?.let(::cancelNavigationMotion)
                 ready = false
                 visualReady = false
                 appliedTheme = null
@@ -503,10 +643,14 @@ private class MusicEngine(context: Context) {
             }
 
             override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+                libraryState = null
+                playerState = null
+                pendingNativeMotion = null
+                owner.get()?.libraryChanged()
+                owner.get()?.playerChanged()
                 ready = false
                 visualReady = false
                 appliedTheme = null
-                appliedBackground = null
                 miniPlayerVisible = false
                 owner.get()?.playbackChanged()
                 trustedPage = false
@@ -584,8 +728,22 @@ private class MusicEngine(context: Context) {
             return true
         }
         var settled = false
-        val builder = RoyToolsDialogBuilder(activity).setTitle("音乐").setMessage(message.orEmpty())
-            .setPositiveButton("确定") { _, _ -> settled = true; result.confirm() }
+        val text = message.orEmpty()
+        val actionTitle = text.substringBefore('\n').takeIf {
+            confirm && '\n' in text && it in setOf("确认下载", "清空所有下载", "删除下载")
+        }
+        val positiveLabel = when (actionTitle) {
+            "清空所有下载" -> "清空"
+            "删除下载" -> "删除"
+            else -> actionTitle ?: "确定"
+        }
+        val builder = RoyToolsDialogBuilder(activity)
+            .setTitle(actionTitle ?: "音乐")
+            .setMessage(if (actionTitle != null) text.substringAfter('\n') else text)
+            .setPositiveButton(positiveLabel) { _, _ ->
+                settled = true
+                result.confirm()
+            }
         if (confirm) builder.setNegativeButton("取消") { _, _ -> settled = true; result.cancel() }
         val dialog = builder.create()
         dialogs.add(dialog)
@@ -704,20 +862,111 @@ private class MusicEngine(context: Context) {
         }
 
         @JavascriptInterface fun onNavigationState(payload: String) {
-            if (!trustedPage || payload.length > 4096) return
+            if (!trustedPage || payload.length > MAX_NAVIGATION_STATE_LENGTH) return
             val page = generation
             val state = runCatching { JSONObject(payload) }.getOrNull() ?: return
             val depth = if (state.optBoolean("secondary")) state.optInt("depth", 1).coerceIn(1, 32) else 0
             val title = if (depth > 0) state.optString("title").take(120).takeIf { it.isNotBlank() } else null
-            val pageKey = state.optString("pageKey").take(512).takeIf { it.isNotBlank() }
+            val rawPageKey = state.optString("pageKey")
+            if (rawPageKey.length > MAX_PAGE_KEY_LENGTH) return
+            val pageKey = rawPageKey.takeIf { it.isNotBlank() }
             main.post {
                 if (!trustedPage || page != generation) return@post
+                val pageChanged = pageKey != navigationPageKey || depth != navigationDepth
                 if (pageKey != navigationPageKey) closeDialogs()
+                // Keep the player attached until the destination commits, including during Back.
+                if (navigationPageKey == "player" && pageKey != "player") playerState = null
                 navigationDepth = depth
                 navigationTitle = title
                 navigationPageKey = pageKey
+                canLocatePlaylistTrack = state.optBoolean("canLocatePlaylistTrack", false)
                 miniPlayerVisible = state.optBoolean("miniPlayerVisible", false)
-                owner.get()?.navigationChanged(title, depth)
+                overlayOpen = state.optBoolean("overlayOpen")
+                inPlayerFlow = state.optBoolean("inPlayerFlow")
+                updateSurfaceBackground()
+                val panel = owner.get()
+                panel?.navigationChanged(title, depth)
+                val motionId = state.optInt("motion")
+                val newMotion = motionId > lastMotionId
+                if (newMotion) lastMotionId = motionId
+                if (!pageChanged || panel?.started != true) return@post
+                cancelNavigationMotion(panel)
+                pendingNativeMotion = null
+                val direction = state.optString("motionDirection")
+                if (!newMotion || direction.isEmpty()) return@post
+                when {
+                    showsNativeSettings || showsNativeLibrary || showsNativePlayer -> panel.onNavigationMotion?.invoke(direction)
+                    MusicLibraryState.supports(pageKey) || pageKey == "player" -> pendingNativeMotion = direction
+                    else -> animateNavigationWhenReady(panel, page, direction)
+                }
+            }
+        }
+
+        @JavascriptInterface fun onLibraryState(payload: String) {
+            if (!trustedPage || payload.length > 8_000_000) return
+            val page = generation
+            val state = MusicLibraryState.parse(payload) ?: return
+            if (state.pageKey.length > MAX_PAGE_KEY_LENGTH) return
+            main.post {
+                if (!trustedPage || page != generation) return@post
+                libraryState = state
+                if (!showsNativeLibrary) return@post
+                updateSurfaceBackground()
+                val panel = owner.get() ?: return@post
+                panel.libraryChanged()
+                val motion = pendingNativeMotion
+                pendingNativeMotion = null
+                if (motion != null && panel.started) panel.onNavigationMotion?.invoke(motion)
+            }
+        }
+
+        @JavascriptInterface fun onPlayerState(payload: String) {
+            if (!trustedPage || payload.length > 2_000_000) return
+            val page = generation
+            val state = MusicPlayerPageState.parse(payload) ?: return
+            main.post {
+                if (!trustedPage || page != generation) return@post
+                playerState = state
+                if (navigationPageKey != "player") return@post
+                updateSurfaceBackground()
+                val panel = owner.get() ?: return@post
+                panel.playerChanged()
+                val motion = pendingNativeMotion
+                if (motion != null) {
+                    pendingNativeMotion = null
+                    if (panel.started) panel.onNavigationMotion?.invoke(motion)
+                }
+            }
+        }
+
+        @JavascriptInterface fun onPlayerProgress(trackId: String, position: Double, activeLine: Int) {
+            if (!trustedPage || trackId.length > MAX_CATALOG_ID_LENGTH || !position.isFinite() || position < 0) return
+            val page = generation
+            main.post {
+                val current = playerState ?: return@post
+                if (!trustedPage || page != generation || !showsNativePlayer || current.trackId != trackId) return@post
+                playerState = current.copy(position = position, lyrics = current.lyrics.copy(activeIndex = activeLine))
+                owner.get()?.playerChanged()
+            }
+        }
+
+        @JavascriptInterface fun locateLibraryTrack(pageKey: String, trackId: String) {
+            if (!trustedPage || pageKey.length !in 1..MAX_PAGE_KEY_LENGTH || trackId.length > MAX_CATALOG_ID_LENGTH) return
+            val page = generation
+            main.post {
+                if (trustedPage && page == generation && showsNativeLibrary && navigationPageKey == pageKey) {
+                    owner.get()?.locateLibraryTrack(trackId)
+                }
+            }
+        }
+
+        @JavascriptInterface fun openExternal(url: String) {
+            if (!trustedPage || url.length > 4096) return
+            val uri = Uri.parse(url)
+            if (uri.scheme != "https" || uri.host.isNullOrBlank() || uri.userInfo != null) return
+            val page = generation
+            main.post {
+                if (trustedPage && page == generation) this@MusicEngine.openExternal(uri)
             }
         }
 
@@ -774,6 +1023,11 @@ private class MusicEngine(context: Context) {
     }
 
     companion object {
+        // Match the catalog validator, reserving room for the playlist prefix and JSON escapes.
+        private const val MAX_CATALOG_ID_LENGTH = 2048
+        private const val MAX_PAGE_KEY_LENGTH = MAX_CATALOG_ID_LENGTH + 9 // "playlist:"
+        private const val MAX_NAVIGATION_STATE_LENGTH = 32_768
+
         private var instance: MusicEngine? = null
         fun clearLogs() { instance?.enqueue("clearLogs", null) }
         fun get(context: Context): MusicEngine = instance ?: MusicEngine(context).also { instance = it }

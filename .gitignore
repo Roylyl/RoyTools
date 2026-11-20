@@ -1,76 +1,109 @@
-# Local Gradle / Kotlin / native build state
+# Android build state
 .gradle/
 .kotlin/
-**/build/
-**/.cxx/
+build/
+.cxx/
 .externalNativeBuild/
 cmake-build-*/
 .gradle-settings-cache/
 .gradletasknamecache
-/android/core/src/main/cpp/version.h
+/android/app/src/main/assets/geoip.metadb
+/android/app/src/main/assets/geosite.dat
+/android/app/src/main/assets/ASN.mmdb
+/android/app/src/main/assets/BundleMRS.7z
 
-# Local Python helpers and Go test executables
+# Xcode and generated iOS build inputs
+DerivedData/
+.build/
+xcuserdata/
+*.xcuserstate
+/ios/Engine/RoyToolsCore.xcframework/
+/ios/Engine/GeoData/
+
+# Local tool state and Go test executables
 __pycache__/
 *.py[cod]
 .venv/
 /android/core/src/*/golang/**/*.test
 /android/core/src/*/golang/**/*.test.exe
 
-# IDE state and local machine configuration
+# IDE and local machine configuration
 .idea/
 *.iml
 .vscode/
 .fleet/
-/local.properties
-**/local.properties
+local.properties
 /gradle-app.setting
 /captures/
 
-# Signing material and credentials (never publish these)
-**/signing.properties
+# Signing and credentials
+signing.properties
 *.keystore
 *.jks
 *.p12
 *.pfx
 *.key
 *.pem
+*.mobileprovision
+*.provisionprofile
+*.developerprofile
+.netrc
 .env
 .env.*
 !.env.example
 !.env.sample
-**/adbkey
-**/adbkey.pub
-**/adb_keys
+adbkey
+adbkey.pub
+adb_keys
 /.android/
 /adb-keys/
 /wireless-keys/
 *.local.properties
 /secrets/
 /credentials/
-**/google-services.json
+google-services.json
 /tracker.properties
 /android/fastlane/Appfile
 /android/fastlane/Matchfile
 /android/fastlane/report.xml
 /android/fastlane/Preview.html
 
-# Build outputs and local distribution bundles
+# Packages, archives and diagnostic outputs
 *.apk
 *.aab
 *.apks
 *.idsig
+*.ipa
+*.xcarchive/
+*.xcarchive.zip
+*.dSYM/
+*.dSYM.zip
+*.xcresult/
+*.xcresult.zip
+*.xctestrun
+*.xcdistributionlogs/
+*.trace/
+*.profraw
+*.profdata
+/ios/**/*.app/
+/ios/**/*.appex/
 *.hprof
 *.log
 /output/
 /outputs/
 /dist/
 /artifacts/
+/android/app/release/
+/android/app/meta/release/
 /android/app/foss/release/
 /android/app/premium/release/
 
-# Local device QA, screenshots and personal configuration exports
+# Local device testing and personal exports
 /UI预览/
 /UI核对记录.txt
+/本轮最终音乐首页.png
+roytools-novpn.*/
+[Rr]oy[Tt]ools-no-vpn[.-]*/
 /device-exports/
 /private/
 /personal/
@@ -95,8 +128,9 @@ __pycache__/
 !/*.example.yml
 !/*.example.conf
 /android/app/src/main/assets/music/share-covers/
-/Roylyl-*.yaml
-/Roylyl-*.yml
+RoyTools-*日志-*.txt
+unified-logs/
+unified-log-exports/
 /logcat*.txt
 /bugreport-*
 /adb-*.txt
@@ -106,12 +140,6 @@ __pycache__/
 /*.out
 /*.ab
 /*.har
-
-# Generated Geo data; keep source assets and legal notices trackable
-/android/app/src/main/assets/geoip.metadb
-/android/app/src/main/assets/geosite.dat
-/android/app/src/main/assets/ASN.mmdb
-/android/app/src/main/assets/BundleMRS.7z
 
 # Local scratch work and temporary helpers
 /.codex/
@@ -137,25 +165,6 @@ Desktop.ini
 *.swp
 *.swo
 
-# Keep the Gradle wrapper and public source fixtures
-!/android/gradle/wrapper/gradle-wrapper.jar
-# These inherited example.org TLS files are public test fixtures, not user keys.
-!/android/core/src/foss/golang/clash/test/config/example.org-key.pem
-!/android/core/src/foss/golang/clash/test/config/example.org.pem
-
-# Xcode outputs and local signing data
-DerivedData/
-.build/
-xcuserdata/
-*.xcuserstate
-*.ipa
-*.xcarchive
-*.mobileprovision
-*.developerprofile
-/ios/Engine/RoyToolsCore.xcframework/
-/ios/Engine/GeoData/
-# JSON/YAML inside the source tree remains available for build configuration and fixtures.
-
 # Telegram credentials and device Chat data exports
 **/notification_forward_private.xml
 **/telegram-chat/
@@ -173,3 +182,12 @@ xcuserdata/
 **/Roylyl-*.yaml
 **/Roylyl-*.yml
 **/roylyl-verge-*/providers/
+
+# Required build inputs and public source fixtures
+!/android/gradle/wrapper/gradle-wrapper.jar
+!/android/core/src/main/jniLibs/arm64-v8a/libbridge.so
+!/android/core/src/main/jniLibs/arm64-v8a/libclash.so
+!/android/refresh/src/main/jniLibs/*/libadb.so
+# These inherited example.org TLS files are public test fixtures, not user keys.
+!/android/core/src/foss/golang/clash/test/config/example.org-key.pem
+!/android/core/src/foss/golang/clash/test/config/example.org.pem

@@ -1,14 +1,24 @@
 package com.github.kr328.clash.forward
 
-import android.content.ComponentName
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.content.Intent
 import android.provider.Settings
+import android.view.View
+import android.view.animation.PathInterpolator
 import android.widget.*
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.widget.doAfterTextChanged
 import androidx.work.WorkManager
 import com.github.kr328.clash.R
 import com.github.kr328.clash.design.dialog.RoyToolsDialogBuilder
 import com.github.kr328.clash.common.ui.TouchFeedback
+import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.*
 import org.json.JSONObject
 
@@ -16,16 +26,51 @@ class ForwardPanel(private val activity: android.app.Activity) {
     val view = FrameLayout(activity)
     private val home = activity.layoutInflater.inflate(R.layout.roytools_forward_home, view, false)
     private val configuration = activity.layoutInflater.inflate(R.layout.roytools_forward, view, false)
+    private var transition: AnimatorSet? = null
+    private var navigationGeneration = 0L
     var isSecondary = false; private set
     var onNavigationChanged: ((Boolean) -> Unit)? = null
     fun goHome() { if (isSecondary) show(false) else (home as? ScrollView)?.scrollTo(0, 0) }
     private fun show(settings: Boolean) {
+        if (isSecondary == settings) return
         isSecondary = settings
+        navigationGeneration++
+        val outgoing = if (settings) home else configuration
+        val incoming = if (settings) configuration else home
+        if (!settings) {
+            outgoing.findFocus()?.clearFocus()
+            WindowCompat.getInsetsController(activity.window, view).hide(WindowInsetsCompat.Type.ime())
+        }
+        transition?.removeAllListeners()
+        transition?.cancel()
+        transition = null
+        outgoing.translationX = 0f
+        incoming.translationX = 0f
+        outgoing.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        incoming.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
         view.removeAllViews()
-        val page = if(settings) configuration else home
-        view.addView(page)
-        page.startAnimation(android.view.animation.AnimationUtils.loadAnimation(activity,
-            if(settings) com.github.kr328.clash.design.R.anim.roytools_push_in else com.github.kr328.clash.design.R.anim.roytools_pop_in))
+        val width = view.width.toFloat()
+        if (width > 0 && view.isShown && ValueAnimator.areAnimatorsEnabled()) {
+            view.addView(outgoing)
+            view.addView(incoming, if (settings) 1 else 0)
+            incoming.translationX = if (settings) width else -width * 0.18f
+            transition = AnimatorSet().apply {
+                playTogether(
+                    ObjectAnimator.ofFloat(incoming, View.TRANSLATION_X, 0f),
+                    ObjectAnimator.ofFloat(outgoing, View.TRANSLATION_X, if (settings) -width * 0.18f else width),
+                )
+                duration = 220L
+                interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
+                addListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: Animator) {
+                        view.removeView(outgoing)
+                        outgoing.translationX = 0f
+                        transition = null
+                    }
+                })
+                start()
+            }
+        } else view.addView(incoming)
         onNavigationChanged?.invoke(settings)
         refresh()
     }
@@ -33,8 +78,12 @@ class ForwardPanel(private val activity: android.app.Activity) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val token = configuration.findViewById<EditText>(R.id.forward_token)
     private val chat = configuration.findViewById<EditText>(R.id.forward_chat)
+    private val tokenField = configuration.findViewById<TextInputLayout>(R.id.forward_token_field)
+    private val chatField = configuration.findViewById<TextInputLayout>(R.id.forward_chat_field)
     private val enabled = home.findViewById<com.google.android.material.materialswitch.MaterialSwitch>(R.id.forward_enabled)
     private val status = home.findViewById<TextView>(R.id.forward_status)
+    private val tokenPattern = Regex("[0-9]+:[A-Za-z0-9_-]+")
+    private val chatPattern = Regex("-?[0-9]+")
     private var binding = false
     private var busy = false
     private var statsJob:Job?=null
@@ -52,9 +101,11 @@ class ForwardPanel(private val activity: android.app.Activity) {
         home.findViewById<android.view.View>(R.id.forward_settings).setOnClickListener { show(true) }
         token.setText(prefs.getString("token", ""))
         chat.setText(prefs.getString("chat", ""))
+        token.doAfterTextChanged { tokenField.error = null }
+        chat.doAfterTextChanged { chatField.error = null }
         enabled.setOnCheckedChangeListener { _, value ->
             if (!binding) {
-                if (value && (!authorized() || !save())) {
+                if (value && (!authorized() || !hasSavedConfiguration())) {
                     binding = true; enabled.isChecked = false; binding = false
                     toast("请先保存机器人配置并授予通知使用权")
                 } else {
@@ -64,15 +115,20 @@ class ForwardPanel(private val activity: android.app.Activity) {
                 }
             }
         }
+        home.findViewById<View>(R.id.forward_toggle_row).setOnClickListener { enabled.toggle() }
         button(R.id.forward_clear_media) { confirmClear(true) }
         button(R.id.forward_clear_records) { confirmClear(false) }
         button(R.id.forward_permission) { activity.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
         button(R.id.forward_save) { if(save()) toast("配置已保存") }
         button(R.id.forward_discover) { discover() }
         button(R.id.forward_test) {
-            if (save()) request {
-                TelegramForward.call(token.text.toString().trim(), "sendMessage", JSONObject().put("chat_id", chat.text.toString().trim()).put("text", "RoyTools通知转发测试成功。此后的Android通知将在这里接收。"))
-                val done: () -> Unit = { toast("测试消息已发送，请在iPhone查看") }; done
+            if (save()) {
+                val savedToken = token.text.toString().trim()
+                val savedChat = chat.text.toString().trim()
+                request {
+                    TelegramForward.call(savedToken, "sendMessage", JSONObject().put("chat_id", savedChat).put("text", "RoyTools通知转发测试成功。此后的Android通知将在这里接收。"))
+                    val done: () -> Unit = { toast("测试消息已发送，请在iPhone查看") }; done
+                }
             }
         }
         refresh()
@@ -135,10 +191,28 @@ class ForwardPanel(private val activity: android.app.Activity) {
         }
         ForwardRecovery.ensure(activity)
     }
-    private fun save(requireChat: Boolean = true): Boolean {
-        val t = token.text.toString().trim(); val c = chat.text.toString().trim()
-        if (!t.matches(Regex("[0-9]+:[A-Za-z0-9_-]+"))) { token.error = "请输入有效Bot Token"; return false }
-        if (requireChat && !c.matches(Regex("-?[0-9]+"))) { chat.error = "请先获取或填写Chat ID"; return false }
+    private fun hasSavedConfiguration(): Boolean =
+        tokenPattern.matches(prefs.getString("token", "").orEmpty()) &&
+            chatPattern.matches(prefs.getString("chat", "").orEmpty())
+
+    private fun validatedToken(): String? {
+        val value = token.text.toString().trim()
+        if (!tokenPattern.matches(value)) {
+            tokenField.error = "请输入有效Bot Token"
+            if (isSecondary) token.requestFocus()
+            return null
+        }
+        return value
+    }
+
+    private fun save(): Boolean {
+        val t = validatedToken() ?: return false
+        val c = chat.text.toString().trim()
+        if (!chatPattern.matches(c)) {
+            chatField.error = "请先获取或填写Chat ID"
+            if (isSecondary) chat.requestFocus()
+            return false
+        }
         if (t != prefs.getString("token", "") || c != prefs.getString("chat", "")) {
             prefs.edit().remove("chat_offset").putString("token", t).putString("chat", c).putLong("generation", System.currentTimeMillis()).apply()
             WorkManager.getInstance(activity).cancelAllWorkByTag("notification-forward")
@@ -148,16 +222,23 @@ class ForwardPanel(private val activity: android.app.Activity) {
     private fun request(action: suspend () -> (() -> Unit)) {
         if(busy) return
         busy = true
+        val generation = navigationGeneration
         scope.launch {
-            try { val done = withContext(Dispatchers.IO) { action() }; if (!activity.isFinishing) done() }
+            try {
+                val done = withContext(Dispatchers.IO) { action() }
+                if (navigationGeneration == generation && configuration.isShown && !activity.isFinishing) done()
+            }
             catch (e: CancellationException) { throw e }
-            catch (e: Exception) { toast(if(e is TelegramForward.ApiError) e.message.orEmpty() else "连接Telegram失败，请检查网络后重试") }
+            catch (e: Exception) {
+                if (navigationGeneration == generation && configuration.isShown && !activity.isFinishing) {
+                    toast(if(e is TelegramForward.ApiError) e.message.orEmpty() else "连接Telegram失败，请检查网络后重试")
+                }
+            }
             finally { busy = false }
         }
     }
     private fun discover() {
-        if(!save(false)) return
-        val t = token.text.toString().trim()
+        val t = validatedToken() ?: return
         request {
             val updates = TelegramForward.call(t, "getUpdates", JSONObject().put("timeout", 0).put("allowed_updates", org.json.JSONArray().put("message"))).getJSONArray("result")
             val chats = linkedMapOf<String, String>()
@@ -166,15 +247,24 @@ class ForwardPanel(private val activity: android.app.Activity) {
                 if(c.optString("type") != "private") continue
                 chats[c.getString("id")] = c.optString("first_name", "接收会话") + " · " + c.getString("id")
             }
-            val done: () -> Unit = {
+            val done: () -> Unit = showResult@{
+                if (token.text.toString().trim() != t) return@showResult
                 if(chats.isEmpty()) toast("请先向机器人发送一条新消息，再获取Chat ID")
                 else RoyToolsDialogBuilder(activity).setTitle("选择接收会话")
                     .setItems(chats.values.toTypedArray()) { _, which ->
-                        chat.setText(chats.keys.elementAt(which)); save(); toast("接收会话已保存")
+                        if (token.text.toString().trim() == t) {
+                            chat.setText(chats.keys.elementAt(which))
+                            if (save()) toast("接收会话已保存")
+                        }
                     }.setNegativeButton("取消", null).show()
             }
             done
         }
     }
-    fun destroy() { scope.cancel() }
+    fun destroy() {
+        transition?.removeAllListeners()
+        transition?.cancel()
+        transition = null
+        scope.cancel()
+    }
 }

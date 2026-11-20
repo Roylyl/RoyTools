@@ -5,23 +5,16 @@ import android.view.View
 import com.github.kr328.clash.core.model.ConfigurationOverride
 import com.github.kr328.clash.core.model.LogMessage
 import com.github.kr328.clash.core.model.TunnelState
-import com.github.kr328.clash.core.model.pinLanSharing
 import com.github.kr328.clash.design.databinding.DesignSettingsOverideBinding
-import com.github.kr328.clash.design.dialog.FullScreenDialog
-import com.github.kr328.clash.design.dialog.requestModelTextInput
 import com.github.kr328.clash.design.preference.*
 import com.github.kr328.clash.design.util.*
 import com.github.kr328.clash.design.dialog.RoyToolsDialogBuilder
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
 class OverrideSettingsDesign(
     context: Context,
     configuration: ConfigurationOverride,
-    lanOnly: Boolean = false,
-    effective: com.github.kr328.clash.core.model.UiConfiguration = com.github.kr328.clash.core.model.UiConfiguration(),
-    addresses: List<String> = emptyList()
 ) : Design<OverrideSettingsDesign.Request>(context) {
     enum class Request {
         ResetOverride
@@ -55,7 +48,6 @@ class OverrideSettingsDesign(
 
     init {
         binding.self = this
-        if (lanOnly) binding.clearView.visibility = View.GONE
 
         binding.activityBarLayout.applyFrom(context)
 
@@ -73,66 +65,6 @@ class OverrideSettingsDesign(
         )
 
         val screen = preferenceScreen(context) {
-            if (lanOnly) {
-                category(R.string.lan_sharing)
-                val connection = clickable(title = R.string.lan_connection_details)
-                clickable(
-                    title = R.string.lan_sharing_help,
-                    summary = R.string.lan_sharing_instructions,
-                )
-                selectableList(
-                    value = configuration::allowLan,
-                    values = arrayOf<Boolean?>(true, false),
-                    valuesText = arrayOf(R.string.enabled, R.string.disabled),
-                    title = R.string.allow_lan,
-                )
-                val port = clickable(title = R.string.lan_fixed_port)
-                fun updateConnection() {
-                    val mixed = configuration.mixedPort ?: effective.mixedPort
-                    val http = configuration.httpPort ?: effective.httpPort
-                    val socks = configuration.socksPort ?: effective.socksPort
-                    val disabled = context.getString(R.string.disabled)
-                    connection.summary = context.getString(
-                        R.string.lan_connection_values,
-                        addresses.joinToString("\n").ifEmpty { context.getString(R.string.lan_no_address) },
-                        (if (mixed > 0) mixed else http).takeIf { it > 0 }?.toString() ?: disabled,
-                        (if (mixed > 0) mixed else socks).takeIf { it > 0 }?.toString() ?: disabled,
-                    )
-                    port.summary = mixed.toString()
-                }
-                updateConnection()
-                port.clicked {
-                    launch {
-                        val value = context.requestModelTextInput(
-                            initial = configuration.mixedPort.toString(),
-                            title = context.getText(R.string.lan_fixed_port),
-                            error = context.getText(R.string.lan_invalid_port),
-                            validator = { it.toIntOrNull() in 1..65535 },
-                        )
-                        configuration.mixedPort = value.toInt()
-                        configuration.pinLanSharing(effective)
-                        updateConnection()
-                    }
-                }
-                editableText(
-                    value = configuration::bindAddress,
-                    adapter = object : NullableTextAdapter<String?> {
-                        override fun from(value: String?) = value
-                        override fun to(text: String?) = text?.takeIf { it.isNotBlank() } ?: "0.0.0.0"
-                    },
-                    title = R.string.bind_address,
-                    placeholder = R.string.dont_modify,
-                    empty = R.string.default_,
-                )
-                editableTextList(
-                    value = configuration::authentication,
-                    adapter = TextAdapter.String,
-                    title = R.string.authentication,
-                    placeholder = R.string.dont_modify,
-                )
-                return@preferenceScreen
-            }
-
             category(R.string.general)
 
             editableText(

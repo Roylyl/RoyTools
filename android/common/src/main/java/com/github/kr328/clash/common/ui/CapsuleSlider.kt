@@ -10,13 +10,15 @@ import android.util.AttributeSet
 import android.view.ViewGroup
 import android.widget.SeekBar
 import android.widget.TextView
+import androidx.core.content.ContextCompat
+import com.github.kr328.clash.common.R
 
 /** One geometry and palette for the mode controls and idle-delay control. */
 open class CapsuleSlider @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) :
     SeekBar(context, attrs) {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val accent = context.obtainStyledAttributes(intArrayOf(android.R.attr.colorAccent)).let {
-        try { it.getColor(0, Color.rgb(0, 122, 255)) } finally { it.recycle() }
+        try { it.getColor(0, ContextCompat.getColor(context, R.color.roytools_action_blue)) } finally { it.recycle() }
     }
     private val dark = context.obtainStyledAttributes(intArrayOf(android.R.attr.textColorPrimary)).let {
         try { Color.luminance(it.getColorStateList(0)?.defaultColor ?: Color.BLACK) > 0.5f }

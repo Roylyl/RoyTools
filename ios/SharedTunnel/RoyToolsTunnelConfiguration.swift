@@ -2,7 +2,11 @@ import Foundation
 
 enum RoyToolsTunnelMode: String, Codable, CaseIterable, Sendable {
     case subscription = "default"
-    case rule, music, ai
+    case rule, music, ai, global, direct
+
+    var usesRepositoryRules: Bool {
+        self == .rule || self == .music || self == .ai
+    }
 }
 
 struct RoyToolsTunnelConfiguration: Codable, Equatable, Sendable {
@@ -14,6 +18,9 @@ struct RoyToolsTunnelConfiguration: Codable, Equatable, Sendable {
     let rules: [String]
     let providers: [String: String]
     let musicDomains: [String]
+    var lanPort: Int? = nil
+    var profileID: UUID? = nil
+    var groupSelections: [String: String]? = nil
 }
 
 enum RoyToolsTunnelCommand: String, Codable, Sendable {
@@ -24,7 +31,20 @@ struct RoyToolsProxyGroup: Codable, Equatable, Sendable, Identifiable {
     let name: String
     let nodes: [String]
     let selected: String?
+    var selectable: Bool = true
     var id: String { name }
+}
+
+struct RoyToolsProxyLatencyRequest: Codable, Sendable {
+    static let maximumNodes = 12
+    static let maximumBytes = 64 * 1024
+    let group: String?
+    let nodes: [String]
+}
+
+struct RoyToolsProxyLatency: Codable, Equatable, Sendable {
+    let node: String
+    let milliseconds: Int?
 }
 
 struct RoyToolsTunnelReply: Codable, Sendable {
@@ -37,9 +57,70 @@ struct RoyToolsTunnelReply: Codable, Sendable {
     var musicProxyPort: Int?
     var musicProxyUsername: String?
     var musicProxyPassword: String?
+    var lanProxyPort: Int?
     var selectedGroup: String?
     var selectedNode: String?
     var groups: [RoyToolsProxyGroup]?
+    var proxyNodes: [String]?
+    var proxyLatencies: [RoyToolsProxyLatency]?
+}
+
+struct ProxyPayloadSample {
+    let uploaded: UInt64
+    let downloaded: UInt64
+    let date: Date
+    var wifi: UInt64 = 0
+    var cellular: UInt64 = 0
+}
+
+struct DailyProxyTraffic: Codable, Equatable, Sendable {
+    private let day: DateComponents
+    private(set) var bytes: UInt64
+    private var wifiBytes: UInt64?
+    private var cellularBytes: UInt64?
+
+    init(date: Date, bytes: UInt64 = 0, calendar: Calendar = .autoupdatingCurrent) {
+        day = calendar.dateComponents([.era, .year, .month, .day], from: date)
+        self.bytes = bytes
+    }
+
+    func bytes(on date: Date, calendar: Calendar = .autoupdatingCurrent) -> UInt64 {
+        isOnDay(date, calendar: calendar) ? bytes : 0
+    }
+
+    func breakdown(on date: Date, calendar: Calendar = .autoupdatingCurrent) -> (wifi: UInt64, cellular: UInt64, unclassified: UInt64) {
+        guard isOnDay(date, calendar: calendar) else { return (0, 0, 0) }
+        let wifi = wifiBytes ?? 0
+        let cellular = cellularBytes ?? 0
+        return (wifi, cellular, bytes - min(bytes, Self.adding(wifi, cellular)))
+    }
+
+    private func isOnDay(_ date: Date, calendar: Calendar) -> Bool {
+        let localDay = calendar.dateComponents([.era, .year, .month, .day], from: date)
+        return localDay == day
+    }
+
+    func recording(_ sample: ProxyPayloadSample, since previous: ProxyPayloadSample,
+                   calendar: Calendar = .autoupdatingCurrent) -> DailyProxyTraffic {
+        var result = DailyProxyTraffic(date: sample.date, bytes: bytes(on: sample.date, calendar: calendar),
+                                       calendar: calendar)
+        // A delta crossing local midnight cannot be split between days without packet timestamps.
+        guard calendar.isDate(previous.date, inSameDayAs: sample.date) else { return result }
+        let up = sample.uploaded >= previous.uploaded ? sample.uploaded - previous.uploaded : sample.uploaded
+        let down = sample.downloaded >= previous.downloaded ? sample.downloaded - previous.downloaded : sample.downloaded
+        result.bytes = Self.adding(Self.adding(result.bytes, up), down)
+        let sameDay = isOnDay(sample.date, calendar: calendar)
+        let wifi = sample.wifi >= previous.wifi ? sample.wifi - previous.wifi : sample.wifi
+        let cellular = sample.cellular >= previous.cellular ? sample.cellular - previous.cellular : sample.cellular
+        result.wifiBytes = Self.adding(sameDay ? wifiBytes ?? 0 : 0, wifi)
+        result.cellularBytes = Self.adding(sameDay ? cellularBytes ?? 0 : 0, cellular)
+        return result
+    }
+
+    private static func adding(_ lhs: UInt64, _ rhs: UInt64) -> UInt64 {
+        let (sum, overflow) = lhs.addingReportingOverflow(rhs)
+        return overflow ? .max : sum
+    }
 }
 
 enum RoyToolsTunnelStorage {
@@ -47,6 +128,7 @@ enum RoyToolsTunnelStorage {
     static let providerBundleIdentifier = "com.roylyl.tools.packettunnel"
     static let activateRequestedOption = "useRequestedConfiguration"
     private static let maximumBytes = 24 * 1024 * 1024
+    private static let proxyTrafficFileName = "daily-proxy-traffic.json"
 
     static func saveRequested(_ configuration: RoyToolsTunnelConfiguration) throws {
         try save(configuration, name: "requested.json")
@@ -64,6 +146,29 @@ enum RoyToolsTunnelStorage {
         try load(name: "applied.json")
     }
 
+    static func removeActivationConfigurations() throws {
+        guard let directory = try? sharedVPNDirectory() else { return }
+        for name in ["applied.json", "requested.json"] {
+            let url = directory.appendingPathComponent(name)
+            do { try FileManager.default.removeItem(at: url) }
+            catch CocoaError.fileNoSuchFile {}
+        }
+    }
+
+    static func loadDailyProxyTraffic() throws -> DailyProxyTraffic? {
+        let url = try sharedVPNDirectory().appendingPathComponent(proxyTrafficFileName)
+        do {
+            return try JSONDecoder().decode(DailyProxyTraffic.self, from: Data(contentsOf: url))
+        } catch CocoaError.fileReadNoSuchFile {
+            return nil
+        }
+    }
+
+    static func saveDailyProxyTraffic(_ record: DailyProxyTraffic) throws {
+        let url = try sharedVPNDirectory().appendingPathComponent(proxyTrafficFileName)
+        try JSONEncoder().encode(record).write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+    }
+
     static func engineDirectory() throws -> URL {
         let url = try settingsDirectory().appendingPathComponent("Engine", isDirectory: true)
         try FileManager.default.createDirectory(
@@ -73,11 +178,15 @@ enum RoyToolsTunnelStorage {
         return url
     }
 
-    private static func settingsDirectory() throws -> URL {
+    private static func sharedVPNDirectory() throws -> URL {
         guard let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup) else {
             throw StorageError.missingAppGroup
         }
-        var url = container.appendingPathComponent("VPN", isDirectory: true)
+        return container.appendingPathComponent("VPN", isDirectory: true)
+    }
+
+    private static func settingsDirectory() throws -> URL {
+        var url = try sharedVPNDirectory()
         try FileManager.default.createDirectory(
             at: url, withIntermediateDirectories: true,
             attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication]

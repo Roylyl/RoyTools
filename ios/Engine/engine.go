@@ -43,7 +43,10 @@ var (
 		stack      tun.Stack
 		device     atomic.Pointer[packetDevice]
 		music      *musicListener
+		lan        *lanProxy
 		groupOrder []string
+		proxyNodes []string
+		profileID  string
 		selected   string
 	}
 )
@@ -61,16 +64,19 @@ type musicListener struct {
 }
 
 type groupState struct {
-	Name    string   `json:"name"`
-	Nodes   []string `json:"nodes"`
-	Current string   `json:"current,omitempty"`
+	Name       string   `json:"name"`
+	Nodes      []string `json:"nodes"`
+	Current    string   `json:"current,omitempty"`
+	Selectable bool     `json:"selectable"`
 }
 
 type engineState struct {
 	Groups        []groupState   `json:"groups"`
+	ProxyNodes    []string       `json:"proxyNodes"`
 	SelectedGroup string         `json:"selectedGroup,omitempty"`
 	SelectedNode  string         `json:"selectedNode,omitempty"`
 	MusicProxy    *musicEndpoint `json:"musicProxy,omitempty"`
+	LANProxy      *lanEndpoint   `json:"lanProxy,omitempty"`
 }
 
 func startEngine(home string, input []byte, mtu int) error {
@@ -156,6 +162,15 @@ func applyProfile(input []byte) error {
 		// Preserve context without returning subscription secrets, URLs or node auth.
 		return errors.New("Mihomo could not load the subscription or generated rules")
 	}
+	if request.Mode == "global" {
+		// Mihomo's global mode routes to GLOBAL. Keep the active RoyTools group
+		// as that destination, including its selected node.
+		target := cfg.Proxies[selection.target]
+		if target == nil {
+			return errors.New("the selected global proxy is unavailable")
+		}
+		cfg.Proxies["GLOBAL"] = target
+	}
 	for name, provider := range cfg.RuleProviders {
 		if len(name) >= len("roytools-") && name[:len("roytools-")] == "roytools-" {
 			if err := provider.Initial(); err != nil {
@@ -170,23 +185,38 @@ func applyProfile(input []byte) error {
 			return err
 		}
 	}
-	// Capture selections before swapping the config; restore them if the
-	// group and node still exist in the incoming subscription.
-	previous := make(map[string]string)
-	for _, name := range machine.groupOrder {
-		if group := proxyGroup(name); group != nil {
-			previous[name] = group.Now()
+	lan := machine.lan
+	if request.LANPort == 0 {
+		lan = nil
+	} else if lan == nil || lan.endpoint.Port != request.LANPort {
+		lan, err = makeLANProxy(request.LANPort)
+		if err != nil {
+			if music != nil && music != machine.music {
+				music.listener.Close()
+			}
+			return err
 		}
 	}
-	executor.ApplyConfig(cfg, true)
-	if request.SelectedNode != "" && request.SelectedGroup == selection.target {
+	// Keep the manual selectors through a refresh without pinning automatic groups.
+	previous := make(map[string]string)
+	if machine.profileID == request.ProfileID {
+		for _, name := range machine.groupOrder {
+			if proxy := tunnel.Proxies()[name]; proxy != nil && proxy.Type() == C.Selector {
+				previous[name] = proxyGroup(name).Now()
+			}
+		}
+	}
+	if target := cfg.Proxies[selection.target]; target != nil && target.Type() == C.Selector &&
+		request.SelectedNode != "" && request.SelectedGroup == selection.target {
 		previous[request.SelectedGroup] = request.SelectedNode
 	}
+	for name, node := range request.GroupSelections {
+		previous[name] = node
+	}
+	executor.ApplyConfig(cfg, true)
 	for name, node := range previous {
-		if proxy := tunnel.Proxies()[name]; proxy != nil {
-			if group, ok := proxy.Adapter().(outboundgroup.SelectAble); ok {
-				_ = group.Set(node)
-			}
+		if selector, ok := proxyGroup(name).(outboundgroup.SelectAble); ok {
+			_ = selector.Set(node)
 		}
 	}
 	if request.Mode != "music" && music != nil {
@@ -194,7 +224,13 @@ func applyProfile(input []byte) error {
 		music = nil
 	}
 	machine.music = music
+	if machine.lan != nil && machine.lan != lan {
+		machine.lan.listener.Close()
+	}
+	machine.lan = lan
 	machine.groupOrder = selection.groups
+	machine.proxyNodes = selection.nodes
+	machine.profileID = request.ProfileID
 	machine.selected = selection.target
 	return nil
 }
@@ -239,11 +275,12 @@ func proxyGroup(name string) outboundgroup.ProxyGroup {
 func engineStatus() []byte {
 	machine.Lock()
 	defer machine.Unlock()
-	status := engineState{Groups: make([]groupState, 0, len(machine.groupOrder)), SelectedGroup: machine.selected}
+	status := engineState{Groups: make([]groupState, 0, len(machine.groupOrder)), ProxyNodes: machine.proxyNodes, SelectedGroup: machine.selected}
 	for _, name := range machine.groupOrder {
 		if group := proxyGroup(name); group != nil {
 			members := group.Proxies()
-			item := groupState{Name: name, Nodes: make([]string, 0, len(members)), Current: group.Now()}
+			_, selectable := group.(outboundgroup.SelectAble)
+			item := groupState{Name: name, Nodes: make([]string, 0, len(members)), Current: group.Now(), Selectable: selectable}
 			for _, member := range members {
 				item.Nodes = append(item.Nodes, member.Name())
 			}
@@ -255,6 +292,9 @@ func engineStatus() []byte {
 	}
 	if machine.music != nil {
 		status.MusicProxy = &machine.music.endpoint
+	}
+	if machine.lan != nil {
+		status.LANProxy = &machine.lan.endpoint
 	}
 	data, _ := json.Marshal(status)
 	return data
@@ -277,6 +317,10 @@ func stopCore() {
 		machine.music.listener.Close()
 		machine.music = nil
 	}
+	if machine.lan != nil {
+		machine.lan.listener.Close()
+		machine.lan = nil
+	}
 	statistic.DefaultManager.Range(func(track statistic.Tracker) bool {
 		track.Close()
 		return true
@@ -284,6 +328,8 @@ func stopCore() {
 	tunnel.OnSuspend()
 	executor.Shutdown()
 	machine.groupOrder = nil
+	machine.proxyNodes = nil
+	machine.profileID = ""
 	machine.selected = ""
 }
 

@@ -17,9 +17,8 @@ internal class MusicAssets(context: Context) {
     private val assets = context.applicationContext.assets
 
     fun intercept(request: WebResourceRequest): WebResourceResponse? =
-        if (request.method == "GET" && !isOrigin(request.url)) {
-            MusicArtwork.openResponse(app, request.url.toString())
-                ?: open(request.url, request.method, request.requestHeaders)
+        if (request.method in setOf("GET", "HEAD") && !isOrigin(request.url)) {
+            MusicArtwork.openResponse(app, request.url.toString(), request.method)
         } else open(request.url, request.method, request.requestHeaders)
 
     fun open(uri: Uri, method: String = "GET", requestHeaders: Map<String, String> = emptyMap()): WebResourceResponse? {
@@ -29,6 +28,13 @@ internal class MusicAssets(context: Context) {
         if (!path.startsWith("/music/") || path.indexOf('\\') >= 0 || path.indexOf('\u0000') >= 0 ||
             path.split('/').any { it == "." || it == ".." }) return error(404, "Not Found")
         if (method != "GET" && method != "HEAD") return error(405, "Method Not Allowed")
+        if (path == "/music/__cover_cache__" && method == "GET") {
+            return runCatching {
+                WebResourceResponse("application/json", "UTF-8", 200, "OK",
+                    mapOf("Cache-Control" to "no-store", "X-Content-Type-Options" to "nosniff"),
+                    ByteArrayInputStream(MusicArtwork.cacheEntries(app).toByteArray(Charsets.UTF_8)))
+            }.getOrElse { error(500, "Asset Read Error") }
+        }
         val name = path.removePrefix("/").let { if (it.endsWith('/')) it + "index.html" else it }
         val input = try { assets.open(name, AssetManager.ACCESS_STREAMING) }
         catch (_: java.io.IOException) { return error(404, "Not Found") }

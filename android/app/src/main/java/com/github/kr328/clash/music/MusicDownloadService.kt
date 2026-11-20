@@ -154,8 +154,14 @@ class MusicDownloadService : Service() {
         val processed = state.processed.coerceIn(0, total)
         val percent = state.percent
         val speed = speedBytesPerSecond.takeIf { it.isFinite() && it > 0 } ?: 0.0
-        val rate = String.format(Locale.ROOT, "%.2fMB/s", speed / 1_000_000.0)
-        val unit = when (state.kind) { "lyrics" -> "份"; "covers" -> "张"; else -> "首" }
+        val rate = when {
+            speed <= 0 -> "—"
+            speed < 1 -> "<1B/s"
+            speed < 1_000 -> String.format(Locale.ROOT, "%.0fB/s", speed)
+            speed < 1_000_000 -> String.format(Locale.ROOT, "%.1fKB/s", speed / 1_000.0)
+            else -> String.format(Locale.ROOT, "%.2fMB/s", speed / 1_000_000.0)
+        }
+        val unit = when (state.kind) { "lyrics" -> "份"; "covers" -> "张"; "mixed" -> "项"; else -> "首" }
         val summary = getString(R.string.music_download_notification_progress, percent, processed, total, rate, unit)
         val transferred = String.format(Locale.ROOT, "%.2fMB", state.downloadedBytes.coerceAtLeast(0) / 1_000_000.0)
         val bytes = if (state.totalBytesKnown && state.totalBytes > 0) {

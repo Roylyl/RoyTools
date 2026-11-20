@@ -1,12 +1,17 @@
 package com.github.kr328.clash
 
 import android.os.DeadObjectException
+import android.net.Uri
+import android.provider.OpenableColumns
+import androidx.activity.result.contract.ActivityResultContracts
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
-import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.design.ProfilesDesign
+import com.github.kr328.clash.design.dialog.requestModelTextInput
+import com.github.kr328.clash.design.dialog.withModelProgressBar
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.util.showExceptionToast
+import com.github.kr328.clash.remote.FilesClient
 import com.github.kr328.clash.remote.Remote
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.service.remote.IProfileManager
@@ -14,6 +19,7 @@ import com.github.kr328.clash.util.withProfile
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -23,20 +29,19 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 import com.github.kr328.clash.design.R
 
 class ProfilesActivity : BaseActivity<ProfilesDesign>() {
     override suspend fun main() {
         val panel = ProfilesDesign(this)
         setContentDesign(panel)
-        val ticker = ticker(TimeUnit.MINUTES.toMillis(1))
         val writes = Mutex()
         val pending = mutableListOf<String>()
         var fetchJob: Job? = null
         var fetchGeneration = 0L
         var navigationPending = false
         var savePrompt: Job? = null
+        var importPrompt: Job? = null
 
         fun refresh() {
             val generation = ++fetchGeneration
@@ -69,7 +74,13 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
             launch {
                 try {
                     // Mutex preserves submission order without making navigation wait.
-                    writes.withLock { withTimeout(if (bulk) 30_000L else 10_000L) { block() } }
+                    writes.withLock {
+                        withTimeout(when (key) {
+                            "import" -> 120_000L
+                            "update-all" -> 30_000L
+                            else -> 10_000L
+                        }) { block() }
+                    }
                     if (activityStarted) refresh()
                 } catch (_: TimeoutCancellationException) {
                     if (activityStarted) panel.showToast("配置操作超时，请检查服务后重试", ToastDuration.Long)
@@ -91,6 +102,41 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
             startActivity(intent)
         }
 
+        fun edit(profile: Profile) {
+            navigate(PropertiesActivity::class.intent.setUUID(profile.uuid)
+                .putExtra(PropertiesActivity.EXTRA_COMPACT_EDITOR, true))
+        }
+
+        fun promptImport(file: Boolean) {
+            if (importPrompt?.isActive == true || "import" in pending) return
+            importPrompt = launch {
+                try {
+                    if (file) {
+                        val uri = startActivityForResult(ActivityResultContracts.GetContent(), "*/*")
+                            ?: return@launch
+                        val name = documentProfileName(uri) ?: getString(R.string.proxy_profiles_local_file)
+                        mutate("import") { importProfile(Profile.Type.File, name, file = uri) }
+                    } else {
+                        val source = requestModelTextInput(
+                            initial = "",
+                            title = getText(R.string.proxy_profiles_import_subscription),
+                            hint = getText(R.string.proxy_profiles_subscription_url),
+                            error = getText(R.string.accept_http_content),
+                            validator = { parseSubscription(it) != null }
+                        ).trim()
+                        val uri = parseSubscription(source) ?: return@launch
+                        val name = uri.getQueryParameter("name")?.trim()?.takeIf(String::isNotEmpty)
+                            ?: uri.host.orEmpty()
+                        mutate("import") { importProfile(Profile.Type.Url, name, source = source) }
+                    }
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    if (activityStarted) panel.showExceptionToast(error)
+                }
+            }
+        }
+
         while (isActive) {
             select<Unit> {
                 events.onReceive { event ->
@@ -103,8 +149,9 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
                 }
                 panel.requests.onReceive { request ->
                     when (request) {
-                        ProfilesDesign.Request.Create -> navigate(NewProfileActivity::class.intent)
-                        is ProfilesDesign.Request.Edit -> navigate(PropertiesActivity::class.intent.setUUID(request.profile.uuid))
+                        ProfilesDesign.Request.ImportSubscription -> promptImport(file = false)
+                        ProfilesDesign.Request.ImportFile -> promptImport(file = true)
+                        is ProfilesDesign.Request.Edit -> edit(request.profile)
                         ProfilesDesign.Request.UpdateAll -> mutate("update-all") {
                             writeProfile {
                                 queryAll().filter { it.imported && it.type != Profile.Type.File }
@@ -122,13 +169,55 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
                         } else if (savePrompt?.isActive != true) {
                             savePrompt = launch { panel.requestSave(request.profile) }
                         }
-                        is ProfilesDesign.Request.Duplicate -> mutate("clone:${request.profile.uuid}") {
-                            val uuid = writeProfile { clone(request.profile.uuid) }
-                            if (activityStarted) navigate(PropertiesActivity::class.intent.setUUID(uuid))
-                        }
                     }
                 }
-                if (activityStarted) ticker.onReceive { panel.updateElapsed() }
+            }
+        }
+    }
+
+    private fun parseSubscription(input: String): Uri? {
+        val uri = Uri.parse(input.trim())
+        return uri.takeIf {
+            it.scheme.equals("https", ignoreCase = true) || it.scheme.equals("http", ignoreCase = true)
+        }?.takeIf { !it.host.isNullOrBlank() }
+    }
+
+    private suspend fun documentProfileName(uri: Uri): String? = withContext(Dispatchers.IO) {
+        try {
+            contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
+                if (it.moveToFirst()) {
+                    val index = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (index >= 0) it.getString(index)?.substringBeforeLast('.')?.trim()?.takeIf(String::isNotEmpty)
+                    else null
+                } else null
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            // Some document providers expose the stream without supporting a metadata query.
+            null
+        }
+    }
+
+    private suspend fun importProfile(type: Profile.Type, name: String, source: String = "", file: Uri? = null) {
+        withModelProgressBar {
+            configure {
+                text = getString(R.string.proxy_profiles_processing)
+                isIndeterminate = true
+            }
+            val draft = writeProfile { create(type, name, source) }
+            var imported = false
+            try {
+                if (file != null) FilesClient(this@ProfilesActivity).copyDocument("$draft/config.yaml", file)
+                writeProfile {
+                    commit(draft)
+                    imported = true
+                    queryByUUID(draft)?.let { setActive(it) }
+                }
+            } finally {
+                if (!imported) withContext(NonCancellable) {
+                    runCatching { writeProfile { release(draft) } }
+                }
             }
         }
     }
@@ -161,7 +250,8 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
             val name = profileName(uuid)
             if (activityStarted) design?.showActionDialog(
                 getString(R.string.toast_profile_updated_failed, name, reason ?: "请稍后重试"), R.string.edit
-            ) { startActivity(PropertiesActivity::class.intent.setUUID(uuid)) }
+            ) { startActivity(PropertiesActivity::class.intent.setUUID(uuid)
+                .putExtra(PropertiesActivity.EXTRA_COMPACT_EDITOR, true)) }
         }
     }
 }

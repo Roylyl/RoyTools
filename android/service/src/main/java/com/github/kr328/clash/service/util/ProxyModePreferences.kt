@@ -9,11 +9,24 @@ object ProxyModePreferences {
         "roylyl"->"rule";"music"->"music";"ai"->"ai"
         else->when(config.mode){TunnelState.Mode.Rule->"rule";TunnelState.Mode.Global->"global";TunnelState.Mode.Direct->"direct";else->"default"}
     }
-    fun save(c:Context,config:ConfigurationOverride){c.getSharedPreferences("proxy_mode",Context.MODE_PRIVATE).edit().putString("choice",choice(config)).apply()}
+    internal val choices = setOf("default", "rule", "music", "ai", "global", "direct")
+
+    fun save(c: Context, config: ConfigurationOverride) = save(c, choice(config))
+
+    fun save(c: Context, choice: String) {
+        require(choice in choices)
+        c.getSharedPreferences("proxy_mode", Context.MODE_PRIVATE).edit().putString("choice", choice).apply()
+    }
     fun read(c:Context)=c.getSharedPreferences("proxy_mode",Context.MODE_PRIVATE).getString("choice","default").orEmpty()
-    fun apply(c:Context,config:ConfigurationOverride,choice:String){
+    fun apply(
+        c: Context,
+        config: ConfigurationOverride,
+        choice: String,
+        routingTarget: String? = c.getSharedPreferences("proxy_mode", Context.MODE_PRIVATE)
+            .getString("target_" + com.github.kr328.clash.service.store.ServiceStore(c).activeProfile, null),
+    ) {
         RoutingPresets.clear(config)
-        config.routingTarget=c.getSharedPreferences("proxy_mode",Context.MODE_PRIVATE).getString("target_"+com.github.kr328.clash.service.store.ServiceStore(c).activeProfile,null)
+        config.routingTarget = routingTarget
         if(choice in listOf("rule","music","ai")){
             val groups=Clash.queryGroupNames(false).ifEmpty{Clash.queryGroup("GLOBAL",ProxySort.Default).proxies.filter{it.isGroup}.map{it.name}}
             val target=RoutingPresets.target(config,groups,Clash.queryGroup("GLOBAL",ProxySort.Default))

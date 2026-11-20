@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.os.Process
 import com.github.kr328.clash.common.Global
 import com.github.kr328.clash.service.util.ProxyWidgetState
+import com.github.kr328.clash.service.util.ProxyModePreferences
 
 class StatusProvider : ContentProvider() {
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle? {
@@ -20,6 +21,16 @@ class StatusProvider : ContentProvider() {
             METHOD_WIDGET_MODE -> {
                 enforceWidgetCaller()
                 ProxyWidgetState.setMode(requireNotNull(context), arg ?: extras?.getString(ProxyWidgetState.KEY_MODE))
+            }
+            METHOD_IDLE_PROXY_MODE -> {
+                enforceWidgetCaller()
+                val app = requireNotNull(context)
+                val accepted = arg != null && !serviceRunning
+                if (accepted) ProxyModePreferences.save(app, requireNotNull(arg))
+                Bundle().apply {
+                    putBoolean("accepted", accepted)
+                    putString("choice", ProxyModePreferences.read(app))
+                }
             }
             METHOD_CURRENT_PROFILE -> {
                 return if (serviceRunning)
@@ -78,11 +89,16 @@ class StatusProvider : ContentProvider() {
         const val METHOD_CURRENT_PROFILE = "currentProfile"
         const val METHOD_WIDGET_STATE = "widgetState"
         const val METHOD_WIDGET_MODE = "widgetMode"
+        const val METHOD_IDLE_PROXY_MODE = "idleProxyMode"
 
         private const val CLASH_SERVICE_RUNNING_FILE = "service_running.lock"
 
         @Volatile
         var serviceRunning: Boolean = false
+            set(value) {
+                if (!value) currentProfile = null
+                field = value
+            }
 
         // Persist user intent independently of the current process. A system kill must not
         // erase recovery state, while explicit stop, VPN revocation and runtime errors do.

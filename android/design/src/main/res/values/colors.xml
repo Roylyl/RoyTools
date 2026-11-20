@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="color_clash_light">#007AFF</color>
-    <color name="color_clash_dark">#0A84FF</color>
-    <color name="roytools_action_blue">#007AFF</color>
+    <color name="color_clash_light">@color/roytools_action_blue</color>
+    <color name="color_clash_dark">@color/roytools_action_blue</color>
     <color name="color_system_ui_overlay">#50000000</color>
     <color name="color_light_background">#FFF2F2F7</color>
     <color name="color_dark_background">#FF121214</color>

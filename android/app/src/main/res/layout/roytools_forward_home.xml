@@ -1,12 +1,15 @@
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="match_parent" android:paddingHorizontal="16dp" android:paddingVertical="8dp" android:clipToPadding="false">
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:paddingHorizontal="@dimen/roytools_page_margin" android:paddingVertical="8dp" android:clipToPadding="false" android:background="?attr/glassCanvasStart">
 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
 <LinearLayout style="@style/RoyTools.Card">
 <TextView style="@style/RoyTools.CardTitle" android:text="通知转发" />
-<TextView android:id="@+id/forward_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="12dp" android:text="尚未配置" />
-<com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/forward_enabled" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="实时转发到Telegram" />
+<TextView android:id="@+id/forward_status" style="@style/RoyTools.Caption" android:layout_marginTop="4dp" android:text="尚未配置" />
+<LinearLayout android:id="@+id/forward_toggle_row" style="@style/RoyTools.ToggleRow">
+<TextView style="@style/RoyTools.ToggleLabel" android:text="实时转发到Telegram" android:importantForAccessibility="no" />
+<com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/forward_enabled" style="@style/RoyTools.SettingSwitch" android:contentDescription="实时转发到Telegram" />
+</LinearLayout>
 </LinearLayout>
 <LinearLayout style="@style/RoyTools.Card">
-<TextView style="@style/RoyTools.CardTitle" android:text="Chat" />
+<TextView style="@style/RoyTools.CardTitle" android:text="@string/roytools_chat_title" />
 <com.google.android.material.button.MaterialButton android:id="@+id/forward_chat_open" style="@style/RoyTools.SecondaryButton" android:text="打开聊天" />
 </LinearLayout>
 <LinearLayout style="@style/RoyTools.Card">

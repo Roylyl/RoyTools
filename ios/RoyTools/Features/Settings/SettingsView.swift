@@ -24,6 +24,7 @@ enum Appearance: String, CaseIterable, Identifiable {
 
 struct SettingsView: View {
     @Binding var appearance: Appearance
+    let vpn: VPNController
 
     var body: some View {
         NavigationStack {
@@ -35,15 +36,41 @@ struct SettingsView: View {
                         }
                     }
                 }
-                Section("关于RoyTools") {
-                    LabeledContent("应用版本", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—")
-                    if let repository = URL(string: "https://github.com/Roylyl/RoyTools") {
-                        Link(destination: repository) {
-                            Label("开源项目", systemImage: "chevron.left.forwardslash.chevron.right")
+                Section("后台运行") {
+                    NavigationLink {
+                        BackgroundSettingsView(vpn: vpn)
+                    } label: {
+                        Label("后台运行设置", systemImage: "gearshape.2")
+                    }
+                }
+                Section("快捷控制") {
+                    if #available(iOS 18.0, *) {
+                        NavigationLink {
+                            ShortcutSettingsView(kind: .controlCenter)
+                        } label: {
+                            Label("添加控制中心代理开关", systemImage: "switch.2")
                         }
+                    }
+                    NavigationLink {
+                        ShortcutSettingsView(kind: .homeWidget)
+                    } label: {
+                        Label("添加桌面小组件", systemImage: "square.grid.2x2")
+                    }
+                }
+                Section("应用信息") {
+                    NavigationLink {
+                        AppUpdateSettingsView()
+                    } label: {
+                        Label("应用更新", systemImage: "arrow.down.circle")
+                    }
+                    NavigationLink {
+                        AboutRoyToolsView(vpn: vpn)
+                    } label: {
+                        Label("关于RoyTools", systemImage: "info.circle")
                     }
                 }
             }
+            .iPadContentWidth()
             .navigationTitle("设置")
         }
     }

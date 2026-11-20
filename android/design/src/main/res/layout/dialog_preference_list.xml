@@ -15,9 +15,9 @@
             <androidx.recyclerview.widget.RecyclerView android:id="@+id/main_list" android:layout_width="match_parent" android:layout_height="match_parent" android:layout_above="@id/actions_view" android:layout_below="@id/title_view" />
 
             <LinearLayout android:id="@+id/actions_view" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_alignParentBottom="true" android:orientation="horizontal" android:baselineAligned="false" android:paddingHorizontal="@dimen/dialog_button_margin">
-                <com.google.android.material.button.MaterialButton android:id="@+id/reset_view" style="@style/RoyTools.DialogSecondaryButton" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/reset" />
-                <com.google.android.material.button.MaterialButton android:id="@+id/cancel_view" style="@style/RoyTools.DialogSecondaryButton" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/cancel" />
-                <com.google.android.material.button.MaterialButton android:id="@+id/ok_view" style="@style/RoyTools.DialogPrimaryButton" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/ok" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/reset_view" style="@style/RoyTools.DialogButton" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/reset" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/cancel_view" style="@style/RoyTools.DialogButton" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/cancel" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/ok_view" style="@style/RoyTools.DialogButton" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/ok" />
             </LinearLayout>
         </RelativeLayout>
     </androidx.coordinatorlayout.widget.CoordinatorLayout>

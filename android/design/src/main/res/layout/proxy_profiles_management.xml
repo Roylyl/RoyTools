@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:paddingTop="6dp" android:paddingHorizontal="@dimen/glass_page_margin">
+    <LinearLayout style="@style/RoyTools.Card">
+        <TextView style="@style/RoyTools.CardTitle" android:text="@string/proxy_profiles_manage" />
+        <androidx.appcompat.widget.AppCompatButton android:id="@+id/import_subscription"
+            style="@style/RoyTools.ProfileAction"
+            android:drawableStart="@drawable/ic_outline_inbox"
+            android:text="@string/proxy_profiles_import_subscription" />
+        <androidx.appcompat.widget.AppCompatButton android:id="@+id/import_configuration"
+            style="@style/RoyTools.ProfileAction"
+            android:drawableStart="@drawable/ic_outline_folder"
+            android:text="@string/proxy_profiles_import_file" />
+        <androidx.appcompat.widget.AppCompatButton android:id="@+id/update_subscriptions"
+            style="@style/RoyTools.ProfileAction"
+            android:visibility="gone" android:drawableStart="@drawable/ic_baseline_sync"
+            android:text="@string/proxy_profiles_update_subscriptions" />
+    </LinearLayout>
+</FrameLayout>

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="roytools_action_blue">#2C67C5</color>
     <dimen name="roytools_card_radius">20dp</dimen>
     <dimen name="roytools_control_radius">16dp</dimen>
     <dimen name="roytools_dialog_radius">24dp</dimen>

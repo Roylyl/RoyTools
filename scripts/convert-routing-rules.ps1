@@ -6,11 +6,10 @@
 param(
     [Parameter(Mandatory)][string]$AIConfig,
     [Parameter(Mandatory)][string]$RuleConfig,
-    [Parameter(Mandatory)][ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version
+    [Parameter(Mandatory)][ValidatePattern('\A(0|[1-9][0-9]{0,5})\.(0|[1-9][0-9]{0,5})\.(0|[1-9][0-9]{0,5})\z')][string]$Version
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
-$repo = Split-Path -Parent $PSScriptRoot
 
 function Convert-Section([string]$Path, [string]$Prefix) {
     $source = [Collections.Generic.List[string]]::new()
@@ -68,5 +67,10 @@ $bundle = [ordered]@{
     rule = Convert-Section $RuleConfig 'roytools-rule'
 }
 $json = ($bundle | ConvertTo-Json -Depth 8).Replace("`r`n", "`n")
-[IO.File]::WriteAllText((Join-Path $repo 'routing-rules.json'), $json, [Text.UTF8Encoding]::new($false))
-& (Join-Path $PSScriptRoot 'update-routing-manifest.ps1') -Notes "AI与规则更新至$Version；保留源规则顺序，AI未匹配流量直连，沿用当前所选节点。"
+$candidate = [IO.Path]::GetTempFileName()
+try {
+    [IO.File]::WriteAllText($candidate, $json, [Text.UTF8Encoding]::new($false))
+    & (Join-Path $PSScriptRoot 'update-routing-manifest.ps1') -BundleSource $candidate -Notes "AI与规则更新至$Version；保留源规则顺序，AI未匹配流量直连，沿用当前所选节点。"
+} finally {
+    Remove-Item -LiteralPath $candidate
+}

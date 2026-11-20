@@ -125,10 +125,9 @@ class AdaptiveHzTileService : TileService() {
 
     private fun openRefreshSettings() {
         try {
-            val intent = packageManager.getLaunchIntentForPackage(packageName)
-                ?.putExtra("roytools_tab", "refresh")
-                ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                ?: return
+            val intent = Intent().setClassName(packageName, "com.github.kr328.clash.MainActivity")
+                .putExtra("roytools_tab", "refresh")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 startActivityAndCollapse(
                     PendingIntent.getActivity(

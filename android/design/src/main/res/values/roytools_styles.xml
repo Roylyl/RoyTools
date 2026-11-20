@@ -28,11 +28,7 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">10dp</item>
     </style>
-    <style name="RoyTools.SecondaryButton" parent="RoyTools.MaterialButton">
-        <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">10dp</item>
-    </style>
+    <style name="RoyTools.SecondaryButton" parent="RoyTools.PrimaryButton" />
     <style name="ShapeAppearanceOverlay.RoyTools" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">@dimen/roytools_dialog_radius</item>
@@ -43,16 +39,18 @@
         <item name="alertDialogStyle">@style/RoyTools.AlertDialog</item>
         <item name="materialAlertDialogTitleTextStyle">@style/RoyTools.DialogTitle</item>
         <item name="materialAlertDialogBodyTextStyle">@style/RoyTools.DialogBody</item>
-        <item name="buttonBarButtonStyle">@style/RoyTools.DialogSecondaryButton</item>
-        <item name="buttonBarPositiveButtonStyle">@style/RoyTools.DialogPrimaryButton</item>
-        <item name="buttonBarNegativeButtonStyle">@style/RoyTools.DialogSecondaryButton</item>
-        <item name="buttonBarNeutralButtonStyle">@style/RoyTools.DialogSecondaryButton</item>
+        <item name="buttonBarButtonStyle">@style/RoyTools.DialogButton</item>
+        <item name="buttonBarPositiveButtonStyle">@style/RoyTools.DialogButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/RoyTools.DialogButton</item>
+        <item name="buttonBarNeutralButtonStyle">@style/RoyTools.DialogButton</item>
         <item name="materialButtonStyle">@style/RoyTools.MaterialButton</item>
         <item name="textInputStyle">@style/RoyTools.TextInput</item>
         <item name="android:backgroundDimAmount">0.32</item>
     </style>
     <style name="RoyTools.AlertDialog" parent="MaterialAlertDialog.MaterialComponents">
         <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.RoyTools</item>
+        <item name="listItemLayout">@layout/roytools_dialog_list_item</item>
+        <item name="singleChoiceItemLayout">@layout/roytools_dialog_choice_item</item>
     </style>
     <style name="RoyTools.DialogTitle" parent="MaterialAlertDialog.MaterialComponents.Title.Text">
         <item name="android:textSize">20sp</item>
@@ -66,7 +64,12 @@
     <style name="RoyTools.ThemeChoice" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:minHeight">48dp</item>
+        <item name="android:layout_marginBottom">4dp</item>
+        <item name="android:minHeight">@dimen/roytools_touch_target</item>
+        <item name="android:paddingHorizontal">12dp</item>
+        <item name="android:paddingVertical">8dp</item>
+        <item name="android:background">@drawable/roytools_choice_background</item>
+        <item name="android:buttonTint">@color/roytools_choice_indicator</item>
         <item name="android:textSize">16sp</item>
         <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
@@ -93,8 +96,9 @@
         <item name="android:textSize">16sp</item>
         <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
-    <style name="RoyTools.DialogSecondaryButton" parent="RoyTools.MaterialButton">
-        <item name="android:singleLine">true</item>
+    <style name="RoyTools.DialogButton" parent="RoyTools.MaterialButton">
+        <item name="android:singleLine">false</item>
+        <item name="android:maxLines">2</item>
         <item name="android:ellipsize">end</item>
         <item name="android:layout_marginStart">4dp</item>
         <item name="android:layout_marginEnd">4dp</item>
@@ -103,7 +107,19 @@
         <item name="android:layout_marginTop">4dp</item>
         <item name="android:layout_marginBottom">4dp</item>
     </style>
-    <style name="RoyTools.DialogPrimaryButton" parent="RoyTools.DialogSecondaryButton" />
+    <style name="RoyTools.DialogListRow" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">@dimen/roytools_touch_target</item>
+        <item name="android:paddingHorizontal">24dp</item>
+        <item name="android:paddingVertical">10dp</item>
+        <item name="android:gravity">start|center_vertical</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+    <style name="RoyTools.AnchoredMenu" parent="Widget.AppCompat.PopupMenu">
+        <item name="android:popupBackground">@drawable/roytools_menu_background</item>
+    </style>
     <style name="RoyTools.MaterialButton" parent="Widget.Material3.Button">
         <item name="materialThemeOverlay">@style/ThemeOverlay.RoyTools.MaterialButton</item>
         <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.RoyTools.Action</item>

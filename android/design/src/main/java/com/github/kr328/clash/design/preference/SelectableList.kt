@@ -27,7 +27,7 @@ fun <T> PreferenceScreen.selectableList(
             set(value) {
                 field = value
 
-                this.summary = context.getText(valuesText[value])
+                summary = context.getText(valuesText.getOrNull(value) ?: R.string.not_selected)
             }
         override var listener: OnChangedListener? = null
     }

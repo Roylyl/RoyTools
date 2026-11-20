@@ -39,9 +39,6 @@ object AdaptiveHzActionHandler {
     // Refreshes the foreground notification after a mode change.
     private fun refreshSurfaces(context: Context) {
         val appContext = context.applicationContext
-        appContext.sendBroadcast(android.content.Intent("${appContext.packageName}.intent.action.REFRESH_WIDGET_CHANGED")
-            .setPackage(appContext.packageName))
-
         runCatching {
             StabilityForegroundService.refreshNotification(appContext)
             RefreshModeNotice.show(appContext, getCurrentMode(appContext))

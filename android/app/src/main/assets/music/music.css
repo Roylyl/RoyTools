@@ -416,16 +416,12 @@ html[data-theme="light"] #full-player::backdrop { background:#f6f8fb; }
 
   #full-player .full-shell[data-mobile-view="lyrics"] .full-content { flex:1; grid-template-columns:54px minmax(0,1fr); grid-template-rows:auto minmax(0,1fr); align-content:stretch; align-items:start; justify-content:stretch; gap:0 11px; min-height:0; }
   #full-player .full-shell[data-mobile-view="lyrics"] .full-content > img { grid-column:1; grid-row:1; display:block; border-radius:9px; }
-  #full-player .full-shell[data-mobile-view="lyrics"] .full-info { grid-column:2; grid-row:1 / span 2; display:flex; flex-direction:column; min-height:0; }
   #full-player .full-shell[data-mobile-view="lyrics"] .full-info > .eyebrow { display:none; }
   #full-player .full-shell[data-mobile-view="lyrics"] .quality-badges { display:inline-flex; }
   #full-player .full-shell[data-mobile-view="lyrics"] #audio-details,
   #full-player .full-shell[data-mobile-view="lyrics"] .audio-note { display:none; }
 
   #full-player .full-shell[data-mobile-view="lyrics"] .full-title-row h2 { line-height:1.2; max-height:2.4em; overflow:hidden; }
-  #full-player .full-shell[data-mobile-view="lyrics"] #full-artist { margin:3px 0 0; padding:0; font-size:12px; }
-  #full-player .full-shell[data-mobile-view="lyrics"] #full-album { margin:2px 0 0; padding:0; font-size:10px; line-height:1.35; }
-  #full-player .full-shell[data-mobile-view="lyrics"] #full-like-mobile { top:0; right:0; width:34px; height:34px; }
 
   #full-player .full-shell[data-mobile-view="lyrics"] .lyric-line { margin:7px 0; font-size:clamp(16px,4.6vw,21px); }
   #full-player .full-shell[data-mobile-view="lyrics"] .full-timeline,
@@ -658,7 +654,6 @@ html[data-theme="light"] .track-row.current .track-title-play { color:#168260; }
 #full-player #full-status:empty::before { content:none; }
 #full-player .full-lyrics { position:relative; display:block; flex:1; width:100%; height:auto; min-height:0; max-height:none; margin:24px 0 0; padding:12px 10px 36px; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; mask-image:linear-gradient(to bottom,#000 0%,#000 92%,transparent); }
 #full-player .full-lyrics { --lyric-font-size:clamp(19px,1.7vw,25px); }
-#full-player .lyric-credit { color:var(--muted); font-size:var(--lyric-font-size); line-height:1.65; margin:18px 0; opacity:1; }
 #full-player .lyric-group { margin:18px 0; }
 #full-player .lyric-group .lyric-line { color:var(--muted); opacity:1; margin:3px 0; font-size:var(--lyric-font-size); line-height:1.65; }
 #full-player .lyric-group.is-active .lyric-line { color:var(--text); font-weight:650; }
@@ -733,8 +728,6 @@ html[data-theme="light"] { --select-chevron:url("data:image/svg+xml,%3Csvg xmlns
  #full-player .full-shell[data-mobile-view="lyrics"] { gap:10px; }
  #full-player .full-shell[data-mobile-view="lyrics"] .full-content { position:relative; display:block; margin:0; padding:8px 0 0; }
  #full-player .full-shell[data-mobile-view="lyrics"] .full-content > img { position:absolute; top:8px; left:0; width:64px; height:64px; max-height:none; }
- #full-player .full-shell[data-mobile-view="lyrics"] .full-info { height:100%; width:100%; padding:0; }
- #full-player .full-shell[data-mobile-view="lyrics"] .full-meta { min-height:86px; padding-left:78px; }
  #full-player .full-shell[data-mobile-view="lyrics"] .full-title-row { padding-right:32px; }
  #full-player .full-shell[data-mobile-view="lyrics"] .full-title-row h2 { font-size:21px; }
  #full-player .full-shell[data-mobile-view="lyrics"] .full-lyrics { position:relative; display:block; flex:1; width:100%; height:auto; min-height:0; max-height:none; margin:18px 0 0; padding:10px 2px 28px; }
@@ -757,7 +750,6 @@ html[data-theme="light"] { --select-chevron:url("data:image/svg+xml,%3Csvg xmlns
  #full-player .full-controls { padding-top:0; gap:20px; }
  #full-player .full-controls .play { width:44px; height:44px; }
 }
-#full-player .full-shell[data-mobile-view="lyrics"] .lyric-credit,
 #full-player .full-shell[data-mobile-view="lyrics"] .lyric-group .lyric-line { font-size:var(--lyric-font-size); line-height:1.65; }
 
 /* The thin timeline remains visible in both themes; its hit area stays 48px. */

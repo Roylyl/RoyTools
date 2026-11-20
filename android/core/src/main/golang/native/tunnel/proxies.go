@@ -3,6 +3,7 @@ package tunnel
 import (
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/dlclark/regexp2"
 
@@ -183,13 +184,7 @@ func convertProxies(proxies []C.Proxy, uiSubtitlePattern *regexp2.Regexp) []*Pro
 				}
 			}
 		}
-		testURL := "https://www.gstatic.com/generate_204"
-		for k := range p.ExtraDelayHistories() {
-			if len(k) > 0 {
-				testURL = k
-				break
-			}
-		}
+		testURL := proxyLatencyTestURL(p)
 		_, isGroup := p.Adapter().(outboundgroup.ProxyGroup)
 
 		result = append(result, &Proxy{
@@ -202,6 +197,25 @@ func convertProxies(proxies []C.Proxy, uiSubtitlePattern *regexp2.Regexp) []*Pro
 		})
 	}
 	return result
+}
+
+func proxyLatencyTestURL(p C.Proxy) string {
+	var latest time.Time
+	var selected string
+	for url, state := range p.ExtraDelayHistories() {
+		if url == "" || len(state.History) == 0 {
+			continue
+		}
+		last := state.History[len(state.History)-1].Time
+		if selected == "" || last.After(latest) || (last.Equal(latest) && url < selected) {
+			selected = url
+			latest = last
+		}
+	}
+	if selected != "" {
+		return selected
+	}
+	return C.DefaultTestURL
 }
 
 func collectProviders(providers []provider.ProxyProvider, uiSubtitlePattern *regexp2.Regexp) []*Proxy {

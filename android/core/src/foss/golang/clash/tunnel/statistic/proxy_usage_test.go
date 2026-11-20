@@ -63,12 +63,12 @@ func TestProxyUsageNetworksAndReset(t *testing.T) {
 	var manager Manager
 	manager.SetTrafficNetwork(TrafficNetworkWifi)
 	const large = int64(1<<40) + 17
-	manager.pushProxyTraffic(large)
+	manager.pushProxyUploaded(large)
 	manager.SetTrafficNetwork(TrafficNetworkMobile)
-	manager.pushProxyTraffic(29)
-	manager.pushProxyTraffic(-1)
+	manager.pushProxyDownloaded(29)
+	manager.pushProxyUploaded(-1)
 	manager.SetTrafficNetwork(999)
-	manager.pushProxyTraffic(100)
+	manager.pushProxyUploaded(100)
 	manager.PushUploaded(20)
 	manager.PushDownloaded(30)
 	manager.ResetStatistic()
@@ -153,10 +153,10 @@ func TestProxyUsageMidnightAndLateIO(t *testing.T) {
 	boundary := before.Add(100 * time.Millisecond)
 	var manager Manager
 	manager.SetTrafficNetwork(TrafficNetworkWifi)
-	manager.pushProxyTrafficAt(40, before)
-	manager.pushProxyTrafficAt(70, boundary)
+	manager.pushProxyTrafficAt(40, true, before)
+	manager.pushProxyTrafficAt(70, true, boundary)
 	// A pre-midnight IO completing out of order must retain both days' totals.
-	manager.pushProxyTrafficAt(2, before)
+	manager.pushProxyTrafficAt(2, false, before)
 	if got := manager.proxyUsageAt(before); got != (ProxyUsage{Day: "2026-11-04", Wifi: 42}) {
 		t.Fatalf("old-day IO misclassified: %+v", got)
 	}
@@ -174,7 +174,7 @@ func TestProxyUsageQueryRollsOverWithoutTraffic(t *testing.T) {
 	before := time.Date(2026, 11, 4, 23, 59, 59, 0, location)
 	var manager Manager
 	manager.SetTrafficNetwork(TrafficNetworkMobile)
-	manager.pushProxyTrafficAt(99, before)
+	manager.pushProxyTrafficAt(99, true, before)
 	if got := manager.proxyUsageAt(before.Add(time.Second)); got != (ProxyUsage{Day: "2026-11-05"}) {
 		t.Fatalf("idle new-day query kept yesterday's bytes: %+v", got)
 	}
@@ -186,9 +186,9 @@ func TestProxyUsageTimezoneChangesKeepSeparateLocalDates(t *testing.T) {
 	instant := time.Date(2026, 11, 4, 20, 0, 0, 0, time.UTC)
 	var manager Manager
 	manager.SetTrafficNetwork(TrafficNetworkWifi)
-	manager.pushProxyTrafficAt(11, instant.In(east))
+	manager.pushProxyTrafficAt(11, true, instant.In(east))
 	manager.SetTrafficNetwork(TrafficNetworkMobile)
-	manager.pushProxyTrafficAt(22, instant.In(west))
+	manager.pushProxyTrafficAt(22, false, instant.In(west))
 	if got := manager.proxyUsageAt(instant.In(west)); got != (ProxyUsage{Day: "2026-11-04", Mobile: 22}) {
 		t.Fatalf("timezone crossing local date reused another day's bucket: %+v", got)
 	}
@@ -196,7 +196,7 @@ func TestProxyUsageTimezoneChangesKeepSeparateLocalDates(t *testing.T) {
 		t.Fatalf("timezone return lost the original day's bytes: %+v", got)
 	}
 	eastNine := time.FixedZone("east", 9*60*60)
-	manager.pushProxyTrafficAt(3, instant.In(eastNine))
+	manager.pushProxyTrafficAt(3, true, instant.In(eastNine))
 	if got := manager.proxyUsageAt(instant.In(eastNine)); got != (ProxyUsage{Day: "2026-11-05", Wifi: 11, Mobile: 3}) {
 		t.Fatalf("same-date timezone change lost prior traffic: %+v", got)
 	}
@@ -229,8 +229,8 @@ func TestProxyUsageDSTCalendarBoundaries(t *testing.T) {
 			if time.Duration(bucket.end-bucket.start)*time.Second != tc.hours*time.Hour {
 				t.Fatalf("DST day has wrong duration: %d", bucket.end-bucket.start)
 			}
-			manager.pushProxyTrafficAt(8, end.Add(-time.Nanosecond))
-			manager.pushProxyTrafficAt(9, end)
+			manager.pushProxyTrafficAt(8, true, end.Add(-time.Nanosecond))
+			manager.pushProxyTrafficAt(9, false, end)
 			if got := manager.proxyUsageAt(end.Add(-time.Nanosecond)); got.Wifi != 8 {
 				t.Fatalf("last old-day byte crossed the DST boundary: %+v", got)
 			}

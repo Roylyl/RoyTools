@@ -6,6 +6,7 @@ import android.content.Intent
 import android.appwidget.AppWidgetManager
 import android.os.Bundle
 import com.github.kr328.clash.common.Global
+import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.core.model.ProxySort
 import com.github.kr328.clash.core.model.TunnelState
@@ -43,21 +44,16 @@ object ProxyWidgetState {
         val snapshot = Bundle().apply {
             putBoolean(KEY_RUNNING, running)
             putString(KEY_ACTIVE_PROFILE, if (running) StatusProvider.currentProfile else selectedProfile(context))
-            putString(KEY_MODE, "default")
+            putString(KEY_MODE, ProxyModePreferences.read(context))
             putBoolean(KEY_READY, false)
             putLong(KEY_WIFI_BYTES, usage.wifi)
             putLong(KEY_MOBILE_BYTES, usage.mobile)
             putString(KEY_USAGE_DAY, usage.day)
         }
-        if (!running) return snapshot
+        if (!running || StatusProvider.currentProfile == null) return snapshot
 
         val override = runCatching { Clash.queryOverride(Clash.OverrideSlot.Session) }.getOrNull()
-        snapshot.putString(KEY_MODE, override?.routingPreset?.takeUnless{it=="roylyl"} ?: when (override?.mode) {
-            TunnelState.Mode.Rule -> "rule"
-            TunnelState.Mode.Global -> "global"
-            TunnelState.Mode.Direct -> "direct"
-            else -> "default"
-        })
+        if (override != null) snapshot.putString(KEY_MODE, ProxyModePreferences.choice(override))
         val effective = runCatching { Clash.queryTunnelState().mode }.getOrNull() ?: return snapshot
         snapshot.putString(KEY_EFFECTIVE_MODE, effective.name.lowercase())
         snapshot.putBoolean(KEY_READY, true)
@@ -70,34 +66,24 @@ object ProxyWidgetState {
 
     @Synchronized
     fun setMode(context: Context, value: String?): Bundle {
-        val mode = when (value) {
-            "default" -> null
-            "rule" -> TunnelState.Mode.Rule
-            "global" -> TunnelState.Mode.Global
-            "direct" -> TunnelState.Mode.Direct
-            else -> return failure("invalid_mode")
-        }
+        val choice = value?.takeIf { it in ProxyModePreferences.choices } ?: return failure("invalid_mode")
         if (!StatusProvider.serviceRunning) return failure("stopped")
+        if (StatusProvider.currentProfile == null) return failure("not_ready")
         return try {
             // Preserve the other session overrides and all persisted selector choices.
             val override = Clash.queryOverride(Clash.OverrideSlot.Session)
-            if (override.mode != mode || override.routingPreset != null || value=="rule") {
-                com.github.kr328.clash.core.model.RoutingPresets.clear(override)
-                if(value=="rule") {
-                    val groups=Clash.queryGroupNames(false).ifEmpty{Clash.queryGroup("GLOBAL",ProxySort.Default).proxies.filter{it.isGroup}.map{it.name}}
-                    val target=com.github.kr328.clash.core.model.RoutingPresets.target(override,groups,Clash.queryGroup("GLOBAL",ProxySort.Default))
-                    com.github.kr328.clash.core.model.BundledRoutingRules.apply(context,override,target,groups)
-                }
-                override.mode = mode
+            if (ProxyModePreferences.choice(override) != choice || choice == "rule") {
+                ProxyModePreferences.apply(context, override, choice, override.routingTarget)
                 Clash.patchOverride(Clash.OverrideSlot.Session, override)
-                ProxyModePreferences.save(context,override)
+                ProxyModePreferences.save(context, choice)
                 context.sendOverrideChanged()
             }
             query(context).apply {
                 putBoolean(KEY_SUCCESS, true)
                 publish(context, this)
             }
-        } catch (_: Exception) {
+        } catch (error: Exception) {
+            Log.w("桌面小组件切换代理模式失败", error)
             failure("unavailable")
         }
     }

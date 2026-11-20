@@ -87,6 +87,7 @@ class ClashManager(private val context: Context) : IClashManager,
 
     override fun clearOverride(slot: Clash.OverrideSlot) {
         Clash.clearOverride(slot)
+        context.sendOverrideChanged()
     }
 
     override suspend fun healthCheck(group: String) {

@@ -14,8 +14,8 @@
 <meta property="og:image:alt" content="Roylyl Music的字母R音乐标识">
 <title>Roylyl Music</title>
 <script>try{document.documentElement.dataset.theme=window.RoyToolsMusicBridge?.getTheme()==='dark'?'dark':'light';if(window.RoyToolsMusicBridge)document.documentElement.classList.add('native-embedded')}catch{document.documentElement.dataset.theme='light'}</script>
-<link rel="icon" type="image/svg+xml" href="./favicon.svg"><link rel="stylesheet" href="./image-loading.css?v=20260927-1"><script src="./image-loading.js?v=20261111-3" defer></script><link rel="stylesheet" href="./music.css?v=20261111-android-35"><link rel="stylesheet" href="./roytools.css?v=20261111-android-35">
-<script src="./lyric-parser.js?v=20261111-android-35" defer></script><script src="./playback-feedback.js?v=20261111-android-35" defer></script><script src="./catalog-sync.js?v=20261111-android-35" defer></script><script src="./app.js?v=20261111-android-35" defer></script>
+<link rel="icon" type="image/svg+xml" href="./favicon.svg"><link rel="stylesheet" href="./image-loading.css?v=20260927-1"><script src="./image-loading.js?v=20261120-android-11" defer></script><link rel="stylesheet" href="./music.css?v=20261120-android-11"><link rel="stylesheet" href="./roytools.css?v=20261120-android-11">
+<script src="./lyric-parser.js?v=20261120-android-11" defer></script><script src="./playback-feedback.js?v=20261120-android-11" defer></script><script src="./catalog-sync.js?v=20261120-android-11" defer></script><script src="./app.js?v=20261120-android-11" defer></script>
 </head>
 <body>
 <a class="skip" href="#content">跳到音乐库</a>
@@ -37,24 +37,140 @@
   </div>
 </section>
 
-<section class="library" id="library" hidden><button class="back" id="back-albums" type="button" hidden>← 返回专辑收藏</button><div id="album-detail" hidden></div><div class="section-heading"><div><p class="eyebrow">YOUR COLLECTION</p><h2 id="view-title">专辑收藏</h2></div><div class="search-tools"><button type="button" id="reset-view-filters" class="back reset-view-filters" hidden>清空筛选</button><label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="搜索歌曲、歌手、专辑" aria-label="搜索歌曲、歌手或专辑"><kbd>/</kbd></label></div></div>
-<div class="filters"><label>歌手<select id="artist"><option value="">全部歌手</option></select></label><label>第一顺序<select id="sort-primary"><option value="default" disabled hidden>默认排序</option><option value="release">发行时间</option><option value="artist">歌手</option><option value="name">名称</option></select></label><label>第二顺序<select id="sort-secondary"><option value="none">不设置</option><option value="release">发行时间</option><option value="artist">歌手</option><option value="name">名称</option></select></label><label>方向<select id="sort-direction"><option value="asc">升序</option><option value="desc">降序</option></select></label><span id="result-count"></span></div>
-<div class="notice" id="notice" role="status">正在载入音乐收藏…</div><button id="retry" class="secondary" hidden>重新连接</button>
-<div id="playlist-detail" hidden></div><div id="albums" class="album-grid"></div><div id="songs" hidden></div><div id="empty" class="empty" hidden><span>♫</span><h3>这里还很安静</h3><p>试试其他关键词，或查看Apple Music固定歌单。</p><button type="button" id="clear-filters" class="secondary" hidden>清空筛选</button></div>
+<section id="active-downloads" class="music-content-page" aria-label="正在下载" hidden>
+  <div class="download-queue-controls">
+    <div class="download-concurrency-control">
+      <span id="download-concurrency-label">同时下载数</span>
+      <div class="download-concurrency-options" id="download-concurrency" role="radiogroup" aria-labelledby="download-concurrency-label">
+        <label><input type="radio" name="download-concurrency" value="1"><span>1项</span></label>
+        <label><input type="radio" name="download-concurrency" value="2"><span>2项</span></label>
+        <label><input type="radio" name="download-concurrency" value="3" checked><span>3项</span></label>
+        <label><input type="radio" name="download-concurrency" value="4"><span>4项</span></label>
+        <label><input type="radio" name="download-concurrency" value="5"><span>5项</span></label>
+      </div>
+    </div>
+    <button type="button" id="download-pause">暂停所有下载</button>
+    <button type="button" id="download-clear">清空所有下载</button>
+  </div>
+  <p id="download-queue-empty" class="download-queue-empty">暂无正在下载的项目</p>
+  <section id="download-queue-section" aria-labelledby="download-queue-title" hidden>
+    <h2 id="download-queue-title">下载队列</h2>
+    <div id="download-queue-items" class="download-queue-items"></div>
+  </section>
+  <section id="download-recent-section" aria-labelledby="download-recent-title" hidden>
+    <h2 id="download-recent-title">最近下载</h2>
+    <dl id="download-recent" class="download-results"></dl>
+  </section>
+  <section id="download-results-section" aria-labelledby="download-results-title" hidden>
+    <h2 id="download-results-title">下载结果</h2>
+    <dl id="download-results" class="download-results"></dl>
+  </section>
+</section>
+
+<section class="library" id="library" hidden>
+  <button class="back" id="back-albums" type="button" hidden>← 返回专辑收藏</button>
+  <div id="collection-heading" class="section-heading"><h2 id="view-title">专辑</h2><details id="playlist-navigation" class="playlist-navigation" hidden><summary id="playlist-location" aria-label="快速定位" title="快速定位"></summary><div class="playlist-location-menu"><button id="playlist-to-top" type="button">回到顶部</button><button id="playlist-locate" type="button">定位当前曲目</button></div></details></div>
+  <div id="album-detail" hidden></div><div id="playlist-detail" hidden></div>
+  <section id="downloaded-collection-actions" hidden><button id="download-entire-library" type="button" class="primary">下载全部曲目</button></section>
+  <div id="collection-search" class="search-tools"><button type="button" id="reset-view-filters" class="back reset-view-filters" hidden>清空筛选</button><label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 4.5 4.5"/></svg><input id="search" type="search" placeholder="搜索歌曲、歌手、专辑" aria-label="搜索歌曲、歌手或专辑"><kbd>/</kbd></label></div>
+  <div id="collection-filters" class="filters"><label>歌手<select id="artist"><option value="">全部歌手</option></select></label><label>方向<select id="sort-direction"><option value="asc">升序</option><option value="desc">降序</option></select></label><label>第一顺序<select id="sort-primary"><option value="default" disabled hidden>默认排序</option><option value="release">发行时间</option><option value="artist">歌手</option><option value="name">名称</option></select></label><label>第二顺序<select id="sort-secondary"><option value="none">不设置</option><option value="release">发行时间</option><option value="artist">歌手</option><option value="name">名称</option></select></label></div>
+  <p id="result-count" class="collection-result-count"></p>
+  <div class="notice" id="notice" role="status">正在载入音乐收藏…</div><button id="retry" class="secondary" hidden>重新连接</button>
+  <div id="albums" class="album-grid"></div><div id="songs" hidden></div><div id="empty" class="empty" hidden><h3>暂无歌曲</h3></div>
 </section>
 </main></div>
-<div id="playlist-navigation" class="playlist-navigation" aria-label="歌单快捷定位" hidden><button id="playlist-to-top" type="button" aria-label="回到顶部" title="回到顶部"></button><button id="playlist-locate" type="button" aria-label="定位当前曲目" title="定位当前曲目"></button></div>
-<button type="button" id="queue-backdrop" class="music-queue-backdrop" aria-label="关闭播放队列" hidden></button><aside id="queue-panel" class="queue-panel" aria-label="播放队列" hidden><div class="queue-head"><div><p class="eyebrow">UP NEXT</p><h2>播放队列</h2></div><button id="close-queue" class="icon" aria-label="关闭播放队列">×</button></div><div id="queue-list"></div></aside>
-<div id="track-more-menu" class="track-more-menu" role="menu" aria-label="歌曲更多选项" hidden><button id="share-track" type="button" role="menuitem">分享歌曲</button><button id="download-track" type="button" role="menuitem">下载</button><button type="button" id="menu-album" role="menuitem">查看专辑</button><div id="menu-artists" role="group" aria-label="歌手"></div><button type="button" id="cancel-insertion" role="menuitem" hidden>取消此次插队</button><button type="button" id="clear-insertions" role="menuitem" hidden>清空待插队</button><button id="remove-pending" type="button" role="menuitem" hidden>删除待播</button></div>
+<div id="album-options" class="track-more-menu" role="menu" aria-label="专辑更多选项" hidden><button id="album-option-play" type="button" role="menuitem">播放专辑</button><button id="album-option-download" type="button" role="menuitem">下载全部</button></div>
+<div id="download-item-options" class="track-more-menu" role="menu" aria-label="下载项目操作" hidden>
+  <button id="download-option-prioritize" type="button" role="menuitem" data-option-action="prioritize">优先下载</button>
+  <button id="download-option-remove" type="button" role="menuitem" data-option-action="remove" class="menu-destructive">删除</button>
+</div>
+<button type="button" id="queue-backdrop" class="music-queue-backdrop" aria-label="关闭播放队列" hidden></button>
+<aside id="queue-panel" class="queue-panel music-queue" role="dialog" aria-modal="true" aria-labelledby="queue-title" hidden>
+  <button type="button" class="queue-detent" aria-label="展开播放队列"></button>
+  <div class="queue-head"><button type="button" class="icon queue-clear" aria-label="清空待插队" hidden></button><h2 id="queue-title">播放队列</h2><button id="close-queue" class="queue-done" type="button">完成</button></div>
+  <div id="queue-list"></div>
+</aside>
+<div id="track-more-menu" class="track-more-menu" role="menu" aria-label="歌曲更多选项" hidden><button id="share-track" type="button" role="menuitem">分享歌曲</button><button id="download-track" type="button" role="menuitem">下载</button><button type="button" id="menu-album" role="menuitem">查看专辑</button><div id="menu-artists" role="group" aria-label="歌手"></div><button type="button" id="cancel-insertion" role="menuitem" hidden>取消此次插队</button><button type="button" id="clear-insertions" role="menuitem" hidden>清空待插队</button><button id="remove-pending" type="button" role="menuitem" class="menu-destructive" hidden>删除待播</button><button id="delete-downloaded-track" type="button" role="menuitem" class="menu-destructive" hidden>删除下载</button></div>
 <div id="feedback-stack" class="feedback-stack" aria-label="操作提示"></div>
 <div id="favorite-notice" class="favorite-notice" role="status" aria-live="polite" hidden></div>
 <footer class="player" aria-label="音乐播放器"><div class="now"><button id="open-full" class="cover-button" aria-label="打开全屏播放" disabled><img id="now-cover" src="./placeholder.svg" alt="" width="56" height="56"></button><button type="button" id="open-full-copy" class="now-copy" aria-label="打开正在播放的歌曲"><span class="now-title-line"><strong id="now-title">选一首，慢慢听</strong><span id="player-status" role="status" class="player-status"></span></span><span id="now-artist">你的音乐，从这里开始</span></button><button id="now-like" class="icon" aria-label="喜欢当前歌曲" aria-pressed="false" disabled>♡</button></div><div class="transport"><div class="controls"><button id="prev" class="icon" aria-label="上一首">◀Ⅰ</button><button id="play" class="play" aria-label="播放">▶</button><button id="next" class="icon" aria-label="下一首">Ⅰ▶</button><button id="repeat" class="icon small mode-button" aria-label="播放模式：列表循环" aria-pressed="false" title="播放模式：列表循环">↻</button><button id="mobile-queue-toggle" class="icon" aria-label="播放队列" aria-expanded="false" aria-controls="queue-panel">☷</button></div><div class="timeline"><span id="elapsed">0:00</span><input id="seek" type="range" min="0" max="100" value="0" step="0.1" aria-label="播放进度" disabled><span id="duration">0:00</span></div></div><div class="player-extra"><button id="quality" class="quality" aria-label="查看音频参数" disabled>音频信息</button><label class="volume">音量<input id="volume" type="range" min="0" max="1" step="0.01" value="1" aria-label="音量"></label><button id="queue-toggle" class="icon" aria-label="播放队列" aria-expanded="false" aria-controls="queue-panel">☷</button></div></footer>
-<dialog id="full-player" aria-labelledby="full-title">
-<div class="full-shell" data-mobile-view="cover"><header class="full-header"><span>Roylyl Music / NOW PLAYING</span><button id="close-full" class="icon" aria-label="退出全屏播放">⌄</button></header><div class="full-view-bar"><div class="full-tabs" role="tablist" aria-label="全屏播放页面"><button type="button" id="full-cover-tab" class="full-tab is-active" role="tab" aria-selected="true" aria-controls="full-content">封面</button><button type="button" id="full-lyrics-tab" class="full-tab" role="tab" aria-selected="false" aria-controls="full-content">歌词</button></div><button type="button" id="full-more" class="icon full-share" aria-label="更多播放选项" title="更多播放选项" aria-haspopup="menu" aria-expanded="false" aria-controls="full-more-menu"></button><div id="full-more-menu" class="track-more-menu full-more-menu" role="menu" hidden><button id="full-share-action" type="button" role="menuitem">分享</button><button id="full-download-action" type="button" role="menuitem">下载</button><button id="open-sleep-timer" type="button" role="menuitem">定时关闭</button><button id="full-menu-album" type="button" role="menuitem">查看专辑</button><div id="full-menu-artists" role="group" aria-label="歌手"></div><button type="button" id="full-clear-insertions" role="menuitem" hidden>清空待插队</button></div><span id="full-share-status" class="full-share-status" role="status" hidden></span></div>
-<div id="full-content" class="full-content"><img id="full-cover" src="./placeholder.svg" alt="当前专辑封面"><section class="full-info"><div class="full-meta"><p class="eyebrow">正在播放</p><div class="full-title-row"><h2 id="full-title"></h2><div id="quality-badges" class="quality-badges" aria-label="音频信息"></div></div><p id="full-artist"></p><p id="full-album"></p><button id="full-like-mobile" class="icon" aria-label="喜欢当前歌曲" aria-pressed="false">♡</button><dl id="audio-details"></dl><p class="audio-note">参数描述音源文件，蓝牙传输规格取决于设备。</p><span id="full-status" role="status" aria-live="polite"></span></div><section id="full-lyrics" class="full-lyrics" aria-label="滚动歌词" aria-live="off" tabindex="0"><p class="lyrics-placeholder">正在载入歌词…</p></section></section></div>
-<div class="full-transport"><div class="full-timeline"><span id="full-elapsed">0:00</span><input id="full-seek" type="range" min="0" max="100" step="0.1" value="0" aria-label="全屏播放进度" disabled><span id="full-duration">0:00</span></div>
-<div class="full-controls"><button id="full-prev" class="icon" aria-label="全屏上一首">◀Ⅰ</button><button id="full-play" class="play" aria-label="全屏播放">▶</button><button id="full-next" class="icon" aria-label="全屏下一首">Ⅰ▶</button><button id="full-repeat" class="icon mode-button" aria-label="播放模式：列表循环" aria-pressed="false" title="播放模式：列表循环">↻</button><button id="full-like" class="icon" aria-label="喜欢全屏歌曲" aria-pressed="false">♡</button><button id="full-queue-toggle" class="icon" aria-label="打开播放列表" aria-expanded="false" aria-controls="full-queue">☷</button></div></div><button type="button" id="full-queue-backdrop" class="music-queue-backdrop" aria-label="关闭播放列表" hidden></button><section id="full-queue" class="full-queue" aria-label="播放列表" hidden><div class="queue-head"><h2>播放列表</h2><button id="full-queue-close" class="icon" aria-label="关闭播放列表">×</button></div><div id="full-queue-list"></div></section></div>
-<dialog id="sleep-dialog" aria-labelledby="sleep-title"><div class="queue-head"><h2 id="sleep-title">定时关闭</h2><button id="close-sleep-timer" class="icon" type="button" aria-label="关闭定时设置"></button></div><p class="sleep-description">到时暂停播放，保留当前进度。</p><p id="sleep-current"></p><div class="sleep-presets"><button class="secondary" type="button" data-sleep-minutes="30">30分钟</button><button class="secondary" type="button" data-sleep-minutes="60">1小时</button><button class="secondary" type="button" data-sleep-minutes="120">2小时</button><button class="secondary" type="button" data-sleep-minutes="180">3小时</button></div><form id="sleep-custom-form"><label for="sleep-minutes">自定义时间（分钟）</label><div class="sleep-custom"><input id="sleep-minutes" type="number" inputmode="numeric" min="1" max="1440" step="1" placeholder="输入分钟数" required><button class="primary" type="submit">开启定时</button></div></form><button id="cancel-sleep-timer" class="secondary" type="button">取消定时</button></dialog>
+<dialog id="full-player" aria-labelledby="full-page-title">
+  <div class="full-shell" data-mobile-view="cover">
+    <header class="full-header">
+      <button id="close-full" class="icon" type="button" aria-label="退出全屏播放">⌄</button>
+      <h2 id="full-page-title">正在播放</h2>
+      <button type="button" id="full-more" class="icon" aria-label="更多播放选项" title="更多播放选项" aria-haspopup="menu" aria-expanded="false" aria-controls="full-more-menu"></button>
+    </header>
+    <div class="full-view-bar">
+      <div class="full-tabs" role="tablist" aria-label="全屏播放页面">
+        <button type="button" id="full-cover-tab" class="full-tab is-active" role="tab" aria-selected="true" aria-controls="full-content">封面</button>
+        <button type="button" id="full-lyrics-tab" class="full-tab" role="tab" aria-selected="false" aria-controls="full-content">歌词</button>
+      </div>
+    </div>
+    <div id="full-content" class="full-content">
+      <img id="full-cover" src="./placeholder.svg" alt="当前专辑封面">
+      <section id="full-lyrics" class="full-lyrics" aria-label="滚动歌词" aria-live="off" tabindex="0"><p class="lyrics-placeholder">正在载入歌词…</p></section>
+    </div>
+    <div class="full-transport">
+      <div class="full-info" aria-label="当前曲目">
+        <div class="full-meta"><h2 id="full-title"></h2><p id="full-artist"></p><button id="full-album" type="button"></button></div>
+        <button id="full-like-mobile" class="icon" type="button" aria-label="Apple Music收藏" aria-pressed="false">♡</button>
+      </div>
+      <div class="full-timeline">
+        <input id="full-seek" type="range" min="0" max="100" step="0.1" value="0" aria-label="播放进度" disabled>
+        <span id="full-elapsed">0:00</span><span id="full-duration">0:00</span>
+      </div>
+      <div class="full-controls">
+        <button id="full-repeat" class="icon mode-button" type="button" aria-label="播放模式：列表循环" aria-pressed="false" title="播放模式：列表循环">↻</button>
+        <button id="full-prev" class="icon" type="button" aria-label="上一首">◀Ⅰ</button>
+        <button id="full-play" class="play" type="button" aria-label="播放">▶</button>
+        <button id="full-next" class="icon" type="button" aria-label="下一首">Ⅰ▶</button>
+        <button id="full-queue-toggle" class="icon" type="button" aria-label="播放队列" aria-expanded="false" aria-controls="full-queue">☷</button>
+      </div>
+      <div class="full-loading-space"><span id="full-status" role="status" hidden>正在缓冲</span></div>
+    </div>
+  </div>
+  <div id="full-more-menu" class="track-more-menu full-more-menu" role="menu" aria-label="更多播放选项" hidden>
+    <button id="full-audio-details" type="button" role="menuitem">歌曲详情</button>
+    <button id="full-share-action" type="button" role="menuitem">分享</button>
+    <button id="full-download-action" type="button" role="menuitem">下载</button>
+    <button id="open-sleep-timer" type="button" role="menuitem">定时关闭</button>
+    <button id="full-menu-album" type="button" role="menuitem">查看专辑</button>
+    <div id="full-menu-artists" role="group" aria-label="歌手"></div>
+    <button type="button" id="full-clear-insertions" role="menuitem" hidden>清空待插队</button>
+  </div>
+  <span id="full-share-status" class="full-share-status" role="status" hidden></span>
+  <button type="button" id="full-queue-backdrop" class="music-queue-backdrop" aria-label="关闭播放队列" hidden></button>
+  <section id="full-queue" class="full-queue music-queue" role="dialog" aria-modal="true" aria-labelledby="full-queue-title" hidden>
+    <button type="button" class="queue-detent" aria-label="展开播放队列"></button>
+    <div class="queue-head"><button type="button" class="icon queue-clear" aria-label="清空待插队" hidden></button><h2 id="full-queue-title">播放队列</h2><button id="full-queue-close" class="queue-done" type="button">完成</button></div>
+    <div id="full-queue-list"></div>
+  </section>
+  <dialog id="audio-info-dialog" aria-labelledby="audio-info-title">
+    <div class="queue-head"><h2 id="audio-info-title">音频信息</h2><button id="close-audio-info" type="button" class="queue-done">完成</button></div>
+    <dl id="audio-details"></dl><p class="audio-note">参数描述音源文件，蓝牙传输规格取决于设备。</p>
+  </dialog>
+  <dialog id="sleep-dialog" aria-labelledby="sleep-title">
+    <div class="queue-head"><h2 id="sleep-title">定时关闭</h2><button id="close-sleep-timer" class="queue-done" type="button">完成</button></div>
+    <section id="sleep-active" class="sleep-section" hidden>
+      <h3>进行中</h3>
+      <div class="sleep-remaining"><span>剩余时间</span><span id="sleep-current"></span></div>
+      <button id="cancel-sleep-timer" type="button">取消定时</button>
+    </section>
+    <section class="sleep-section">
+      <h3>定时暂停</h3>
+      <div class="sleep-presets"><button type="button" data-sleep-minutes="30">30分钟</button><button type="button" data-sleep-minutes="60">1小时</button><button type="button" data-sleep-minutes="120">2小时</button><button type="button" data-sleep-minutes="180">3小时</button></div>
+      <p class="sleep-description">到时暂停播放，保留当前进度。</p>
+    </section>
+    <form id="sleep-custom-form" class="sleep-section" novalidate>
+      <h3><label for="sleep-minutes">自定义</label></h3>
+      <div class="sleep-custom">
+        <input id="sleep-minutes" type="number" inputmode="numeric" min="1" max="1440" step="1" placeholder="1–1440分钟" aria-describedby="sleep-error" required>
+        <button type="submit" class="sleep-start primary">开启定时</button>
+      </div>
+      <p id="sleep-error" role="status" hidden>请输入1–1440之间的整数分钟。</p>
+    </form>
+  </dialog>
 </dialog>
 
 <div id="queue-undo" class="queue-undo" role="status" hidden><span id="queue-undo-text"></span><button type="button" id="undo-queue-change">撤销</button></div>

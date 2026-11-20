@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.ByteArrayInputStream
@@ -38,13 +39,12 @@ internal object MusicArtwork {
     private const val BITMAP_EDGE = 320
     private val cacheLock = Any()
     private val commitLock = Any()
+    private val sourceLocks = Array(32) { Any() }
     private val cacheGeneration = AtomicLong(0)
     private var clearedGeneration = 0L // Protected by cacheLock.
     private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     @Volatile private var legacyCoverPaths: Map<String, Source>? = null
-    // All native consumers share one sampled bitmap per original file and revision.
-    // Loading stays serialized with disk writes, so concurrent requests also share
-    // the first fetch/decode instead of storing a copy for each song or surface.
+    // The mini-player, notifications and widgets share one sampled bitmap per cover.
     private val bitmaps = object : LruCache<String, Bitmap>(MAX_BITMAP_BYTES) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.allocationByteCount
     }
@@ -59,6 +59,9 @@ internal object MusicArtwork {
         val source = original?.copy(revision = request.revision ?: original.revision) ?: request
         return "${cacheGeneration.get()}:${source.cachePath}"
     }
+
+    fun peek(cacheKey: String?): Bitmap? =
+        cacheKey?.let(bitmaps::get)?.takeUnless { it.isRecycled }
 
     private fun parseSource(url: String): Source? {
         if (url.length > 4096 || runCatching { URI(url) }.isFailure) return null
@@ -86,94 +89,116 @@ internal object MusicArtwork {
         return relative
     }
 
-    /** WebView, notifications and widgets share the same original file and fetch lock. */
-    fun openResponse(context: Context, url: String): WebResourceResponse? {
+    /** GET acquires an original, while HEAD looks up that same file without a network request. */
+    fun openResponse(context: Context, url: String, method: String): WebResourceResponse? {
         val request = parseSource(url) ?: return null
         if (Looper.myLooper() == Looper.getMainLooper()) return null
         val headers = mapOf("Access-Control-Allow-Origin" to MusicAssets.ORIGIN,
-            "Cache-Control" to "no-cache", "X-Content-Type-Options" to "nosniff")
-        val generation = cacheGeneration.get()
-        val response = synchronized(cacheLock) {
-            // decode also validates the downloaded image before committing its original.
-            if (decode(context, url) == null || generation != cacheGeneration.get()) return@synchronized null
-            val original = if (request.legacy) legacyCoverPaths?.get(request.relative) else null
-            val source = original?.copy(revision = request.revision ?: original.revision) ?: request
-            val directory = File(context.applicationContext.filesDir, "music-artwork").canonicalFile
-            val cached = File(directory, source.cachePath).canonicalFile
-            if (!cached.path.startsWith(directory.path + File.separator) || !cached.isFile) return@synchronized null
-            runCatching {
-                val mime = when (source.relative.substringAfterLast('.').lowercase()) {
-                    "png" -> "image/png"
-                    "webp" -> "image/webp"
-                    else -> "image/jpeg"
-                }
-                WebResourceResponse(mime, null, 200, "OK",
-                    headers + ("Content-Length" to cached.length().toString()), cached.inputStream())
-            }.onFailure { Log.w("原生封面读取失败", it) }.getOrNull()
+            "Access-Control-Expose-Headers" to "X-RoyTools-Cover-Cache",
+            "Cache-Control" to "no-store", "X-Content-Type-Options" to "nosniff")
+        val head = method == "HEAD"
+        val response = withOriginal(context, request, !head) { source, cached, _ ->
+            val mime = when (source.relative.substringAfterLast('.').lowercase()) {
+                "png" -> "image/png"
+                "webp" -> "image/webp"
+                else -> "image/jpeg"
+            }
+            WebResourceResponse(mime, null, 200, "OK", headers + mapOf(
+                "Content-Length" to cached.length().toString(), "X-RoyTools-Cover-Cache" to "1"
+            ), if (head) ByteArrayInputStream(ByteArray(0)) else cached.inputStream())
         }
         // Do not fall through to a second network request when the shared fetch fails.
-        return response ?: WebResourceResponse("text/plain", "UTF-8", 502, "Artwork unavailable",
-            headers, ByteArrayInputStream(ByteArray(0)))
+        return response ?: WebResourceResponse("text/plain", "UTF-8", if (head) 404 else 502,
+            if (head) "Not Found" else "Artwork unavailable", headers, ByteArrayInputStream(ByteArray(0)))
     }
 
     fun decode(context: Context, url: String): Bitmap? {
         if (Looper.myLooper() == Looper.getMainLooper()) return null
         val request = parseSource(url) ?: return null
+        return withOriginal(context, request, true) { source, cached, generation ->
+            val bitmapKey = "$generation:${source.cachePath}"
+            bitmaps.get(bitmapKey)?.takeUnless { it.isRecycled } ?: decodeFile(cached, BITMAP_EDGE)?.also {
+                if (generation == cacheGeneration.get()) bitmaps.put(bitmapKey, it)
+            }?.takeIf { generation == cacheGeneration.get() }
+        }
+    }
+
+    private inline fun <T> withOriginal(context: Context, request: Source, allowFetch: Boolean,
+                                        use: (Source, File, Long) -> T?): T? {
+        val app = context.applicationContext
         val generation = cacheGeneration.get()
-        return synchronized(cacheLock) {
-            if (generation != cacheGeneration.get()) return@synchronized null
+        val source = if (!request.legacy) request else synchronized(cacheLock) {
+            val original = originalCoverPaths(app)[request.relative] ?: return null
+            original.copy(revision = request.revision ?: original.revision)
+        }
+        val stripe = sourceLocks[(source.relative.hashCode() and Int.MAX_VALUE) % sourceLocks.size]
+        return synchronized(stripe) {
             runCatching {
-                clearInvalidatedCache(context.applicationContext, generation)
-                val source = if (!request.legacy) request else {
-                    val original = originalCoverPaths(context)[request.relative] ?: return@runCatching null
-                    original.copy(revision = request.revision ?: original.revision)
+                synchronized(cacheLock) {
+                    if (generation != cacheGeneration.get()) return@runCatching null
+                    clearInvalidatedCache(app, generation)
                 }
                 val relative = source.cachePath
-                val bitmapKey = "$generation:$relative"
-                val directory = File(context.applicationContext.filesDir, "music-artwork").canonicalFile
+                val directory = File(app.filesDir, "music-artwork").canonicalFile
                 val cached = File(directory, relative).canonicalFile
                 if (!cached.path.startsWith(directory.path + File.separator)) return@runCatching null
                 // Reuse originals downloaded by earlier versions instead of fetching again.
                 if (!cached.isFile) {
-                    val legacyRoot = File(context.applicationContext.cacheDir, "music-artwork").canonicalFile
+                    val legacyRoot = File(app.cacheDir, "music-artwork").canonicalFile
                     val legacy = File(legacyRoot, relative).canonicalFile
                     if (legacy.path.startsWith(legacyRoot.path + File.separator) && legacy.isFile) {
-                        cached.parentFile?.mkdirs()
-                        if (!legacy.renameTo(cached)) runCatching { legacy.copyTo(cached, overwrite = false) }
+                        synchronized(commitLock) {
+                            if (generation != cacheGeneration.get()) return@runCatching null
+                            cached.parentFile?.mkdirs()
+                            if (!legacy.renameTo(cached)) runCatching {
+                                legacy.copyTo(cached, overwrite = false)
+                                legacy.delete()
+                            }
+                        }
                     }
                 }
-                if (cached.isFile) {
-                    if (cached.length() !in 1L..MAX_BYTES) return@runCatching null
-                    bitmaps.get(bitmapKey)?.takeUnless { it.isRecycled }?.let { return@runCatching it }
-                    decodeFile(cached, BITMAP_EDGE)?.let { bitmap ->
-                        if (generation != cacheGeneration.get()) return@runCatching null
-                        cached.setLastModified(System.currentTimeMillis())
-                        bitmaps.put(bitmapKey, bitmap)
-                        return@runCatching bitmap
+                if (!cached.isFile) {
+                    if (!allowFetch) return@runCatching null
+                    val parent = cached.parentFile ?: return@runCatching null
+                    if (!parent.isDirectory && !parent.mkdirs() && !parent.isDirectory) return@runCatching null
+                    val temporary = File.createTempFile("cover-", ".part", parent)
+                    try {
+                        if (!download(source.relative, source.revision, temporary, generation)) return@runCatching null
+                        // Validate once before storing. WebView can decode from the original directly.
+                        if (decodeFile(temporary, 64) == null) return@runCatching null
+                        val stored = synchronized(commitLock) {
+                            generation == cacheGeneration.get() && temporary.renameTo(cached)
+                        }
+                        if (!stored) return@runCatching null
+                    } finally {
+                        temporary.delete()
                     }
-                    // A decode failure (including memory pressure) must not discard the original.
-                    return@runCatching null
                 }
-                // Old saved notifications contain the website's derived JPG URL. Resolve
-                // those covers through the bundled track metadata, then fetch the original.
-                val parent = cached.parentFile ?: return@runCatching null
-                if (!parent.isDirectory && !parent.mkdirs()) return@runCatching null
-                val temporary = File.createTempFile("cover-", ".part", parent)
-                try {
-                    if (!download(source.relative, source.revision, temporary, generation)) return@runCatching null
-                    val bitmap = decodeFile(temporary, BITMAP_EDGE) ?: return@runCatching null
-                    val stored = synchronized(commitLock) {
-                        if (generation != cacheGeneration.get()) return@runCatching null
-                        temporary.renameTo(cached)
-                    }
-                    if (!stored) return@runCatching null
-                    bitmaps.put(bitmapKey, bitmap)
-                    bitmap
-                } finally {
-                    temporary.delete()
-                }
-            }.onFailure { Log.w("原生封面下载或解码失败", it) }.getOrNull()
+                if (generation != cacheGeneration.get() || cached.length() !in 1L..MAX_BYTES) return@runCatching null
+                use(source, cached, generation)
+            }.onFailure { Log.w("原生封面读写失败", it) }.getOrNull()
         }
+    }
+
+    internal fun cacheEntries(context: Context): String = synchronized(cacheLock) {
+        val app = context.applicationContext
+        clearInvalidatedCache(app, cacheGeneration.get())
+        val directory = File(app.filesDir, "music-artwork")
+        val entries = JSONArray()
+        if (directory.isDirectory) Files.walk(directory.toPath()).use { tree ->
+            tree.filter { Files.isRegularFile(it, java.nio.file.LinkOption.NOFOLLOW_LINKS) }.forEach { path ->
+                val file = path.toFile()
+                val size = file.length()
+                if (size !in 1L..MAX_BYTES) return@forEach
+                val key = file.relativeTo(directory).invariantSeparatorsPath
+                val match = Regex("^(.+\\.(?:jpe?g|png|webp))(?:\\.rev-([A-Za-z0-9._-]{1,128}))?$",
+                    RegexOption.IGNORE_CASE).matchEntire(key) ?: return@forEach
+                val relative = validRelativePath(match.groupValues[1]) ?: return@forEach
+                val revision = match.groupValues[2].ifBlank { null }
+                entries.put(JSONArray().put(relative).put(revision).put(size))
+            }
+        }
+        entries.toString()
     }
 
     /** Called only by the artwork IO worker while holding cacheLock. */

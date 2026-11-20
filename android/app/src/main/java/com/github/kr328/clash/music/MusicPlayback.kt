@@ -172,11 +172,16 @@ object MusicPlayback {
             JSONObject(context.getSharedPreferences("roytools_music_native", Context.MODE_PRIVATE)
                 .getString("last_track", "{}") ?: "{}")
         }.getOrNull() ?: return State()
+        val title = saved.optString("title").take(500)
+        val artist = saved.optString("artist").take(500)
+        val hasTrack = title.isNotBlank() || artist.isNotBlank()
         // A process restart never auto-plays. The page restores its own queue/cache.
+        // Older snapshots only saved the track. The page supplies a queue when it restores one.
         return State(
-            title = saved.optString("title").take(500), artist = saved.optString("artist").take(500),
+            title = title, artist = artist,
             album = saved.optString("album").take(500), artwork = saved.optString("artwork").take(2048),
-            position = saved.optDouble("position", 0.0), duration = saved.optDouble("duration", 0.0)
+            position = saved.optDouble("position", 0.0), duration = saved.optDouble("duration", 0.0),
+            canPrevious = saved.optBoolean("canPrevious", hasTrack), canNext = saved.optBoolean("canNext", hasTrack)
         )
     }
 
@@ -191,7 +196,8 @@ object MusicPlayback {
             lastWidgetIdentity = widgetIdentity
             WidgetMusicState.notifyChanged(context)
         }
-        val identity = "${current.playing}\n${current.title}\n${current.artist}\n${current.album}\n${current.artwork}"
+        val identity = "${current.playing}\n${current.title}\n${current.artist}\n${current.album}\n${current.artwork}\n" +
+            "${current.canPrevious}\n${current.canNext}"
         val now = SystemClock.elapsedRealtime()
         if (!force && identity == lastSavedIdentity && now - lastSavedAt < 15_000L) return
         lastSavedAt = now
@@ -199,6 +205,7 @@ object MusicPlayback {
         val json = JSONObject().put("title", current.title).put("artist", current.artist)
             .put("album", current.album).put("artwork", current.artwork)
             .put("position", current.position).put("duration", current.duration)
+            .put("canPrevious", current.canPrevious).put("canNext", current.canNext)
         // Initial page hydration reports no track before the catalog restores its queue.
         if (current.title.isNotBlank() || current.artist.isNotBlank()) {
             context.getSharedPreferences("roytools_music_native", Context.MODE_PRIVATE)

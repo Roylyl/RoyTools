@@ -95,8 +95,14 @@ func RTCoreReadPacket(buffer *C.uint8_t, capacity C.int32_t, timeoutMS C.int32_t
 	if out == nil {
 		return -2
 	}
-	wait := time.Duration(max(0, min(1000, int(timeoutMS)))) * time.Millisecond
-	n, err := device.readPacket(out, wait)
+	var n int
+	var err error
+	if timeoutMS < 0 {
+		n, err = device.Read(out)
+	} else {
+		wait := time.Duration(min(1000, int(timeoutMS))) * time.Millisecond
+		n, err = device.readPacket(out, wait)
+	}
 	if err == nil {
 		return C.int32_t(n)
 	}
@@ -121,6 +127,18 @@ func RTCoreDownloaded() C.int64_t {
 	return C.int64_t(download)
 }
 
+//export RTCoreSetTrafficNetwork
+func RTCoreSetTrafficNetwork(network C.int32_t) {
+	statistic.DefaultManager.SetTrafficNetwork(int32(network))
+}
+
+//export RTCoreProxyUsage
+func RTCoreProxyUsage(wifi, cellular *C.int64_t) {
+	wifiBytes, cellularBytes := statistic.ProxyPayloadTransportTotal()
+	*wifi = C.int64_t(wifiBytes)
+	*cellular = C.int64_t(cellularBytes)
+}
+
 //export RTCoreLastError
 func RTCoreLastError(buffer *C.char, capacity C.int32_t) C.int32_t {
 	lastError.Lock()
@@ -143,4 +161,13 @@ func RTCoreState(buffer *C.char, capacity C.int32_t) C.int32_t {
 		dest[count] = 0
 	}
 	return C.int32_t(len(data))
+}
+
+//export RTCoreTestProxyLatencies
+func RTCoreTestProxyLatencies(request *C.uint8_t, size C.int32_t, output *C.int32_t, count C.int32_t) C.int32_t {
+	if output == nil || count < 1 || count > latencyBatchSize {
+		return -1
+	}
+	results := unsafe.Slice((*int32)(unsafe.Pointer(output)), int(count))
+	return C.int32_t(measureProxyLatencies(bytesAt(request, size, 64<<10), results))
 }

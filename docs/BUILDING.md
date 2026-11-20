@@ -1,6 +1,6 @@
 # 构建RoyTools
 
-Android工程位于`android/`，iOS工程位于`ios/`。应用版本均为2.2.0。规则更新文件保留在仓库根目录，规则版本独立发布。
+Android工程位于`android/`，iOS工程位于`ios/`。应用版本均为2.3.0。规则更新文件保留在仓库根目录，规则版本独立发布。
 
 Android为arm64-v8a安装包，运行环境为Android12及以上。构建需要JDK21和Android SDK35。普通APK构建直接使用仓库附带的`libclash.so`与`libbridge.so`。
 
@@ -9,10 +9,10 @@ Android为arm64-v8a安装包，运行环境为Android12及以上。构建需要J
 安装JDK21与Android SDK35，将`JAVA_HOME`指向JDK目录、`ANDROID_HOME`指向SDK目录。也可向构建脚本传入`-JavaHome`和`-AndroidSdk`。脚本可在Android Studio和Gradle常见安装目录中查找JDK21，不依赖项目原作者的用户名或桌面路径。
 
 ```powershell
-.\构建.ps1 -Version 2.2.0 -BuildType Debug
+.\构建.ps1 -Version 2.3.0 -BuildType Debug
 ```
 
-输出为工程目录下的`RoyTools-2.2.0.apk`。传入`-OutputDirectory`可改变导出目录。构建脚本不会自动安装或操作手机。
+工程目录下，Debug导出为`RoyTools-2.3.0-debug.apk`，Release导出为`RoyTools-2.3.0.apk`。传入`-OutputDirectory`可改变导出目录。构建脚本不会自动安装或操作手机。
 
 `app:downloadGeoFiles`在首次构建时下载Geo数据库至`app/build/generated/geoAssets`；后续构建复用已有文件。`clean`只清理生成文件，不会删除`app/src/main/assets/music`中的音乐页面和资源。
 
@@ -20,7 +20,7 @@ Android为arm64-v8a安装包，运行环境为Android12及以上。构建需要J
 
 ```powershell
 $env:ROYTOOLS_GEO_DIR = 'D:\BuildInputs\RoyToolsGeo'
-.\构建.ps1 -Version 2.2.0 -BuildType Release
+.\构建.ps1 -Version 2.3.0 -BuildType Release
 ```
 
 这个目录是只读构建输入，Gradle会将文件复制到生成目录。迁移工程后，不要只把缓存放进`build/generated`：Gradle可能在首次执行任务前清除旧输出。不要将`ROYTOOLS_GEO_DIR`设为当前工程的`app/build/generated/geoAssets`；仓库外输入不会被本工程`clean`删除。未配置本地输入时仍使用默认网络下载。
@@ -41,7 +41,7 @@ $env:ROYTOOLS_GEO_DIR = 'D:\BuildInputs\RoyToolsGeo'
 也可复制`android/signing.properties.example`为本机`android/signing.properties`，填写`keystore.file`、`keystore.password`、`key.alias`、`key.password`。环境变量优先于同名配置文件。`keystore.file`支持仓库外的绝对路径。配置文件和密钥均不得提交。
 
 ```powershell
-.\构建.ps1 -Version 2.2.0 -BuildType Release
+.\构建.ps1 -Version 2.3.0 -BuildType Release
 ```
 
 脚本要求配置签名才导出Release。直接运行`gradlew :app:assembleMetaRelease`且未配置签名时会生成unsigned包，不会悄悄回退为Debug签名。Debug构建使用本机Android调试密钥；CI手动验证构建也仅使用临时Debug签名，不能用于替换另一个签名的现有安装。
@@ -59,8 +59,8 @@ if runtime.GOOS == "android" {
 ```
 
 ```powershell
-.\android\scripts\build-native.ps1 -GoRoot 'D:\Toolchains\go' -AndroidSdk $env:ANDROID_HOME -Api 24 -Version 2.2.0 -BuildDate 20261104
-.\构建.ps1 -Version 2.2.0 -BuildType Release
+.\android\scripts\build-native.ps1 -GoRoot 'D:\Toolchains\go' -AndroidSdk $env:ANDROID_HOME -Api 24 -Version 2.3.0 -BuildDate 20261104
+.\构建.ps1 -Version 2.3.0 -BuildType Release
 ```
 
 脚本从`core/src/foss/golang`模块编译`cfa/native`，通过本地replace引用仓库中的Mihomo修改源码，再构建JNI桥。`-BuildDate`固定版本标记中的日期；生成物先写入`core/build/native/meta/arm64-v8a`，两库均成功才更新`core/src/main/jniLibs/arm64-v8a`，替换失败会回滚。脚本使用`-trimpath`、关闭VCS自动嵌入、移除调试符号并映射本机源码路径，避免将个人绝对路径写入二进制；不要求文件哈希一致。
@@ -73,4 +73,4 @@ if runtime.GOOS == "android" {
 
 ## iOS构建
 
-使用macOS与Xcode26或更新版本。应用支持iOS17及以上，iOS26上使用原生Liquid Glass标签栏和控件。构建入口、实时活动和代理接入状态见[iOS工程说明](../ios/README.md)。
+使用macOS与Xcode26或更新版本。应用支持iOS17及以上，iOS26上使用原生Liquid Glass标签栏和控件。构建入口和代理配置见[iOS工程说明](../ios/README.md)。

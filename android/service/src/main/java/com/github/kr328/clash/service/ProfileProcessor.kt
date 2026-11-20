@@ -166,6 +166,8 @@ object ProfileProcessor {
             profileLock.withLock {
                 ImportedDao().remove(uuid)
                 PendingDao().remove(uuid)
+                val store = ServiceStore(context)
+                if (store.activeProfile == uuid) store.activeProfile = null
 
                 val pending = context.pendingDir.resolve(uuid.toString())
                 val imported = context.importedDir.resolve(uuid.toString())

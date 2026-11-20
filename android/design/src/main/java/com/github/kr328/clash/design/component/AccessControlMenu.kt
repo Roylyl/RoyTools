@@ -1,6 +1,7 @@
 package com.github.kr328.clash.design.component
 
 import android.content.Context
+import android.view.Gravity
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.widget.PopupMenu
@@ -11,15 +12,15 @@ import com.github.kr328.clash.design.store.UiStore
 import kotlinx.coroutines.channels.Channel
 
 class AccessControlMenu(
-    private val context: Context,
+    context: Context,
     menuView: View,
     private val uiStore: UiStore,
     private val requests: Channel<Request>,
 ) : PopupMenu.OnMenuItemClickListener {
-    private val menu = PopupMenu(context, menuView)
+    private val menu = PopupMenu(context, menuView, Gravity.END, 0, R.style.RoyTools_AnchoredMenu)
 
     fun show() {
-        com.github.kr328.clash.design.dialog.showRoyToolsMenu(context, menu.menu, ::onMenuItemClick)
+        menu.show()
     }
 
     override fun onMenuItemClick(item: MenuItem): Boolean {

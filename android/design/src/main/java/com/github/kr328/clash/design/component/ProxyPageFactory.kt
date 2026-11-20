@@ -34,13 +34,10 @@ class ProxyPageFactory(private val config: ProxyViewConfig) {
         recyclerView.apply {
             layoutManager = GridLayoutManager(config.context, 6).apply {
                 spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
-                    override fun getSpanSize(position: Int): Int {
-                        var grids:Int = 0
-                        when(config.proxyLine){
-                            2 -> grids = 3
-                            3 -> grids = 2
-                        }
-                        return if (config.proxyLine==1) 6 else grids
+                    override fun getSpanSize(position: Int): Int = when (config.proxyLine) {
+                        1 -> 6
+                        3 -> 2
+                        else -> 3
                     }
                 }
             }

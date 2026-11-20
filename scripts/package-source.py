@@ -4,11 +4,12 @@ from pathlib import Path
 import argparse
 import re
 import subprocess
+import tempfile
 import zipfile
 
 root = Path(__file__).resolve().parent.parent
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--version', default='2.2.0', help='major.minor.patch')
+parser.add_argument('--version', default='2.3.0', help='major.minor.patch')
 arguments = parser.parse_args()
 if not re.fullmatch(r'\d+\.\d+\.\d+', arguments.version):
     parser.error('--version must be major.minor.patch')
@@ -38,7 +39,9 @@ for entry in candidates:
             raise SystemExit('Source file escaped project root.')
         files.append(path)
 required = ['README.md', 'LICENSE', 'NOTICE', 'THIRD_PARTY.md', 'CHANGELOG.md',
-            'android/core/src/foss/golang/clash/LICENSE', 'android/gradle/wrapper/gradle-wrapper.jar']
+            'android/core/src/foss/golang/clash/LICENSE', 'android/gradle/wrapper/gradle-wrapper.jar',
+            'android/core/src/main/jniLibs/arm64-v8a/libbridge.so',
+            'android/core/src/main/jniLibs/arm64-v8a/libclash.so']
 for name in required:
     if root / name not in files:
         raise SystemExit(f'Required source/notice missing or ignored: {name}')
@@ -46,8 +49,11 @@ version = arguments.version
 dist = root / 'dist'
 dist.mkdir(exist_ok=True)
 archive = dist / f'RoyTools-{version}-source.zip'
-with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as output:
-    for path in files:
-        output.write(path, 'RoyTools/' + path.relative_to(root).as_posix())
+with tempfile.TemporaryDirectory(prefix='.roytools-source-', dir=dist) as staging:
+    pending = Path(staging) / archive.name
+    with zipfile.ZipFile(pending, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as output:
+        for path in files:
+            output.write(path, 'RoyTools/' + path.relative_to(root).as_posix())
+    pending.replace(archive)
 print(f'Exported {len(files)} source files to {archive}')
 print('External dependency source and Geo licensing require separate distribution review.')

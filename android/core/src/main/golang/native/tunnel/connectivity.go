@@ -1,7 +1,9 @@
 package tunnel
 
 import (
+	"context"
 	"sync"
+	"time"
 
 	"github.com/metacubex/mihomo/adapter/outboundgroup"
 	"github.com/metacubex/mihomo/constant/provider"
@@ -20,8 +22,9 @@ func HealthCheck(name string) {
 
 	g, ok := p.Adapter().(outboundgroup.ProxyGroup)
 	if !ok {
-		log.Warnln("Request health check for `%s`: invalid type %s", name, p.Type().String())
-
+		ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+		defer cancel()
+		_, _ = p.URLTest(ctx, proxyLatencyTestURL(p), nil)
 		return
 	}
 

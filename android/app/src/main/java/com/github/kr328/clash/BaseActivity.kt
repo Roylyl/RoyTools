@@ -2,6 +2,7 @@ package com.github.kr328.clash
 
 import android.content.res.Configuration
 import android.content.Intent
+import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
@@ -79,6 +80,10 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
     }
 
     protected abstract suspend fun main()
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(newBase.withConfiguredAppLanguage())
+    }
 
     fun defer(operation: suspend () -> Unit) {
         this.defer = operation

@@ -15,6 +15,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.Locale
 import javax.net.ssl.SSLException
+import com.github.kr328.clash.common.R as CommonR
 
 class WirelessSetupService : Service() {
     private val main = Handler(Looper.getMainLooper())
@@ -332,7 +333,7 @@ class WirelessSetupService : Service() {
             .setSmallIcon(R.drawable.ic_qs_tile_adaptive_hz)
             .setContentTitle(title).setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-            .setColor(android.graphics.Color.rgb(0, 122, 255))
+            .setColor(getColor(CommonR.color.roytools_action_blue))
             .setContentIntent(open).setOnlyAlertOnce(!input && !portInput).setOngoing(!input && !portInput)
             .setPriority(if (input || portInput) NotificationCompat.PRIORITY_MAX else NotificationCompat.PRIORITY_LOW)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -387,7 +388,7 @@ class WirelessSetupService : Service() {
             .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
             .setSmallIcon(R.drawable.ic_qs_tile_adaptive_hz)
             .setContentTitle(title).setContentText(message).setAutoCancel(true)
-            .setColor(android.graphics.Color.rgb(0, 122, 255)).build()
+            .setColor(getColor(CommonR.color.roytools_action_blue)).build()
         getSystemService(NotificationManager::class.java).notify(ID + 1, result)
         NotificationGroups.refresh(this, NotificationGroups.WIRELESS)
         stopSelf()
@@ -442,7 +443,7 @@ class WirelessSetupService : Service() {
             com.github.kr328.clash.common.util.NotificationGroups.refresh(context,com.github.kr328.clash.common.util.NotificationGroups.WIRELESS)
         }
         private const val CHANNEL = "wireless_activation_progress"
-        private const val PAIR_CHANNEL = "wireless_pairing_heads_up"
+        internal const val PAIR_CHANNEL = "wireless_pairing_heads_up"
         private const val LEGACY_PAIR_ID = 2003
         private const val ID = 2001
         const val ACTION_PORT = "wireless_connect_port"

@@ -64,7 +64,7 @@ class ProxyPageAdapter(
         holder.recyclerView.bindInsets(surface, toolbarHeight + tabHeight)
         holder.recyclerView.addScrolledToBottomObserver { view, bottom ->
             val position = view.position
-            val state = states[position]
+            val state = states.getOrNull(position) ?: return@addScrolledToBottomObserver
 
             if (state.bottom != bottom) {
                 state.bottom = bottom

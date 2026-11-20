@@ -1,6 +1,7 @@
 package com.github.kr328.clash.update
 
 import android.app.DownloadManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -14,13 +15,22 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.button.MaterialButton
+import androidx.core.view.WindowCompat
 import com.github.kr328.clash.R
+import com.github.kr328.clash.common.R as CommonR
+import com.github.kr328.clash.design.R as DesignR
+import com.github.kr328.clash.design.util.padForSystemBars
 import com.github.kr328.clash.design.util.resolveThemedColor
+import com.github.kr328.clash.withConfiguredAppLanguage
+import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.*
 import kotlin.math.roundToInt
 
 class UpdateActivity : AppCompatActivity(), CoroutineScope by MainScope() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(newBase.withConfiguredAppLanguage())
+    }
+
     private lateinit var status: TextView
     private lateinit var details: TextView
     private lateinit var progress: ProgressBar
@@ -50,37 +60,36 @@ class UpdateActivity : AppCompatActivity(), CoroutineScope by MainScope() {
             com.github.kr328.clash.design.model.DarkMode.ForceLight -> false
             else -> resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK == android.content.res.Configuration.UI_MODE_NIGHT_YES
         }
-        theme.applyStyle(if (night) com.github.kr328.clash.design.R.style.AppThemeDark
-            else com.github.kr328.clash.design.R.style.AppThemeLight, true)
-        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, true)
-        window.statusBarColor = resolveThemedColor(com.github.kr328.clash.design.R.attr.glassCanvasStart)
+        theme.applyStyle(if (night) DesignR.style.AppThemeDark else DesignR.style.AppThemeLight, true)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = resolveThemedColor(DesignR.attr.glassCanvasStart)
         window.navigationBarColor = window.statusBarColor
-        androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
+        WindowCompat.getInsetsController(window, window.decorView).apply {
             isAppearanceLightStatusBars = !night
             isAppearanceLightNavigationBars = !night
         }
-        if (savedInstanceState == null) overridePendingTransition(com.github.kr328.clash.design.R.anim.roytools_push_in,
-            com.github.kr328.clash.design.R.anim.roytools_push_out)
+        if (savedInstanceState == null) overridePendingTransition(DesignR.anim.roytools_push_in, DesignR.anim.roytools_push_out)
         title = getString(R.string.update_title)
         offeredDownload = savedInstanceState?.getLong("offered_download", -1) ?: -1
-        val spacing = (20 * resources.displayMetrics.density).toInt()
+        val pageMargin = resources.getDimensionPixelSize(CommonR.dimen.roytools_page_margin)
+        val itemSpacing = (10 * resources.displayMetrics.density).roundToInt()
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            val cardPadding = (18 * resources.displayMetrics.density).roundToInt()
+            val cardPadding = resources.getDimensionPixelSize(CommonR.dimen.roytools_card_padding)
             setPadding(cardPadding, cardPadding, cardPadding, cardPadding)
-            setBackgroundResource(com.github.kr328.clash.design.R.drawable.roytools_card)
+            setBackgroundResource(DesignR.drawable.roytools_card)
         }
         fun label(text: CharSequence = "") = TextView(this).apply {
             this.text = text
             textSize = 16f
             setTextColor(resolveThemedColor(com.google.android.material.R.attr.colorOnSurface))
-            setPadding(0, spacing / 2, 0, spacing / 2)
+            setPadding(0, itemSpacing, 0, itemSpacing)
             content.addView(this)
         }
         label(getString(R.string.update_current, com.github.kr328.clash.BuildConfig.VERSION_NAME))
-        val updateOptions = layoutInflater.inflate(com.github.kr328.clash.design.R.layout.roytools_update_options, content, false)
+        val updateOptions = layoutInflater.inflate(DesignR.layout.roytools_update_options, content, false)
         content.addView(updateOptions)
-        updateOptions.findViewById<com.google.android.material.materialswitch.MaterialSwitch>(com.github.kr328.clash.design.R.id.roytools_auto_updates).apply {
+        updateOptions.findViewById<com.google.android.material.materialswitch.MaterialSwitch>(DesignR.id.roytools_auto_updates).apply {
             isChecked = UpdateScheduler.enabled(this@UpdateActivity)
             setOnCheckedChangeListener { _, enabled -> UpdateScheduler.setEnabled(this@UpdateActivity, enabled) }
             updateOptions.setOnClickListener { performClick() }
@@ -118,7 +127,7 @@ class UpdateActivity : AppCompatActivity(), CoroutineScope by MainScope() {
             setOnClickListener { finish() }
         }
         check = MaterialButton(this).apply {
-            setText(com.github.kr328.clash.design.R.string.check_for_updates)
+            setText(DesignR.string.check_for_updates)
             content.addView(this)
             setOnClickListener {
                 monitor?.cancel()
@@ -134,38 +143,27 @@ class UpdateActivity : AppCompatActivity(), CoroutineScope by MainScope() {
                 }
             }
         }
-        label(getString(R.string.update_schedule_help))
+        label(getString(R.string.update_schedule_help)).apply {
+            textSize = 13f
+            setTextColor(resolveThemedColor(DesignR.attr.glassTextSecondary))
+        }
         details = label().apply { setTextIsSelectable(true) }
         val shell = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(resolveThemedColor(com.github.kr328.clash.design.R.attr.glassCanvasStart))
+            setBackgroundColor(resolveThemedColor(DesignR.attr.glassCanvasStart))
         }
-        shell.addView(LinearLayout(this).apply {
-            gravity = android.view.Gravity.CENTER_VERTICAL
-            setPadding(spacing, (14 * resources.displayMetrics.density).roundToInt(),
-                spacing, (8 * resources.displayMetrics.density).roundToInt())
-            addView(android.widget.ImageButton(this@UpdateActivity).apply {
-                setImageResource(com.github.kr328.clash.design.R.drawable.roytools_back)
-                background = null
-                contentDescription = "返回"
-                setOnClickListener { finish() }
-            }, LinearLayout.LayoutParams((44 * resources.displayMetrics.density).roundToInt(),
-                (48 * resources.displayMetrics.density).roundToInt()))
-            addView(TextView(this@UpdateActivity).apply {
-                text = title
-                textSize = 25f
-                setTypeface(null, android.graphics.Typeface.BOLD)
-                setTextColor(resolveThemedColor(com.google.android.material.R.attr.colorOnSurface))
-            })
+        shell.padForSystemBars()
+        shell.addView(layoutInflater.inflate(DesignR.layout.common_activity_bar, shell, false).apply {
+            findViewById<View>(DesignR.id.activity_bar_close_view).setOnClickListener { finish() }
+            findViewById<TextView>(DesignR.id.activity_bar_title_view).text = title
         })
         shell.addView(ScrollView(this).apply {
-            setPadding(spacing * 4 / 5, (8 * resources.displayMetrics.density).roundToInt(),
-                spacing * 4 / 5, spacing * 4 / 5)
+            setPadding(pageMargin, pageMargin / 2, pageMargin, pageMargin)
             clipToPadding = false
             addView(content)
         }, LinearLayout.LayoutParams(-1, 0, 1f))
         listOf(action, cancelDownload, backgroundDownload, check).forEach { button ->
-            button.layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = spacing / 2 }
+            button.layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = itemSpacing }
         }
         setContentView(shell)
         UpdateNotifications.dismiss(this)
@@ -173,8 +171,7 @@ class UpdateActivity : AppCompatActivity(), CoroutineScope by MainScope() {
 
     override fun finish() {
         super.finish()
-        overridePendingTransition(com.github.kr328.clash.design.R.anim.roytools_pop_in,
-            com.github.kr328.clash.design.R.anim.roytools_pop_out)
+        overridePendingTransition(DesignR.anim.roytools_pop_in, DesignR.anim.roytools_pop_out)
     }
 
     override fun onStart() {

@@ -3,11 +3,15 @@ package com.github.kr328.clash.design.dialog
 import android.app.Dialog
 import android.content.Context
 import android.os.Bundle
+import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
+import android.widget.LinearLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.view.ViewCompat
+import androidx.core.widget.NestedScrollView
 import com.github.kr328.clash.common.compat.isAllowForceDarkCompat
 import com.github.kr328.clash.common.compat.isSystemBarsTranslucentCompat
 import com.github.kr328.clash.design.R
@@ -20,7 +24,31 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 
 class AppBottomSheetDialog(context: Context) : BottomSheetDialog(context) {
-    private var insets: Insets = Insets.EMPTY
+    private var insets: Insets? = null
+
+    override fun setContentView(view: View) {
+        val scrollable = (view as? NestedScrollView) ?: NestedScrollView(context).apply {
+            clipToPadding = false
+            overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+            addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
+        super.setContentView(LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            val bar = View(context).apply {
+                setBackgroundResource(R.drawable.roytools_sheet_handle)
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }
+            addView(bar, LinearLayout.LayoutParams(
+                context.getPixels(R.dimen.roytools_sheet_handle_width),
+                context.getPixels(R.dimen.bottom_sheet_header_height),
+            ).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                topMargin = context.getPixels(R.dimen.bottom_sheet_background_padding_top)
+                bottomMargin = topMargin
+            })
+            addView(scrollable, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        })
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,6 +59,7 @@ class AppBottomSheetDialog(context: Context) : BottomSheetDialog(context) {
             com.github.kr328.clash.common.ui.TouchFeedback.install(this)
             isSystemBarsTranslucentCompat = true
             isAllowForceDarkCompat = false
+            setDimAmount(0.32f)
         }
 
         findViewById<ViewGroup>(com.google.android.material.R.id.container)?.apply {
@@ -44,27 +73,18 @@ class AppBottomSheetDialog(context: Context) : BottomSheetDialog(context) {
 
                     (layoutParams as CoordinatorLayout.LayoutParams).also { params ->
                         if (ViewCompat.getLayoutDirection(this) == ViewCompat.LAYOUT_DIRECTION_LTR) {
-                            params.setMargins(it.start, 0, it.end, 0)
+                            params.setMargins(it.start, it.top, it.end, 0)
                         } else {
-                            params.setMargins(it.end, 0, it.start, 0)
+                            params.setMargins(it.end, it.top, it.start, 0)
                         }
 
-                        val top = context.getPixels(R.dimen.bottom_sheet_background_padding_top)
-                        val height = context.getPixels(R.dimen.bottom_sheet_header_height)
-
-                        setPaddingRelative(
-                            0,
-                            top * 2 + height,
-                            0,
-                            it.bottom
-                        )
+                        setPaddingRelative(0, 0, 0, it.bottom)
                     }
                 }
             }
         }
 
         setOnShowListener {
-            behavior.halfExpandedRatio = 0.99f
             behavior.state = BottomSheetBehavior.STATE_EXPANDED
         }
     }

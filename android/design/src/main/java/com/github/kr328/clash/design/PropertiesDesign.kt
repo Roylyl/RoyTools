@@ -21,6 +21,7 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
     sealed class Request {
         object Commit : Request()
         object BrowseFiles : Request()
+        object ReplaceFile : Request()
     }
 
     private val binding = DesignPropertiesBinding
@@ -38,6 +39,16 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
     val progressing: Boolean
         get() = binding.processing
 
+    var compactEditor: Boolean
+        get() = binding.compactEditor
+        set(value) {
+            binding.compactEditor = value
+        }
+
+    fun showReplacementFile(name: String?) {
+        binding.replacementName = name
+    }
+
     suspend fun withProcessing(executeTask: suspend (suspend (FetchStatus) -> Unit) -> Unit) {
         try {
             binding.processing = true
@@ -45,7 +56,9 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
             context.withModelProgressBar {
                 configure {
                     isIndeterminate = true
-                    text = context.getString(R.string.initializing)
+                    text = context.getString(
+                        if (compactEditor) R.string.proxy_profiles_processing else R.string.initializing
+                    )
                 }
 
                 executeTask {
@@ -109,7 +122,7 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
         launch {
             val url = context.requestModelTextInput(
                 initial = profile.source,
-                title = context.getText(R.string.url),
+                title = context.getText(if (compactEditor) R.string.proxy_profiles_subscription_url else R.string.url),
                 hint = context.getText(R.string.profile_url),
                 error = context.getText(R.string.accept_http_content),
                 validator = ValidatorHttpUrl
@@ -164,6 +177,10 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
 
     fun requestBrowseFiles() {
         requests.trySend(Request.BrowseFiles)
+    }
+
+    fun requestReplaceFile() {
+        requests.trySend(Request.ReplaceFile)
     }
 
     private fun ModelProgressBarConfigure.applyFrom(status: FetchStatus) {

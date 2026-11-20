@@ -38,7 +38,8 @@
     visibility.unobserve(img);sizing.unobserve(img);record.dispose();
   }
   function setup(img) {
-    if (!img.isConnected || records.has(img)) return;
+    // The music cover loader already controls visibility and decoding.
+    if (!img.isConnected || records.has(img) || img.matches('[data-cover-path],#now-cover,#full-cover')) return;
     const host = img.parentElement;
     if (!host) return;
     const overlay = document.createElement('span');

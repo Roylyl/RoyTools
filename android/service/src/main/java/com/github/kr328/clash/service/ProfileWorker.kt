@@ -21,13 +21,16 @@ import com.github.kr328.clash.service.util.sendProfileUpdateCompleted
 import com.github.kr328.clash.service.util.sendProfileUpdateFailed
 import kotlinx.coroutines.*
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.TimeUnit
 
 class ProfileWorker : BaseService() {
     private val service: ProfileWorker
         get() = this
 
-    private val jobs = mutableListOf<Job>()
+    private val jobs = ConcurrentLinkedQueue<Job>()
+    private val updatingProfiles = ConcurrentHashMap.newKeySet<UUID>()
 
     override fun onCreate() {
         super.onCreate()
@@ -40,7 +43,7 @@ class ProfileWorker : BaseService() {
             delay(TimeUnit.SECONDS.toMillis(10))
 
             while (true) {
-                jobs.removeFirstOrNull()?.join() ?: break
+                jobs.poll()?.join() ?: break
             }
 
             stopSelf()
@@ -59,11 +62,11 @@ class ProfileWorker : BaseService() {
 
         when (intent?.action) {
             Intents.ACTION_PROFILE_REQUEST_UPDATE -> {
-                intent.uuid?.also {
+                intent.uuid?.takeIf(updatingProfiles::add)?.let { uuid ->
                     val job = launch {
-                        run(it)
+                        run(uuid)
                     }
-
+                    job.invokeOnCompletion { updatingProfiles.remove(uuid) }
                     jobs.add(job)
                 }
             }
@@ -89,9 +92,12 @@ class ProfileWorker : BaseService() {
                 ProfileProcessor.update(this, imported.uuid, null)
             }
 
-            completed(imported.uuid, imported.name)
+            val current = ImportedDao().queryByUUID(uuid) ?: return
+            completed(current.uuid, current.name)
 
-            ProfileReceiver.scheduleNext(this, imported)
+            ProfileReceiver.scheduleNext(this, current)
+        } catch (error: CancellationException) {
+            throw error
         } catch (e: Exception) {
             failed(imported.uuid, imported.name, e.message ?: "Unknown")
         }

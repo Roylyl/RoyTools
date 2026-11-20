@@ -11,6 +11,7 @@
     <string name="format_update_complete">Update %s completed</string>
     <string name="format_update_failure">Update %1$s: %2$s</string>
     <string name="running">Running</string>
+    <string name="roytools_no_profile">Not selected</string>
     <string name="loading">Loading</string>
     <string name="clash_meta_for_android">RoyTools</string>
     <string name="profiles_and_providers">Profiles and Providers</string>

@@ -24,6 +24,7 @@
     <!--  Bottom Sheet  -->
     <dimen name="bottom_sheet_background_padding_top">10dp</dimen>
     <dimen name="bottom_sheet_header_height">5dp</dimen>
+    <dimen name="roytools_sheet_handle_width">36dp</dimen>
     <dimen name="bottom_sheet_menu_items_padding">5dp</dimen>
 
     <!-- Large Item -->
@@ -73,7 +74,6 @@
     <dimen name="proxy_text_size">12sp</dimen>
     <dimen name="proxy_text_size_grid3">11sp</dimen>
     <dimen name="proxy_card_radius">@dimen/roytools_card_radius</dimen>
-    <dimen name="proxy_card_offset">0dp</dimen>
 
     <!-- Properties Design -->
     <dimen name="properties_element_margin_vertical">2.5dp</dimen>

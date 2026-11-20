@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="?attr/colorControlHighlight">
+    <item>
+        <selector>
+            <item android:state_checked="true">
+                <shape>
+                    <solid android:color="?attr/glassIconSurface" />
+                    <corners android:radius="@dimen/roytools_control_radius" />
+                </shape>
+            </item>
+            <item android:drawable="@android:color/transparent" />
+        </selector>
+    </item>
+    <item android:id="@android:id/mask">
+        <shape>
+            <solid android:color="@android:color/white" />
+            <corners android:radius="@dimen/roytools_control_radius" />
+        </shape>
+    </item>
+</ripple>

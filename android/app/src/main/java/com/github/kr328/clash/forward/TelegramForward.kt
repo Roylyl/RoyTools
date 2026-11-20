@@ -84,28 +84,39 @@ class ForwardListener : NotificationListenerService() {
 class ForwardWorker(context: Context, params: WorkerParameters): Worker(context, params) {
     override fun doWork(): Result {
         val p = TelegramForward.prefs(applicationContext)
-        if (!p.getBoolean("enabled", false) || p.getLong("generation", 0) != inputData.getLong("generation", -1)) return Result.success()
+        val generation = inputData.getLong("generation", -1)
+        if (!p.getBoolean("enabled", false) || p.getLong("generation", 0) != generation) return Result.success()
         if (System.currentTimeMillis() - inputData.getLong("created", 0) > TimeUnit.HOURS.toMillis(24)) return Result.success()
         if(System.currentTimeMillis()<p.getLong("forward_retry_after",0))return Result.retry()
         return try {
             val sent = synchronized(ForwardDeliveryGate.lock) {
-                if(isStopped || !p.getBoolean("enabled",false) || p.getLong("generation",0)!=inputData.getLong("generation",-1))return Result.success()
+                if(isStopped || !p.getBoolean("enabled",false) || p.getLong("generation",0)!=generation)return Result.success()
                 if(System.currentTimeMillis()<p.getLong("forward_retry_after",0))return Result.retry()
                 val wait=1200L-(android.os.SystemClock.elapsedRealtime()-ForwardDeliveryGate.lastSent)
                 if(wait>0)Thread.sleep(wait)
                 if(isStopped)return Result.retry()
-                try { TelegramForward.call(p.getString("token", "").orEmpty(), "sendMessage", JSONObject()
-                .put("chat_id", p.getString("chat", "")).put("text", inputData.getString("message")))
+                val settings = p.all
+                if (settings["enabled"] != true || (settings["generation"] as? Long ?: 0L) != generation) {
+                    return Result.success()
+                }
+                val token = settings["token"] as? String ?: return Result.success()
+                val chat = settings["chat"] as? String ?: return Result.success()
+                try { TelegramForward.call(token, "sendMessage", JSONObject()
+                .put("chat_id", chat).put("text", inputData.getString("message")))
                 }catch(e:TelegramForward.ApiError){
                     if(e.code==429)p.edit().putLong("forward_retry_after",System.currentTimeMillis()+maxOf(e.retryAfter,30)*1000L).apply()
                     throw e
                 }finally{ForwardDeliveryGate.lastSent=android.os.SystemClock.elapsedRealtime()}
             }
-            runCatching { ChatHistory.append(applicationContext, sent.getJSONObject("result"), false, inputData.getString("message").orEmpty()) }
-            p.edit().putString("status", "最近一次转发成功").apply()
+            if (p.getLong("generation", 0) == generation) {
+                runCatching { ChatHistory.append(applicationContext, sent.getJSONObject("result"), false, inputData.getString("message").orEmpty()) }
+                p.edit().putString("status", "最近一次转发成功").apply()
+            }
             Result.success()
         } catch (e: Exception) {
-            p.edit().putString("status", if (e is TelegramForward.ApiError) e.message else "连接Telegram失败，请检查网络，将自动重试").apply()
+            if (p.getLong("generation", 0) == generation) {
+                p.edit().putString("status", if (e is TelegramForward.ApiError) e.message else "连接Telegram失败，请检查网络，将自动重试").apply()
+            }
             if (e is TelegramForward.ApiError && e.code in listOf(400,401,403)) Result.success()
             else Result.retry()
         }

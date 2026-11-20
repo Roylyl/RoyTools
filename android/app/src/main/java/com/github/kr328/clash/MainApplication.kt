@@ -1,7 +1,12 @@
 package com.github.kr328.clash
 
-import android.app.Application
+import android.app.LocaleManager
 import android.content.Context
+import android.content.res.Configuration
+import android.os.Build
+import android.os.LocaleList
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import com.github.kr328.clash.common.Global
 import com.github.kr328.clash.common.compat.currentProcessName
 import com.github.kr328.clash.common.log.Log
@@ -13,12 +18,21 @@ import com.github.kr328.clash.update.UpdateScheduler
 import java.io.File
 import java.io.FileOutputStream
 import java.io.RandomAccessFile
+import java.util.Locale
+
+internal fun Context.withConfiguredAppLanguage(): Context {
+    if (Build.VERSION.SDK_INT < 33) return this
+    val requested = getSystemService(LocaleManager::class.java)?.applicationLocales ?: return this
+    if (requested.isEmpty || resources.configuration.locales[0] == requested[0]) return this
+    // The first Activity after the default is set may still have its pre-change configuration.
+    return createConfigurationContext(Configuration().apply { setLocales(requested) })
+}
 
 @Suppress("unused")
 class MainApplication : com.mahmutalperenunal.adaptivehz.OneApplication() {
 
     override fun attachBaseContext(base: Context?) {
-        super.attachBaseContext(base)
+        super.attachBaseContext(if (Build.VERSION.SDK_INT < 33) base?.withLegacyAppLanguage() else base)
 
         Global.init(this)
     }
@@ -27,6 +41,9 @@ class MainApplication : com.mahmutalperenunal.adaptivehz.OneApplication() {
         super.onCreate()
 
         val processName = currentProcessName
+        if (processName == packageName && Build.VERSION.SDK_INT >= 33) {
+            setDefaultAppLanguage()
+        }
         extractGeoFiles()
 
         Log.d("Process $processName started")
@@ -47,6 +64,31 @@ class MainApplication : com.mahmutalperenunal.adaptivehz.OneApplication() {
         } else {
             sendServiceRecreated()
         }
+    }
+
+    @androidx.annotation.RequiresApi(33)
+    private fun setDefaultAppLanguage() {
+        val settings = getSharedPreferences("roytools_settings", MODE_PRIVATE)
+        if (settings.getBoolean("app_language_initialized", false)) return
+        val manager = getSystemService(LocaleManager::class.java) ?: return
+        if (manager.applicationLocales.isEmpty) {
+            val systemLocale = manager.systemLocales[0]
+            val language = systemLocale?.takeIf { it.language == "zh" } ?: Locale.CHINESE
+            manager.applicationLocales = LocaleList(language)
+        }
+        // Respect later choices in Android's App Languages settings, including
+        // a deliberate return to the system language.
+        settings.edit().putBoolean("app_language_initialized", true).apply()
+    }
+
+    private fun Context.withLegacyAppLanguage(): Context {
+        val requested = AppCompatDelegate.getApplicationLocales()
+        if (!requested.isEmpty) return createConfigurationContext(Configuration().apply {
+            setLocales(LocaleList.forLanguageTags(requested.toLanguageTags()))
+        })
+        if (resources.configuration.locales[0]?.language == "zh") return this
+        AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("zh"))
+        return createConfigurationContext(Configuration().apply { setLocale(Locale.CHINESE) })
     }
 
     private fun extractGeoFiles() {

@@ -4,156 +4,105 @@
 
 <h1 align="center">RoyTools</h1>
 
-<p align="center">RoyTools的Android与iOS工程。两端共用云端曲库和代理规则更新源。</p>
+<p align="center">在Android、iPhone和iPad上播放和离线下载音乐，使用Mihomo代理。Android还支持Telegram通知转发和刷新率控制。</p>
 
 <p align="center">
-  <a href="https://github.com/Roylyl/RoyTools/releases/latest"><img src="https://img.shields.io/github/v/release/Roylyl/RoyTools?style=flat-square&amp;display_name=tag&amp;label=%E7%89%88%E6%9C%AC&amp;color=007AFF" alt="最新发行版本"></a>
+  <a href="https://github.com/Roylyl/RoyTools/releases/latest"><img src="https://img.shields.io/github/v/release/Roylyl/RoyTools?style=flat-square&amp;display_name=tag&amp;label=%E5%B7%B2%E5%8F%91%E8%A1%8C&amp;color=007AFF" alt="最新公开发行版本"></a>
   <a href="#快速开始"><img src="https://img.shields.io/badge/Android-12%2B-007AFF?style=flat-square" alt="Android12及以上"></a>
-  <a href="#ios工程"><img src="https://img.shields.io/badge/iOS-17%2B-555555?style=flat-square" alt="iOS17及以上"></a>
-  <a href="#快速开始"><img src="https://img.shields.io/badge/ABI-arm64--v8a-555555?style=flat-square" alt="arm64-v8a架构"></a>
+  <a href="#ios安装"><img src="https://img.shields.io/badge/iOS-17%2B-555555?style=flat-square" alt="iOS17及以上"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/Roylyl/RoyTools?style=flat-square&amp;label=%E8%AE%B8%E5%8F%AF&amp;color=555555" alt="开源许可证"></a>
   <a href="https://github.com/Roylyl/RoyTools/releases"><img src="https://img.shields.io/github/downloads/Roylyl/RoyTools/total?style=flat-square&amp;label=%E7%B4%AF%E8%AE%A1%E4%B8%8B%E8%BD%BD&amp;color=007AFF" alt="发行附件累计下载量"></a>
+  <a href="https://github.com/Roylyl/RoyTools/stargazers"><img src="https://img.shields.io/github/stars/Roylyl/RoyTools?style=flat-square&amp;label=Stars&amp;color=555555" alt="GitHubStars数量"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/Roylyl/RoyTools/stargazers"><img src="https://img.shields.io/github/stars/Roylyl/RoyTools?style=flat-square&amp;label=Stars&amp;color=007AFF" alt="GitHubStars数量"></a>
-  <a href="https://github.com/Roylyl/RoyTools/forks"><img src="https://img.shields.io/github/forks/Roylyl/RoyTools?style=flat-square&amp;label=Forks&amp;color=555555" alt="GitHubForks数量"></a>
-  <a href="https://github.com/Roylyl/RoyTools/issues"><img src="https://img.shields.io/github/issues/Roylyl/RoyTools?style=flat-square&amp;label=Issues&amp;color=555555" alt="待处理Issues数量"></a>
-  <a href="https://github.com/Roylyl/RoyTools/graphs/contributors"><img src="https://img.shields.io/github/contributors/Roylyl/RoyTools?style=flat-square&amp;label=%E8%B4%A1%E7%8C%AE%E8%80%85&amp;color=555555" alt="贡献者数量"></a>
-  <a href="https://github.com/Roylyl/RoyTools/commits/main"><img src="https://img.shields.io/github/last-commit/Roylyl/RoyTools?style=flat-square&amp;label=%E6%9C%80%E8%BF%91%E6%9B%B4%E6%96%B0&amp;color=007AFF" alt="最近提交时间"></a>
-</p>
-
-<p align="center">
-  <a href="https://github.com/Roylyl/RoyTools/releases/latest">下载APK</a> · <a href="#快速开始">快速开始</a> · <a href="#音乐">音乐</a> · <a href="#代理">代理</a> · <a href="#通知转发">通知转发</a> · <a href="#刷新率">刷新率</a> · <a href="CHANGELOG.md">更新日志</a> · <a href="#项目来源与许可">项目来源与许可</a>
+  <a href="https://github.com/Roylyl/RoyTools/releases/latest">Android下载</a> · <a href="#ios安装">iOS安装</a> · <a href="#从源码构建">源码构建</a> · <a href="CHANGELOG.md">更新日志</a> · <a href="https://github.com/Roylyl/RoyTools/issues">问题反馈</a>
 </p>
 
 ## 快速开始
 
-从[GitHub发行页](https://github.com/Roylyl/RoyTools/releases/latest)下载APK，安装到Android12及以上的arm64-v8a手机上。首次打开即可联网浏览曲库并听歌，无需填写代理配置。代理需使用自己的订阅或配置文件，通知转发和刷新率可按需开启。
+### Android安装
 
-|想先做什么|第一次怎么用|
-|---|---|
-|听一首歌|打开“音乐→全部歌曲”，点歌名开始播放。也可以从专辑或歌单选歌。|
-|开启代理|打开“代理→配置”，点右上角“＋”。选择“URL”填写自己的订阅地址，或选择“文件”导入配置。保存并选中配置，返回代理首页打开卡片右上方的总开关，首次使用时允许系统VPN请求。|
-|转发通知到iPhone|打开“通知转发→转发设置”，填写Telegram机器人Token、获取Chat ID并授予通知使用权，测试成功后开启转发。|
-|自动调节刷新率|打开“刷新率”页右上方的总开关，点“配置辅助服务”，按[手机配对步骤](#手机配对)激活。首次开启默认使用自适应模式。|
+Android版适用于Android12及以上的arm64-v8a设备。下载APK后安装，覆盖安装需沿用相同签名。要使用当前源码中的改动，可在本机构建APK。[GitHub发行页](https://github.com/Roylyl/RoyTools/releases/latest) · [Android构建](#android构建)
 
-## iOS工程
+### iOS安装
 
-iOS版支持iOS17及以上，在iOS26上使用系统Liquid Glass样式。底部包含音乐、代理、灵动岛和设置。音乐读取现有云端曲库。代理使用Mihomo和系统Packet Tunnel，支持导入HTTPS订阅或本地YAML，并检查仓库规则更新。构建与签名见[iOS工程说明](ios/README.md)。
+iOS和iPadOS支持17及以上版本。使用macOS上的Xcode构建和安装完整版，真机VPN和跨扩展共享数据所需能力为Packet Tunnel与App Groups。使用免费开发者账户时，可以在仓库外生成无VPN测试版，用于音乐和设置。[iOS构建与签名](ios/README.md) · [免费开发者安装方法](ios/iOS免费开发者无VPN版本安装方法.md)
+
+### 开始使用
+
+- 打开“音乐→全部歌曲”，也可从专辑或歌单选曲。iOS26及以上采用Liquid Glass控件，iPad版按窗口宽度调整导航、列表和全屏播放页。
+- 使用代理时，打开“代理→配置”，导入自己的HTTPS订阅或本地Clash/Mihomo YAML。选中配置后回到代理首页，打开VPN开关并按系统提示授权。
 
 ## 音乐
 
-从全部歌曲、专辑或歌单选曲，支持搜索、歌手筛选和多项排序。新增歌单会跟随云端曲库自动显示，无需等待应用更新。
-
-### 播放与队列
-
-- 迷你播放器固定悬浮在底部，进入和返回音乐子页面时保持原位。左右滑动可切换歌曲，点击封面或歌名进入全屏播放。
-- 全屏页提供封面、滚动歌词、播放模式、播放队列和定时关闭。拖动进度条时预览目标时间，松手后跳转播放位置；全屏保持亮屏可在音乐设置中关闭。
-- 连续点击“下一首播放”按点击顺序插播。例如播放A时，依次插播G、H，待播顺序为A→G→H→B。队列的更多菜单支持“删除待播”，只移除本次排队，不删除歌曲文件。
-- 当前浏览的歌单包含正在播放的歌曲时，右下角提供“定位当前曲目”和“回到顶部”。定位时若曲目被筛选隐藏，会清除筛选并跳转。
-
-### 下载与缓存
-
-曲目更多菜单支持下载当前歌曲，专辑和歌单支持“下载全部”。“音乐→设置→音乐下载”可下载整个曲库，也可进入“已下载曲目”搜索、筛选和删除单曲。下载窗口显示速度、进度和百分比，支持取消及后台下载；后台进度显示在通知栏。
-
-- 边听边存：开始播放后持续加载并保存整首歌曲。开启“预加载下一首”时，等当前曲目完整保存后再加载下一首。
-- 保留已有内容：应用不会按使用时间或数量自动淘汰已保存的歌曲、原始封面和有效歌词。音频达到设置的缓存上限后停止新增，需要释放空间时手动清理。
-- 复用专辑封面：同一资源优先读取本地文件，列表、播放器、播放通知和桌面小组件共享原始封面缓存；云端封面版本变化后再获取新图。
-- 批量保存资源：音乐设置支持“下载所有歌词”和“下载所有封面”，也可分别清理音频、歌词和封面，或删除全部下载与缓存。
-
-### 曲库同步
-
-每次进入音乐模块都会检查曲库版本，也可在“音乐→设置”底部手动检查。歌曲、专辑和歌单与网页共用[Roylyl/Music](https://github.com/Roylyl/Music)的云端目录，曲库更新无需重新安装应用。断网时使用上次同步的目录，并可播放已完整保存的歌曲。
-
-APK只附带首次浏览所需的曲库索引，音频、歌词和专辑封面均从云端加载。
+- 按歌名、歌手或专辑搜索，也可浏览收藏和歌单。在“音乐→设置→检查曲库更新”手动同步曲库和歌单。日常打开应用时读取本地目录，离线也可查看上次同步的内容。[Roylyl/Music曲库](https://github.com/Roylyl/Music) · [Roylyl Music网页](https://github.com/Roylyl/roylyl.github.io/tree/main/music)
+- 底部迷你播放器可左右滑动切歌，点按进入全屏播放。全屏页提供封面、同步歌词、播放模式、队列和定时关闭。“下一首播放”按添加顺序插入待播队列。iOS可在锁屏和控制中心播放、暂停、切歌和拖动进度。
+- 可下载单曲、专辑或歌单。“已下载曲目”里的“下载全部曲目”同时加入对应歌词和封面。“边听边存”默认开启，歌曲完整缓存后自动移入已下载列表。“管理缓存”可查看和清理音频、歌词、封面，也可单独补下载歌词或封面。
+- “正在下载”逐项显示进度和速度。可同时下载1至5项，任务进行时可继续添加，也可优先下载、移除单项、暂停或清空队列。Android使用三点菜单，iOS使用列表滑动操作。
 
 ## 代理
 
-代理首页可查看连接状态及实时上传、下载速度。第一个卡片右上方的总开关用于启动或停止代理，模式滑块提供六种选择：
-
-|模式|适合怎样使用|
+|模式|流量走向|
 |---|---|
-|默认|使用当前服务商配置原本的模式和分流规则。|
-|规则|使用Roylyl分流规则，内置3.0.1，可从仓库更新；节点来自当前订阅。|
-|音乐|仅RoyTools访问音乐曲库所需的roylyl.github.io和raw.githubusercontent.com时走代理，其他应用和其他流量直连。|
-|AI|使用AIforHK的AI域名和IP规则，内置3.0.1，可从仓库更新；未匹配流量直连。|
+|默认|沿用当前订阅或配置自带的模式与规则。|
+|规则|按Roylyl分流规则处理，节点来自当前配置。|
+|音乐|仅代理RoyTools获取曲库、音频、歌词和封面的匹配请求。|
+|AI|使用AIforHK的AI域名和IP规则，未匹配流量直连。|
 |全局|全部流量通过所选代理线路。|
 |直连|全部流量直接连接。|
 
-应用会记住上次选择的模式，停止代理或重启应用后再次启动时恢复。规则、音乐、AI只改变分流规则，沿用用户选定的节点或代理组；切回默认恢复服务商原规则，不修改订阅文件。
+- “配置”支持编辑、删除以及单独或批量更新订阅。“代理节点”支持选代理组、组内切换、单测与批量测速。
+- “局域网共享”可设置固定端口，并显示可复制的HTTP和SOCKS5地址。使用同一Wi-Fi或iPhone个人热点时，在客户端填入对应地址和端口。
 
-音乐模式同时限定RoyTools应用和音乐资源域名，不代理其他应用的GitHub访问；AI模式按AIforHK的域名和IP规则分流，未匹配流量直连。音乐模式不代理Telegram；如果当前网络无法直连Telegram，请切换到适用的代理模式并确认线路可用。
+Android和iOS均可在代理首页检查规则更新。规则、音乐和AI模式共用仓库发布的分流数据，更新会保留已选节点，离线时使用本地规则。规则版本独立于应用版本。[规则清单](routing-version.json) · [规则数据](routing-rules.json) · [更新说明](docs/ROUTING_RULES.md)
 
-进入“代理节点”选择节点或测速。应用访问控制、网络、DNS、配置覆写和外部资源都在代理设置中。应用内置分流规则，订阅和节点由使用者自行提供。
+## Android专属功能
 
-### 规则更新
+### 通知转发
 
-Android代理首页“局域网共享”下面提供“检查规则更新”。已是最新版时显示当前规则版本，发现新版后弹窗确认。音乐、AI和规则模式从仓库获取分流数据，沿用选中的节点，断网时使用本地规则。规则版本独立于应用版本。
+打开“通知转发→转发设置”，将Android通知发到Telegram。在Telegram中联系@BotFather，发送`/newbot`创建机器人。进入与新机器人的会话，点击“开始”并发送一句话，然后在RoyTools填入Bot Token、获取Chat ID、授予通知使用权并发送测试消息。
 
-规则数据保存在仓库根目录的[routing-rules.json](routing-rules.json)，发布方式见[规则更新说明](docs/ROUTING_RULES.md)。
+RoyTools会过滤重复、常驻和分组摘要等通知。待发任务断网后会重试，超过24小时则过期。Chat入口可与配置的会话双向收发文字、图片、视频和文件，也支持从系统分享菜单导入。聊天记录保存在本机，可在“转发设置→数据管理”清理。[隐私说明](PRIVACY_POLICY.md)
 
-## 通知转发
+### Android刷新率
 
-把Android的新通知转发到Telegram，在iPhone上接收；也可以进入Chat双向聊天。Android端直接使用Telegram Bot API，无需登录Telegram账号或自建服务器。手机需要能访问api.telegram.org。
+刷新率总开关默认关闭。开启后可在“自适应、低刷新率、高刷新率”之间切换。自适应模式在触控时升频，达到所设静置时间后降频。低、高档的可用刷新率由设备和系统决定。
 
-1. 在iPhone的Telegram中打开@BotFather，发送`/newbot`创建独立机器人，复制Bot Token。
-2. 点击BotFather创建成功回复里的`t.me/机器人用户名`链接，进入新机器人聊天，点击“开始”并发送一句话。
-3. 打开“通知转发→转发设置”，填入Token，点击“自动获取Chat ID”并确认接收会话。
-4. 配置通知使用权，发送测试消息，确认iPhone收到后开启实时转发。
+1. 手机连上Wi-Fi并开启开发者选项。允许RoyTools通知，在刷新率页打开总开关，点“配置辅助服务→打开无线调试”。
+2. 在系统设置开启无线调试，选择“使用配对码配对设备”。保持窗口打开，在RoyTools的配对码通知中输入6位配对码。
+3. 配对后RoyTools会尝试自动连接。若提示填写端口，使用系统“无线调试”首页上的连接端口。回到RoyTools，看到“辅助服务运行中”即可选择模式。
 
-转发会过滤重复内容，并跳过常驻通知、分组摘要、RoyTools和Telegram通知。断网任务联网后重试，超过24小时的待发通知不再发送。iPhone是否弹出横幅由Telegram会话及iOS通知设置决定。
+## 小组件与设置
 
-### Chat聊天
+双端桌面小组件可启停代理、切换代理模式、播放、暂停和切歌。iOS18及以上可在控制中心添加代理开关。“关于RoyTools”可按模块查看、导出和清空日志。反馈问题时，请注明应用版本、系统版本和复现步骤，并隐去日志中的订阅和节点凭据。[提交问题](https://github.com/Roylyl/RoyTools/issues)
 
-- 左灰右蓝的聊天气泡，新消息动态追加；发送后回到最新消息，空输入时发送键禁用。
-- 输入框左侧“＋”打开附件小浮窗。相册支持勾选图片和视频，文件通过系统文件选择器选择。图片最大10MB，视频和文件最大50MB。
-- 图片按原始比例适配预览，加载时显示动画，失败可重试。点开图片支持放大，视频可打开播放。
-- 文件只在点击右侧下载按钮后下载。窗口显示速度、进度和百分比，可取消或后台下载；后台进度显示在通知栏。
-- 系统分享菜单选择“RoyTools Chat”，文本进入输入框，附件确认后发送到已配置的会话。
-- 收到新消息会独立通知，点击进入Chat。记录保存在本机，Telegram Bot API无法补取完整历史；后台接收取决于Android是否允许应用继续运行，可在总设置调整后台保活。
+## 从源码构建
 
-“转发设置→数据管理”显示媒体占用空间和记录条数，支持分别清除媒体或记录，清除后更新统计。Token和Chat ID保存在应用私有配置中，并从系统备份排除。数据发送与保存说明见[隐私说明](PRIVACY_POLICY.md)。
+仓库包含[完整Android工程](android/)和[完整iOS工程](ios/)。当前源码版本均为2.3.0。安装包、本地签名和调试工程放在仓库外。
 
-## 刷新率
+### Android构建
 
-第一个卡片右上方的总开关默认关闭。关闭时恢复系统控制，下方选项置灰，不搜索无线调试，也不显示激活提醒。首次打开默认自适应，之后恢复上次选择的档位。
+准备JDK21和Android SDK35，在仓库根目录执行：
 
-模式滑块从左到右为“自适应、60Hz、120Hz”。自适应模式在触控时升频，静置后降频；静置延迟默认0.5秒，每档相差0.25秒。实际可用的刷新率取决于手机屏幕和系统。
+```bash
+bash android/gradlew -p android :app:assembleMetaDebug
+```
 
-### 手机配对
+APK输出到`android/app/build/outputs/apk/meta/debug/`。首次构建会准备GeoData。Windows入口、离线构建输入、原生核心重建和发行签名见[Android构建说明](docs/BUILDING.md)。
 
-1. 手机连上Wi-Fi并开启开发者选项。先打开RoyTools“刷新率”页的总开关，再点“配置辅助服务→打开无线调试”。
-2. 在系统设置中开启“无线调试”，点“使用配对码配对设备”。保持系统配对窗口打开，直接在RoyTools的横幅通知里输入当前显示的6位配对码。
-3. 配对成功后，应用会尝试自动连接。如果通知要求输入连接端口，返回系统“无线调试”首页，填写“IP地址和端口”显示的端口。回到RoyTools，看到“辅助服务运行中”即可选择模式。
+### iOS构建
 
-配对可以全程在手机上完成。手机重启后若提示“待激活”，可从同一入口重新激活。
+准备macOS、Xcode26或更新版本及Go1.26.10。在仓库根目录构建Mihomo核心、准备GeoData，再用Xcode打开工程。
 
-## 快捷控制与设置
+```bash
+bash ios/scripts/build-engine.sh
+bash ios/scripts/fetch-geodata.sh
+open ios/RoyTools.xcodeproj
+```
 
-底部导航按音乐、代理、通知转发、刷新率、设置排列。在模块二级页点击对应底部按钮，会返回该模块首页；已在首页时回到顶部。
+## 来源与许可
 
-|入口|可以做什么|
-|---|---|
-|桌面4×2小组件|查看当前节点及当天经过代理的Wi-Fi和移动数据用量，切换代理模式和刷新率，查看曲目并控制播放。|
-|控制中心与桌面长按菜单|切换代理或自适应刷新率。在“设置→快捷控制”可查看控制中心按钮和桌面小组件的添加方法。|
-|通知栏|刷新率切换后短暂提示。代理开启时用速度通知承担运行提示，关闭后按后台保活设置接替。下载进度归入运行通知组，Chat新消息单独提醒，无线调试使用独立高优先级通知。|
-|设置→主题、后台运行设置|选择跟随系统、浅色或深色主题，调整后台保活、桌面图标和最近任务的显示方式。|
-|设置→应用更新|手动检查新版本，或开启每小时检查。下载时可查看速度、取消或转入后台，完成后按系统提示安装。|
-|设置→关于RoyTools|按音乐、代理、刷新率和应用查看或导出日志，也可以清空全部日志。|
+RoyTools的代理功能基于Clash-Meta-Plus、[ClashMetaForAndroid](https://github.com/MetaCubeX/ClashMetaForAndroid)和[Mihomo](https://github.com/MetaCubeX/mihomo)。Android刷新率模块使用[Adaptive-Hz](https://github.com/mahmutaunal/Adaptive-Hz)、[Shizuku](https://github.com/RikkaApps/Shizuku)及[Shizuku-API](https://github.com/RikkaApps/Shizuku-API)。通知转发参考[sms-telebot](https://github.com/teslor/sms-telebot)与[NotificationForwarder](https://github.com/ItsAzni/NotificationForwarder)，界面设计参考[ASRtestII](https://github.com/Roylyl/ASRtestII)。
 
-如需反馈问题，请附上RoyTools版本、Android版本和复现步骤。分享日志前请隐去订阅链接、节点凭据等私人信息。[提交问题](https://github.com/Roylyl/RoyTools/issues)
-
-## 项目来源与许可
-
-|来源|用途|
-|---|---|
-|Clash-Meta-Plus、[ClashMetaForAndroid](https://github.com/MetaCubeX/ClashMetaForAndroid)、[mihomo](https://github.com/MetaCubeX/mihomo)|Android代理界面、VPN服务、配置管理与代理核心。|
-|[Adaptive-Hz](https://github.com/mahmutaunal/Adaptive-Hz)、[Shizuku](https://github.com/RikkaApps/Shizuku)、[Shizuku-API](https://github.com/RikkaApps/Shizuku-API)|自适应刷新率、内置权限服务与无线配对。|
-|[Roylyl Music网页](https://github.com/Roylyl/roylyl.github.io/tree/main/music)、[Roylyl/Music](https://github.com/Roylyl/Music)|播放器与曲库交互的来源，以及网页和应用共用的音乐目录。|
-|[sms-telebot](https://github.com/teslor/sms-telebot)、[NotificationForwarder](https://github.com/ItsAzni/NotificationForwarder)|通知转发配置与监听流程参考；模块基于Android通知API和Telegram Bot API实现，未复制其源码。|
-|[ASRtestII](https://github.com/Roylyl/ASRtestII)|配色、页面布局和控件设计参考。|
-
-RoyTools整体以[GNU GPLv3](LICENSE)分发。各上游组件保留原作者的版权和许可。歌曲、歌词与专辑封面的使用和分发遵循各自的权利条件。详见[上游来源](docs/UPSTREAM.md)、[第三方许可与媒体说明](THIRD_PARTY.md)和[版权声明](NOTICE)。
-
-开发与贡献请参阅[构建文档](docs/BUILDING.md)、[贡献指南](CONTRIBUTING.md)和[修改记录](CHANGELOG.md)。
+项目以[GNU GPLv3](LICENSE)分发，上游组件保留各自的版权和许可。歌曲、歌词和专辑封面适用各自的权利条件。[上游来源](docs/UPSTREAM.md) · [第三方许可与媒体说明](THIRD_PARTY.md) · [版权声明](NOTICE) · [贡献指南](CONTRIBUTING.md)

@@ -1,17 +1,21 @@
 // !$*UTF8*$!
 {
 	archiveVersion = 1;
-	classes = {};
-	objectVersion = 77;
+	classes = {
+	};
+	objectVersion = 71;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A20000000000000000000001 /* RoyToolsIslandWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* RoyToolsIslandWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A20000000000000000000001 /* RoyToolsWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* RoyToolsWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A20000000000000000000002 /* routing-rules.json in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000003 /* routing-rules.json */; };
 		A20000000000000000000003 /* routing-version.json in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* routing-version.json */; };
 		A20000000000000000000006 /* RoyToolsPacketTunnel.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A10000000000000000000008 /* RoyToolsPacketTunnel.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A20000000000000000000008 /* RoyToolsCore.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000C /* RoyToolsCore.xcframework */; };
 		A2000000000000000000000A /* GeoData in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000D /* GeoData */; };
+		A2000000000000000000000B /* catalog.json in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000E /* catalog.json */; };
+		A2000000000000000000000C /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000F /* LICENSE */; };
+		A2000000000000000000000D /* NOTICE in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000010 /* NOTICE */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -20,7 +24,7 @@
 			containerPortal = A00000000000000000000001 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = A30000000000000000000002;
-			remoteInfo = RoyToolsIslandWidget;
+			remoteInfo = RoyToolsWidgets;
 		};
 		A20000000000000000000007 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -38,7 +42,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				A20000000000000000000001 /* RoyToolsIslandWidget.appex in Embed App Extensions */,
+				A20000000000000000000001 /* RoyToolsWidgets.appex in Embed App Extensions */,
 				A20000000000000000000006 /* RoyToolsPacketTunnel.appex in Embed App Extensions */,
 			);
 			name = "Embed App Extensions";
@@ -48,7 +52,7 @@
 
 /* Begin PBXFileReference section */
 		A10000000000000000000001 /* RoyTools.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RoyTools.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		A10000000000000000000002 /* RoyToolsIslandWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RoyToolsIslandWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000002 /* RoyToolsWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RoyToolsWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000000000000000000003 /* routing-rules.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "routing-rules.json"; path = "../routing-rules.json"; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000004 /* routing-version.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "routing-version.json"; path = "../routing-version.json"; sourceTree = SOURCE_ROOT; };
 		A10000000000000000000005 /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Version.xcconfig; path = Config/Version.xcconfig; sourceTree = SOURCE_ROOT; };
@@ -60,20 +64,43 @@
 		A1000000000000000000000B /* Tunnel-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "Tunnel-Info.plist"; path = "Config/Tunnel-Info.plist"; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000000C /* RoyToolsCore.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = RoyToolsCore.xcframework; path = Engine/RoyToolsCore.xcframework; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000000D /* GeoData */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GeoData; path = Engine/GeoData; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000000E /* catalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = catalog.json; path = ../android/app/src/main/assets/music/data/catalog.json; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000000F /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; name = LICENSE; path = ../LICENSE; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000010 /* NOTICE */ = {isa = PBXFileReference; lastKnownFileType = text; name = NOTICE; path = ../NOTICE; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		A50000000000000000000001 /* RoyTools */ = {isa = PBXFileSystemSynchronizedRootGroup; path = RoyTools; sourceTree = "<group>"; };
-		A50000000000000000000002 /* RoyToolsIslandWidget */ = {isa = PBXFileSystemSynchronizedRootGroup; path = RoyToolsIslandWidget; sourceTree = "<group>"; };
-		A50000000000000000000003 /* SharedIsland */ = {isa = PBXFileSystemSynchronizedRootGroup; path = SharedIsland; sourceTree = "<group>"; };
-		A50000000000000000000004 /* RoyToolsPacketTunnel */ = {isa = PBXFileSystemSynchronizedRootGroup; path = RoyToolsPacketTunnel; sourceTree = "<group>"; };
-		A50000000000000000000005 /* SharedTunnel */ = {isa = PBXFileSystemSynchronizedRootGroup; path = SharedTunnel; sourceTree = "<group>"; };
+		A50000000000000000000001 /* RoyTools */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = RoyTools; sourceTree = "<group>"; };
+		A50000000000000000000002 /* RoyToolsWidgets */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = RoyToolsWidgets; sourceTree = "<group>"; };
+		A50000000000000000000003 /* SharedWidgets */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = SharedWidgets; sourceTree = "<group>"; };
+		A50000000000000000000004 /* RoyToolsPacketTunnel */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = RoyToolsPacketTunnel; sourceTree = "<group>"; };
+		A50000000000000000000005 /* SharedTunnel */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = SharedTunnel; sourceTree = "<group>"; };
+		A50000000000000000000006 /* SharedWidgetIntents */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = SharedWidgetIntents; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		A40000000000000000000002 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		A40000000000000000000003 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		A40000000000000000000008 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (A20000000000000000000008 /* RoyToolsCore.xcframework in Frameworks */, ); runOnlyForDeploymentPostprocessing = 0; };
+		A40000000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A40000000000000000000003 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A40000000000000000000008 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A20000000000000000000008 /* RoyToolsCore.xcframework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -81,12 +108,15 @@
 			isa = PBXGroup;
 			children = (
 				A50000000000000000000001 /* RoyTools */,
-				A50000000000000000000002 /* RoyToolsIslandWidget */,
-				A50000000000000000000003 /* SharedIsland */,
+				A50000000000000000000002 /* RoyToolsWidgets */,
+				A50000000000000000000003 /* SharedWidgets */,
 				A50000000000000000000004 /* RoyToolsPacketTunnel */,
 				A50000000000000000000005 /* SharedTunnel */,
+				A50000000000000000000006 /* SharedWidgetIntents */,
 				A50000000000000000000012 /* Configuration */,
 				A1000000000000000000000C /* RoyToolsCore.xcframework */,
+				A1000000000000000000000F /* LICENSE */,
+				A10000000000000000000010 /* NOTICE */,
 				A50000000000000000000011 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -95,7 +125,7 @@
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000001 /* RoyTools.app */,
-				A10000000000000000000002 /* RoyToolsIslandWidget.appex */,
+				A10000000000000000000002 /* RoyToolsWidgets.appex */,
 				A10000000000000000000008 /* RoyToolsPacketTunnel.appex */,
 			);
 			name = Products;
@@ -113,6 +143,7 @@
 				A1000000000000000000000A /* Tunnel.entitlements */,
 				A1000000000000000000000B /* Tunnel-Info.plist */,
 				A1000000000000000000000D /* GeoData */,
+				A1000000000000000000000E /* catalog.json */,
 			);
 			name = Configuration;
 			sourceTree = "<group>";
@@ -129,38 +160,44 @@
 				A40000000000000000000006 /* Resources */,
 				A40000000000000000000001 /* Embed App Extensions */,
 			);
-			buildRules = ();
+			buildRules = (
+			);
 			dependencies = (
 				A20000000000000000000005 /* PBXTargetDependency */,
 				A20000000000000000000009 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				A50000000000000000000001 /* RoyTools */,
-				A50000000000000000000003 /* SharedIsland */,
+				A50000000000000000000003 /* SharedWidgets */,
 				A50000000000000000000005 /* SharedTunnel */,
+				A50000000000000000000006 /* SharedWidgetIntents */,
 			);
 			name = RoyTools;
 			productName = RoyTools;
 			productReference = A10000000000000000000001 /* RoyTools.app */;
 			productType = "com.apple.product-type.application";
 		};
-		A30000000000000000000002 /* RoyToolsIslandWidget */ = {
+		A30000000000000000000002 /* RoyToolsWidgets */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A60000000000000000000003 /* Build configuration list for PBXNativeTarget "RoyToolsIslandWidget" */;
+			buildConfigurationList = A60000000000000000000003 /* Build configuration list for PBXNativeTarget "RoyToolsWidgets" */;
 			buildPhases = (
 				A40000000000000000000005 /* Sources */,
 				A40000000000000000000003 /* Frameworks */,
 				A40000000000000000000007 /* Resources */,
 			);
-			buildRules = ();
-			dependencies = ();
-			fileSystemSynchronizedGroups = (
-				A50000000000000000000002 /* RoyToolsIslandWidget */,
-				A50000000000000000000003 /* SharedIsland */,
+			buildRules = (
 			);
-			name = RoyToolsIslandWidget;
-			productName = RoyToolsIslandWidget;
-			productReference = A10000000000000000000002 /* RoyToolsIslandWidget.appex */;
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A50000000000000000000002 /* RoyToolsWidgets */,
+				A50000000000000000000003 /* SharedWidgets */,
+				A50000000000000000000005 /* SharedTunnel */,
+				A50000000000000000000006 /* SharedWidgetIntents */,
+			);
+			name = RoyToolsWidgets;
+			productName = RoyToolsWidgets;
+			productReference = A10000000000000000000002 /* RoyToolsWidgets.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 		A30000000000000000000003 /* RoyToolsPacketTunnel */ = {
@@ -171,9 +208,12 @@
 				A40000000000000000000008 /* Frameworks */,
 				A4000000000000000000000A /* Resources */,
 			);
-			buildRules = ();
-			dependencies = ();
+			buildRules = (
+			);
+			dependencies = (
+			);
 			fileSystemSynchronizedGroups = (
+				A50000000000000000000003 /* SharedWidgets */,
 				A50000000000000000000004 /* RoyToolsPacketTunnel */,
 				A50000000000000000000005 /* SharedTunnel */,
 			);
@@ -195,16 +235,26 @@
 					A30000000000000000000001 = {
 						CreatedOnToolsVersion = 26.0;
 						SystemCapabilities = {
-							com.apple.ApplicationGroups.iOS = {enabled = 1; };
-							com.apple.NetworkExtensions.iOS = {enabled = 1; };
+							com.apple.ApplicationGroups.iOS = {
+								enabled = 1;
+							};
+							com.apple.NetworkExtensions.iOS = {
+								enabled = 1;
+							};
 						};
 					};
-					A30000000000000000000002 = { CreatedOnToolsVersion = 26.0; };
+					A30000000000000000000002 = {
+						CreatedOnToolsVersion = 26.0;
+					};
 					A30000000000000000000003 = {
 						CreatedOnToolsVersion = 26.0;
 						SystemCapabilities = {
-							com.apple.ApplicationGroups.iOS = {enabled = 1; };
-							com.apple.NetworkExtensions.iOS = {enabled = 1; };
+							com.apple.ApplicationGroups.iOS = {
+								enabled = 1;
+							};
+							com.apple.NetworkExtensions.iOS = {
+								enabled = 1;
+							};
 						};
 					};
 				};
@@ -213,15 +263,18 @@
 			compatibilityVersion = "Xcode 16.0";
 			developmentRegion = "zh-Hans";
 			hasScannedForEncodings = 0;
-			knownRegions = ("zh-Hans", en, Base, );
+			knownRegions = (
+				"zh-Hans",
+				en,
+				Base,
+			);
 			mainGroup = A50000000000000000000010;
-			preferredProjectObjectVersion = 77;
 			productRefGroup = A50000000000000000000011 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				A30000000000000000000001 /* RoyTools */,
-				A30000000000000000000002 /* RoyToolsIslandWidget */,
+				A30000000000000000000002 /* RoyToolsWidgets */,
 				A30000000000000000000003 /* RoyToolsPacketTunnel */,
 			);
 		};
@@ -231,22 +284,67 @@
 		A40000000000000000000006 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = (A20000000000000000000002 /* routing-rules.json in Resources */, A20000000000000000000003 /* routing-version.json in Resources */, );
+			files = (
+				A20000000000000000000002 /* routing-rules.json in Resources */,
+				A20000000000000000000003 /* routing-version.json in Resources */,
+				A2000000000000000000000B /* catalog.json in Resources */,
+				A2000000000000000000000C /* LICENSE in Resources */,
+				A2000000000000000000000D /* NOTICE in Resources */,
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A40000000000000000000007 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		A4000000000000000000000A /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A2000000000000000000000A /* GeoData in Resources */, ); runOnlyForDeploymentPostprocessing = 0; };
+		A40000000000000000000007 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A4000000000000000000000A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A2000000000000000000000A /* GeoData in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		A40000000000000000000004 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		A40000000000000000000005 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		A40000000000000000000009 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A40000000000000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A40000000000000000000005 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A40000000000000000000009 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		A20000000000000000000005 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = A30000000000000000000002 /* RoyToolsIslandWidget */; targetProxy = A20000000000000000000004 /* PBXContainerItemProxy */; };
-		A20000000000000000000009 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = A30000000000000000000003 /* RoyToolsPacketTunnel */; targetProxy = A20000000000000000000007 /* PBXContainerItemProxy */; };
+		A20000000000000000000005 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A30000000000000000000002 /* RoyToolsWidgets */;
+			targetProxy = A20000000000000000000004 /* PBXContainerItemProxy */;
+		};
+		A20000000000000000000009 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A30000000000000000000003 /* RoyToolsPacketTunnel */;
+			targetProxy = A20000000000000000000007 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -288,11 +386,14 @@
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Config/App-Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", );
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.roylyl.tools;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -304,11 +405,14 @@
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Config/App-Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", );
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.roylyl.tools;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -316,15 +420,21 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Config/Widget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Config/Widget-Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.roylyl.tools.islandwidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				TARGETED_DEVICE_FAMILY = 1;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ROYTOOLS_WIDGET_EXTENSION";
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -332,15 +442,21 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Config/Widget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Config/Widget-Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.roylyl.tools.islandwidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				TARGETED_DEVICE_FAMILY = 1;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ROYTOOLS_WIDGET_EXTENSION";
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -352,13 +468,17 @@
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Config/Tunnel-Info.plist";
-				OTHER_LDFLAGS = ("$(inherited)", "-lresolv", "-framework", Security, );
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lresolv",
+					"-framework",
+					Security,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.roylyl.tools.packettunnel;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SWIFT_INCLUDE_PATHS = ("$(inherited)", "$(SRCROOT)/Engine/include", );
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -370,38 +490,58 @@
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Config/Tunnel-Info.plist";
-				OTHER_LDFLAGS = ("$(inherited)", "-lresolv", "-framework", Security, );
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lresolv",
+					"-framework",
+					Security,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.roylyl.tools.packettunnel;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SWIFT_INCLUDE_PATHS = ("$(inherited)", "$(SRCROOT)/Engine/include", );
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A60000000000000000000001 /* Project configuration list */ = {
+		A60000000000000000000001 /* Build configuration list for PBXProject "RoyTools" */ = {
 			isa = XCConfigurationList;
-			buildConfigurations = (A70000000000000000000001 /* Debug */, A70000000000000000000002 /* Release */, );
-			defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;
+			buildConfigurations = (
+				A70000000000000000000001 /* Debug */,
+				A70000000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
-		A60000000000000000000002 /* App configuration list */ = {
+		A60000000000000000000002 /* Build configuration list for PBXNativeTarget "RoyTools" */ = {
 			isa = XCConfigurationList;
-			buildConfigurations = (A70000000000000000000003 /* Debug */, A70000000000000000000004 /* Release */, );
-			defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;
+			buildConfigurations = (
+				A70000000000000000000003 /* Debug */,
+				A70000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
-		A60000000000000000000003 /* Widget configuration list */ = {
+		A60000000000000000000003 /* Build configuration list for PBXNativeTarget "RoyToolsWidgets" */ = {
 			isa = XCConfigurationList;
-			buildConfigurations = (A70000000000000000000005 /* Debug */, A70000000000000000000006 /* Release */, );
-			defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;
+			buildConfigurations = (
+				A70000000000000000000005 /* Debug */,
+				A70000000000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
-		A60000000000000000000004 /* Tunnel configuration list */ = {
+		A60000000000000000000004 /* Build configuration list for PBXNativeTarget "RoyToolsPacketTunnel" */ = {
 			isa = XCConfigurationList;
-			buildConfigurations = (A70000000000000000000007 /* Debug */, A70000000000000000000008 /* Release */, );
-			defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;
+			buildConfigurations = (
+				A70000000000000000000007 /* Debug */,
+				A70000000000000000000008 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

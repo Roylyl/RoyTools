@@ -2,14 +2,12 @@ package com.mahmutalperenunal.adaptivehz
 
 import android.Manifest
 import android.app.Activity
-import android.app.Dialog
+import android.app.NotificationManager
 import android.content.Intent
 import android.content.Context
 import com.google.android.material.materialswitch.MaterialSwitch
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import com.google.android.material.button.MaterialButton
 import android.hardware.display.DisplayManager
 import android.os.Handler
@@ -18,30 +16,32 @@ import android.provider.Settings
 import android.view.Gravity
 import android.view.View
 import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import com.mahmutalperenunal.adaptivehz.core.engine.model.AdaptiveHzMode
+import com.mahmutalperenunal.adaptivehz.core.engine.model.RefreshRateApplyResult
 import com.mahmutalperenunal.adaptivehz.core.engine.model.isOperationalSuccess
 import com.mahmutalperenunal.adaptivehz.core.prefs.AdaptiveHzPrefs
 import com.mahmutalperenunal.adaptivehz.core.service.AdaptiveHzActionHandler
 import rikka.shizuku.Shizuku
 import com.github.kr328.clash.common.ui.TouchFeedback
+import com.github.kr328.clash.design.dialog.RoyToolsDialogBuilder
+import com.github.kr328.clash.design.util.resolveThemedColor
 import com.github.kr328.clash.common.R as CommonR
+import com.github.kr328.clash.design.R as DesignR
 import kotlin.math.roundToInt
 
 class RefreshPanel(private val activity: Activity, private val switchContext: Context = activity) : android.content.ContextWrapper(activity) {
     val view = FrameLayout(this)
-    private val blue get() = themeColor(androidx.appcompat.R.attr.colorPrimary, Color.rgb(0, 122, 255))
-    private val primaryTextColor get() = themeColor(android.R.attr.textColorPrimary, Color.BLACK)
-    private val surfaceColor get() = themeColor(com.google.android.material.R.attr.colorSurface, Color.WHITE)
-    private val bgColor get() = if (Color.luminance(primaryTextColor) > 0.5f) Color.rgb(18, 18, 20) else Color.rgb(242, 242, 247)
-    private fun themeColor(attribute: Int, fallback: Int): Int {
-        val colors = theme.obtainStyledAttributes(intArrayOf(attribute))
-        return try { colors.getColor(0, fallback) } finally { colors.recycle() }
-    }
+    private val blue get() = resolveThemedColor(androidx.appcompat.R.attr.colorPrimary)
+    private val primaryTextColor get() = resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
+    private val bgColor get() = resolveThemedColor(DesignR.attr.glassCanvasStart)
     fun scrollToTop() {
         val layout = view.getChildAt(0) as? android.view.ViewGroup
         (layout?.getChildAt(0) as? ScrollView)?.scrollTo(0, 0)
     }
-    private val muted get() = themeColor(android.R.attr.textColorSecondary, Color.rgb(116, 116, 124))
+    private val muted get() = resolveThemedColor(DesignR.attr.glassTextSecondary)
+    private val modeLabels = listOf("自适应", "低刷新率", "高刷新率")
+    private var activationDialog: AlertDialog? = null
     private val handler = Handler(Looper.getMainLooper())
     private var attemptedReconnect = false
     private var stoppedWhileDisabled = false
@@ -82,15 +82,11 @@ class RefreshPanel(private val activity: Activity, private val switchContext: Co
 
     fun onStop() {
         handler.removeCallbacks(ticker)
-
+        activationDialog?.dismiss()
     }
 
     private fun dp(value: Int) = (resources.displayMetrics.density * value).toInt()
     private fun dimension(resource: Int) = resources.getDimensionPixelSize(resource)
-    private fun rounded(color: Int, radius: Int = dimension(CommonR.dimen.roytools_card_radius)) = GradientDrawable().apply {
-        setColor(color)
-        cornerRadius = radius.toFloat()
-    }
     private fun text(value: String, size: Int = 15, color: Int = primaryTextColor) =
         TextView(this).apply {
             text = value
@@ -100,7 +96,8 @@ class RefreshPanel(private val activity: Activity, private val switchContext: Co
         }
     private fun card(controlled: Boolean = true): LinearLayout = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        background = rounded(surfaceColor)
+        setBackgroundResource(DesignR.drawable.roytools_card)
+        clipToOutline = true
         val padding = dimension(CommonR.dimen.roytools_card_padding)
         setPadding(padding, padding, padding, padding)
         layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dimension(CommonR.dimen.roytools_section_spacing) }
@@ -161,7 +158,7 @@ class RefreshPanel(private val activity: Activity, private val switchContext: Co
             }
         }.also { heading.addView(it, LinearLayout.LayoutParams(-2, -2)) }
         statusCard.addView(heading)
-        state = text("", 14, blue)
+        state = text("", 14, muted)
         rate = text("", 48).apply { setTypeface(null, Typeface.BOLD) }
         statusCard.addView(state)
         statusCard.addView(rate)
@@ -192,7 +189,7 @@ class RefreshPanel(private val activity: Activity, private val switchContext: Co
         modeSlider = slider
         modes.addView(slider, LinearLayout.LayoutParams(-1, dp(56)))
         val labels = LinearLayout(this)
-        listOf("自适应", "60Hz", "120Hz").forEachIndexed { index, label ->
+        modeLabels.forEachIndexed { index, label ->
             labels.addView(text(label, 13, muted).apply {
                 gravity = Gravity.CENTER
                 minHeight = dp(48)
@@ -247,7 +244,8 @@ class RefreshPanel(private val activity: Activity, private val switchContext: Co
             return
         }
         AdaptiveHzActionHandler.applyModeAsync(this, mode, onComplete = { result ->
-            if (!result.isOperationalSuccess && AdaptiveHzPrefs.isControlsEnabled(this)) {
+            if (!result.isOperationalSuccess && result != RefreshRateApplyResult.NoOperation &&
+                AdaptiveHzPrefs.isControlsEnabled(this)) {
                 val message = if (mode == AdaptiveHzMode.OFF)
                     "已停止自动控制，恢复系统刷新率失败，请配置辅助服务后重试"
                 else "刷新率设置未生效，请配置辅助服务后重试"
@@ -305,43 +303,48 @@ class RefreshPanel(private val activity: Activity, private val switchContext: Co
     }
 
     private fun phoneActivation() {
-        if (!AdaptiveHzPrefs.isControlsEnabled(this)) return
-        startForegroundService(Intent(this, WirelessSetupService::class.java))
-        modal("手机激活", """1.连接Wi-Fi，打开无线调试。
+        if (!AdaptiveHzPrefs.isControlsEnabled(this) || activity.isFinishing || activationDialog?.isShowing == true) return
+        val instructions = """1.连接Wi-Fi，打开无线调试。
 2.选择“使用配对码配对设备”。
 3.在顶部横幅通知中输入6位配对码。
 
-配对成功后会自动激活。请保持系统配对码窗口打开，直接在通知中输入。""", "打开无线调试") {
-            val intent = Intent().setClassName("com.android.settings",
-                "com.android.settings.Settings\$WirelessDebuggingActivity")
-            runCatching { startActivity(intent) }.onFailure {
-                startActivity(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
-                    .putExtra(":settings:fragment_args_key", "toggle_adb_wireless"))
-            }
+配对成功后会自动激活。请保持系统配对码窗口打开，直接在通知中输入。"""
+        val builder = RoyToolsDialogBuilder(activity).setNegativeButton("取消", null)
+        val manager = getSystemService(NotificationManager::class.java)
+        val pairingChannel = manager.getNotificationChannel(WirelessSetupService.PAIR_CHANNEL)
+        if (!manager.areNotificationsEnabled() || pairingChannel?.importance == NotificationManager.IMPORTANCE_NONE) {
+            builder.setTitle("开启配对通知")
+                .setMessage("无线调试的配对码需要在RoyTools的「配对码横幅」通知中输入。请先开启该通知。")
+                .setPositiveButton("打开通知设置") { _, _ ->
+                    startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
+                }
+        } else {
+            builder.setTitle("手机激活")
+                .setMessage(instructions)
+                .setPositiveButton("打开无线调试") { _, _ -> openWirelessSettings() }
         }
+        val dialog = builder.create()
+        activationDialog = dialog
+        dialog.setOnDismissListener { if (activationDialog === dialog) activationDialog = null }
+        dialog.show()
     }
 
-    private fun modal(title: String, message: String, actionLabel: String? = null, action: (() -> Unit)? = null) {
-        val dialog = Dialog(this)
-        val panel = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(24), dp(24), dp(24), dp(16))
-            background = rounded(surfaceColor, dimension(CommonR.dimen.roytools_dialog_radius))
+    private fun openWirelessSettings() {
+        if (runCatching { startForegroundService(Intent(this, WirelessSetupService::class.java)) }.isFailure) {
+            Toast.makeText(activity, "无法启动辅助服务，请返回重试", Toast.LENGTH_LONG).show()
+            return
         }
-        panel.addView(text(title, 21).apply { setTypeface(null, Typeface.BOLD) })
-        val scroll = ScrollView(this).apply {
-            addView(text(message, 15, muted).apply { setPadding(0, dp(14), 0, dp(14)) })
+        val intent = Intent().setClassName("com.android.settings",
+            "com.android.settings.Settings\$WirelessDebuggingActivity")
+        runCatching { startActivity(intent) }.onFailure {
+            runCatching {
+                startActivity(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
+                    .putExtra(":settings:fragment_args_key", "toggle_adb_wireless"))
+            }.onFailure {
+                Toast.makeText(activity, "无法打开无线调试，请手动前往开发者选项", Toast.LENGTH_LONG).show()
+            }
         }
-        panel.addView(scroll, LinearLayout.LayoutParams(-1, -2).apply {
-            height = if (message.length > 1500) (resources.displayMetrics.heightPixels * 0.5f).toInt() else -2
-        })
-        if (actionLabel != null) button(panel, actionLabel) { dialog.dismiss(); action?.invoke() }
-        button(panel, "关闭") { dialog.dismiss() }
-        dialog.setContentView(panel)
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        dialog.show()
-        dialog.window?.let(TouchFeedback::install)
-        dialog.window?.setLayout(resources.displayMetrics.widthPixels - dp(48), -2)
     }
 
     private fun delayLabel(milliseconds: Long): String {
@@ -364,16 +367,21 @@ class RefreshPanel(private val activity: Activity, private val switchContext: Co
         val rateLabel = if (activeHz == null) "—" else "${activeHz}Hz"
         if (rate.text.toString() != rateLabel) rate.text = rateLabel
         if (!trackingMode) modeSlider?.progress = modeIndex()
-        modeSlider?.contentDescription = "刷新率模式：${listOf("自适应", "60Hz", "120Hz")[modeIndex()]}，可选自适应、60Hz、120Hz"
+        modeSlider?.contentDescription = "刷新率模式：${modeLabels[modeIndex()]}，可选${modeLabels.joinToString("、")}"
         val enabled = AdaptiveHzPrefs.isControlsEnabled(this)
         updatingSwitch = true
         masterSwitch?.isChecked = enabled
         updatingSwitch = false
-        fun enableTree(node: View) {
+        fun updateControls(node: View) {
             node.isEnabled = enabled
-            if (node is android.view.ViewGroup) for (i in 0 until node.childCount) enableTree(node.getChildAt(i))
+            if (node is SeekBar || node is TextView && node.isClickable && node !is MaterialButton) {
+                node.alpha = if (enabled) 1f else 0.45f
+            }
+            if (node is android.view.ViewGroup) {
+                for (i in 0 until node.childCount) updateControls(node.getChildAt(i))
+            }
         }
-        for (card in controlledCards) { enableTree(card); card.alpha = if (enabled) 1f else 0.45f }
+        controlledCards.forEach(::updateControls)
         modeHint?.visibility = if (enabled && !ready()) View.VISIBLE else View.GONE
         val stateLabel = when {
             !enabled -> "刷新率控制已关闭"

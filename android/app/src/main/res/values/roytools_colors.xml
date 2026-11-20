@@ -1,1 +1,1 @@
-<resources><color name="roytools_blue">#2867A3</color><color name="roytools_accent">#007AFF</color></resources>
+<resources><color name="roytools_blue">#2867A3</color><color name="roytools_accent">@color/roytools_action_blue</color></resources>

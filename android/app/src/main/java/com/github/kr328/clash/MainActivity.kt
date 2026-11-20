@@ -19,8 +19,10 @@ import com.github.kr328.clash.util.withProfile
 import com.github.kr328.clash.core.bridge.*
 import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.core.model.BundledRoutingRules
+import com.github.kr328.clash.core.model.ConfigurationOverride
 import com.github.kr328.clash.core.model.ProxySort
 import com.github.kr328.clash.core.model.RoutingPresets
+import com.github.kr328.clash.core.model.RoutingRuleStore
 import com.github.kr328.clash.core.model.TunnelState
 import com.github.kr328.clash.design.util.showExceptionToast
 import com.github.kr328.clash.update.UpdateActivity
@@ -55,8 +57,12 @@ import com.github.kr328.clash.music.MusicPlayback
 import com.github.kr328.clash.log.UnifiedLogs
 import com.github.kr328.clash.log.exportModuleLog
 import com.github.kr328.clash.design.dialog.RoyToolsDialogBuilder
+import com.github.kr328.clash.remote.StatusClient
+import com.github.kr328.clash.service.remote.IClashManager
+import com.github.kr328.clash.service.util.ProxyModePreferences
 
 class MainActivity : BaseActivity<MainDesign>() {
+    private val runtimeRuleVersion = Regex("roytools-(?:ai|rule)-direct-[0-9]+-v([0-9]+)-([0-9]+)-([0-9]+)")
     private val routingUpdater by lazy { com.github.kr328.clash.update.RoutingRuleUpdateController(this, this) }
 
     private suspend fun applyUpdatedRoutingRules() {
@@ -96,27 +102,23 @@ class MainActivity : BaseActivity<MainDesign>() {
                 TAB_PROXY -> { design?.resetProxyScroll(); return }
                 TAB_REFRESH -> { refreshPanel?.scrollToTop(); return }
                 TAB_FORWARD -> { forwardPanel?.goHome(); return }
-                TAB_SETTINGS -> if (settingsPage == SettingsPage.Home) {
-                    design?.scrollVisiblePageToTop(); return
+                TAB_SETTINGS -> {
+                    if (settingsPage == SettingsPage.Home) design?.scrollVisiblePageToTop()
+                    else showSettingsPage(SettingsPage.Home, animated = true)
+                    return
                 }
             }
         }
-        // Music and forwarding own their inner transitions. An outer return
-        // animation belongs only to reselecting the settings module itself.
-        val returning = selectedTab == TAB_SETTINGS && tab == TAB_SETTINGS &&
-            settingsPage != SettingsPage.Home
         when (tab) {
-            TAB_MUSIC -> musicPanel?.goHome()
+            TAB_MUSIC -> if (reselectingMusic) musicPanel?.goHome()
             TAB_FORWARD -> forwardPanel?.goHome()
             TAB_PROXY -> design?.resetProxyScroll()
             TAB_REFRESH -> refreshPanel?.scrollToTop()
-            TAB_SETTINGS -> settingsPage = SettingsPage.Home
         }
         // goHome owns the music page transition. Reattaching its live WebView also
         // restarts layout/theme sync and visibly flashes an already open home page.
         if (reselectingMusic) return
         selectTab(tab)
-        if (returning && tab != TAB_MUSIC) design?.animateReturnToHome()
     }
 
     private fun selectTab(tab: Int) {
@@ -130,9 +132,12 @@ class MainActivity : BaseActivity<MainDesign>() {
                     musicPanel = created
                     created.onNavigationChanged = { title, depth ->
                         if (selectedTab == TAB_MUSIC) {
-                            current.headerTitle(if (depth > 0) title ?: "音乐" else null)
+                            current.musicHeader(if (depth > 0) title ?: "音乐" else null,
+                                created.navigationPageKey, created.canLocatePlaylistTrack,
+                                created.inPlayerFlow, created::headerAction)
                         }
                     }
+                    created.onNavigationMotion = { direction -> current.updatePageMotion(TAB_MUSIC, direction) }
                 }
                 current.showMusic(panel.view)
                 panel.onStart()
@@ -160,15 +165,15 @@ class MainActivity : BaseActivity<MainDesign>() {
         if (tab == TAB_PROXY && clashRunning) readProxyTraffic(current)
     }
 
-    private fun showSettingsPage(page: SettingsPage) {
+    private fun showSettingsPage(page: SettingsPage, animated: Boolean = false) {
         val current = design ?: return
-        val returning = settingsPage != SettingsPage.Home && page == SettingsPage.Home
+        if (animated && (page == settingsPage || selectedTab != TAB_SETTINGS)) return
         settingsPage = page
         when (page) {
-            SettingsPage.Home -> current.showSettings(uiStore.darkMode, returning,
-                onTheme = { showSettingsPage(SettingsPage.Theme) },
-                onAbout = { showSettingsPage(SettingsPage.About) },
-                 onBackground = { showSettingsPage(SettingsPage.Background) },
+            SettingsPage.Home -> current.showSettings(uiStore.darkMode,
+                onTheme = { showSettingsPage(SettingsPage.Theme, animated = true) },
+                onAbout = { showSettingsPage(SettingsPage.About, animated = true) },
+                onBackground = { showSettingsPage(SettingsPage.Background, animated = true) },
                 onCheckUpdates = { startActivity(Intent(this, UpdateActivity::class.java)) })
             SettingsPage.Background -> current.showBackground(
                 autoRestart = packageManager.getComponentEnabledSetting(
@@ -224,6 +229,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                 }
             }
         }
+        if (animated) current.updatePageMotion(TAB_SETTINGS, if (page == SettingsPage.Home) "pop" else "push")
     }
 
     private fun navigateBack() {
@@ -233,7 +239,7 @@ class MainActivity : BaseActivity<MainDesign>() {
             return
         }
         if (selectedTab == TAB_SETTINGS && settingsPage != SettingsPage.Home) {
-            showSettingsPage(SettingsPage.Home)
+            showSettingsPage(SettingsPage.Home, animated = true)
             return
         }
         finish()
@@ -324,26 +330,30 @@ class MainActivity : BaseActivity<MainDesign>() {
         }
     }
 
-    private fun changeProxyMode(current: MainDesign, request: MainDesign.Request) {
-        proxyModeJob?.cancel()
+    private fun changeProxyMode(current: MainDesign, choice: String) {
+        if (proxyModeJob?.isActive == true) return
+        current.setProxyModeChanging(true)
+        current.setProxyIssue(null)
         proxyModeJob = launch {
             try {
                 proxyModeLock.withLock {
                     withTimeout(10_000L) {
+                        if (!clashRunning && withContext(Dispatchers.IO) { StatusClient(this@MainActivity).setIdleProxyMode(choice) }) {
+                            return@withTimeout
+                        }
                         withClash {
                             val override = queryOverride(Clash.OverrideSlot.Session)
-                            val preset=when(request){MainDesign.Request.ModeRule->"roylyl";MainDesign.Request.ModeMusic->"music";MainDesign.Request.ModeAI->"ai";else->null}
-                            if(preset!=null){
+                            val preset = if (choice == "rule") "roylyl" else choice.takeIf { it == "music" || it == "ai" }
+                            if (preset != null) {
                                 val groups=queryProxyGroupNames(false)
                                 val target = RoutingPresets.target(override, groups, queryProxyGroup("GLOBAL", ProxySort.Default))
                                 if (preset == "roylyl") BundledRoutingRules.apply(this@MainActivity, override, target, groups)
                                 else RoutingPresets.apply(this@MainActivity, override, preset, target)
                             } else RoutingPresets.clear(override)
-                            override.mode = when (request) {
-                                MainDesign.Request.ModeMusic,MainDesign.Request.ModeAI -> TunnelState.Mode.Rule
-                                MainDesign.Request.ModeRule -> TunnelState.Mode.Rule
-                                MainDesign.Request.ModeGlobal -> TunnelState.Mode.Global
-                                MainDesign.Request.ModeDirect -> TunnelState.Mode.Direct
+                            override.mode = when (choice) {
+                                "rule", "music", "ai" -> TunnelState.Mode.Rule
+                                "global" -> TunnelState.Mode.Global
+                                "direct" -> TunnelState.Mode.Direct
                                 else -> null
                             }
                             patchOverride(Clash.OverrideSlot.Session, override)
@@ -351,14 +361,15 @@ class MainActivity : BaseActivity<MainDesign>() {
                     }
                 }
             } catch (error: TimeoutCancellationException) {
-                current.showToast("代理模式切换超时，请重试", ToastDuration.Long)
+                current.setProxyIssue("代理模式切换超时，请重试")
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
                 Log.w("切换代理模式失败", error)
-                current.showExceptionToast(error)
+                current.setProxyIssue(error.message ?: "无法切换代理模式")
             } finally {
                 if (currentCoroutineContext().isActive) readProxyStatus(current)
+                current.setProxyModeChanging(false)
             }
         }
     }
@@ -378,6 +389,7 @@ class MainActivity : BaseActivity<MainDesign>() {
         val design = MainDesign(this)
         design.onTabSelected = ::selectTabHome
         design.onHeaderBack = ::navigateBack
+        design.onProxyModeSelected = { changeProxyMode(design, it) }
 
         setContentDesign(design)
 
@@ -403,7 +415,10 @@ class MainActivity : BaseActivity<MainDesign>() {
                     Log.d("主页处理操作：$it")
                     when (it) {
                         MainDesign.Request.ToggleStatus -> toggleProxy(design)
-                        MainDesign.Request.CheckRoutingRules -> routingUpdater.check { applyUpdatedRoutingRules() }
+                        MainDesign.Request.CheckRoutingRules -> routingUpdater.check(design::setRuleCheckStatus) {
+                            try { applyUpdatedRoutingRules() }
+                            finally { if (currentCoroutineContext().isActive) readProxyStatus(design) }
+                        }
                         MainDesign.Request.OpenLanSharing ->
                             startActivity(OverrideSettingsActivity::class.intent.putExtra(
                                 OverrideSettingsActivity.EXTRA_LAN_ONLY, true
@@ -412,16 +427,6 @@ class MainActivity : BaseActivity<MainDesign>() {
                             startActivity(ProxyActivity::class.intent)
                         MainDesign.Request.OpenProfiles ->
                             startActivity(ProfilesActivity::class.intent)
-                        MainDesign.Request.ModeDefault,
-                        MainDesign.Request.ModeRule,
-                        MainDesign.Request.ModeMusic,
-                        MainDesign.Request.ModeAI,
-                        MainDesign.Request.ModeGlobal,
-                        MainDesign.Request.ModeDirect -> changeProxyMode(design, it)
-                        MainDesign.Request.OpenAppSettings -> startActivity(AppSettingsActivity::class.intent)
-                        MainDesign.Request.OpenNetworkSettings -> startActivity(NetworkSettingsActivity::class.intent)
-                        MainDesign.Request.OpenOverrideSettings -> startActivity(OverrideSettingsActivity::class.intent)
-                        MainDesign.Request.OpenProviders -> startActivity(ProvidersActivity::class.intent)
                         MainDesign.Request.AddProxyTile -> addProxyTile()
                         MainDesign.Request.AddProxyWidget -> addProxyWidget()
                     }
@@ -441,7 +446,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                 "2.进入“小组件”，找到RoyTools。\n" +
                 "3.选择横版4×2小组件，拖到桌面的空白区域。\n" +
                 "4.点击“完成”或退出编辑模式。\n\n" +
-                "请预留足够空间，小组件可控制代理、刷新率和音乐播放。")
+                "请预留足够空间，小组件可控制代理和音乐播放。")
             .setPositiveButton("知道了", null).show()
     }
 
@@ -468,18 +473,48 @@ class MainActivity : BaseActivity<MainDesign>() {
         if (selectedTab == TAB_MUSIC) musicPanel?.onStart()
     }
 
+    private data class ProxyOverview(val mode: String, val node: String?, val lanStatus: String, val ruleVersion: String?)
+
     private suspend fun MainDesign.fetch() {
-        setClashRunning(clashRunning)
-
-        val state = withClash {
-            queryTunnelState()
+        val running = clashRunning
+        val profile = withProfile { queryActive()?.takeIf { it.imported }?.name }
+        val overview = withClash {
+            val effective = queryConfiguration()
+            val allowLan = queryOverride(Clash.OverrideSlot.Persist).allowLan ?: effective.allowLan
+            val lan = when {
+                !allowLan -> getString(DesignR.string.lan_status_off)
+                !running -> getString(DesignR.string.lan_status_waiting)
+                effective.allowLan && listOf(effective.mixedPort, effective.httpPort, effective.socksPort).any { it in 1..65535 } ->
+                    getString(DesignR.string.lan_status_listening)
+                else -> getString(DesignR.string.lan_status_no_listener)
+            }
+            val override = if (running) queryOverride(Clash.OverrideSlot.Session) else null
+            ProxyOverview(
+                override?.let(ProxyModePreferences::choice) ?: StatusClient(this@MainActivity).proxyMode(),
+                override?.let { selectedProxy(it, queryTunnelState().mode) },
+                lan,
+                override?.ruleProviders.orEmpty().keys.firstNotNullOfOrNull { key ->
+                    runtimeRuleVersion.matchEntire(key)?.groupValues?.drop(1)?.joinToString(".")
+                },
+            )
         }
-        setMode(state.mode)
-        withClash { queryOverride(Clash.OverrideSlot.Session) }.let { setProxyMode(it.mode,it.routingPreset) }
+        setProxyOverview(running, profile, overview.node, overview.lanStatus)
+        setProxyMode(overview.mode)
+        val local = withContext(Dispatchers.IO) { RoutingRuleStore.current(this@MainActivity).version }
+        setRuleVersions(local, overview.ruleVersion)
+    }
 
-        withProfile {
-            setProfileName(queryActive()?.name)
+    private fun IClashManager.selectedProxy(config: ConfigurationOverride, mode: TunnelState.Mode): String? {
+        if (mode == TunnelState.Mode.Direct) return "直连"
+        val groups = queryProxyGroupNames(false).toSet()
+        var selected = config.routingTarget?.takeIf { it.isNotBlank() }
+            ?: queryProxyGroup("GLOBAL", ProxySort.Default).now.takeIf { it.isNotBlank() }
+            ?: return null
+        val visited = hashSetOf<String>()
+        while (selected in groups && visited.add(selected) && visited.size <= 16) {
+            selected = queryProxyGroup(selected, ProxySort.Default).now.takeIf { it.isNotBlank() } ?: return selected
         }
+        return selected
     }
 
     private suspend fun MainDesign.fetchTraffic() {
@@ -570,7 +605,7 @@ class MainActivity : BaseActivity<MainDesign>() {
             prefs.edit().putBoolean("theme_initialized", true).apply()
         }
         super.onCreate(savedInstanceState)
-        WindowCompat.setDecorFitsSystemWindows(window, true)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         val colors = obtainStyledAttributes(intArrayOf(DesignR.attr.glassCanvasStart, DesignR.attr.glassToolbarSurface))
         window.statusBarColor = colors.getColor(0, window.statusBarColor)
         window.navigationBarColor = colors.getColor(1, window.navigationBarColor)

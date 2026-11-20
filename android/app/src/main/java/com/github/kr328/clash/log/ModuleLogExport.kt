@@ -14,9 +14,9 @@ import java.util.Locale
 
 suspend fun BaseActivity<*>.exportModuleLog(module: UnifiedLogs.Module) {
     val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(Date())
-    val target = startActivityForResult(ActivityResultContracts.CreateDocument("text/plain"),
-        "RoyTools-${module.title}日志-$stamp.txt") ?: return
     try {
+        val target = startActivityForResult(ActivityResultContracts.CreateDocument("text/plain"),
+            "RoyTools-${module.title}日志-$stamp.txt") ?: return
         withContext(Dispatchers.IO) {
             val text = UnifiedLogs.exportText(this@exportModuleLog, module)
             val output = contentResolver.openOutputStream(target, "wt") ?: throw IOException("无法写入所选位置")

@@ -31,4 +31,12 @@ class StatusClient(private val context: Context) {
             null
         }
     }
+
+    fun proxyMode(): String =
+        context.contentResolver.call(uri, StatusProvider.METHOD_IDLE_PROXY_MODE, null, null)
+            ?.getString("choice") ?: "default"
+
+    fun setIdleProxyMode(choice: String): Boolean =
+        context.contentResolver.call(uri, StatusProvider.METHOD_IDLE_PROXY_MODE, choice, null)
+            ?.getBoolean("accepted") == true
 }

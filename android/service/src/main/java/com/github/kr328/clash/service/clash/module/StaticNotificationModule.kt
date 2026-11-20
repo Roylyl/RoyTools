@@ -44,7 +44,7 @@ class StaticNotificationModule(service: Service) : Module<Unit>(service) {
         while (true) {
             loaded.receive()
 
-            val profileName = StatusProvider.currentProfile ?: "Not selected"
+            val profileName = StatusProvider.currentProfile ?: service.getString(R.string.roytools_no_profile)
 
             val notification = builder
                 .setContentTitle(profileName)

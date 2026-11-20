@@ -20,15 +20,19 @@ type profileRequest struct {
 	SubscriptionYAML string            `json:"subscriptionYAML"`
 	SelectedGroup    string            `json:"selectedGroup"`
 	SelectedNode     string            `json:"selectedNode"`
+	ProfileID        string            `json:"profileID"`
+	GroupSelections  map[string]string `json:"groupSelections"`
 	RulesVersion     string            `json:"rulesVersion"`
 	Rules            []string          `json:"rules"`
 	Providers        map[string]string `json:"providers"`
 	MusicDomains     []string          `json:"musicDomains"`
+	LANPort          int               `json:"lanPort"`
 }
 
 type routeSelection struct {
 	target string
 	groups []string
+	nodes  []string
 }
 
 var (
@@ -44,6 +48,9 @@ func decodeProfile(input []byte) (profileRequest, error) {
 	}
 	if err := json.Unmarshal(input, &request); err != nil || request.SubscriptionYAML == "" {
 		return request, errors.New("missing or invalid subscription YAML")
+	}
+	if request.LANPort < 0 || request.LANPort > 65535 {
+		return request, errors.New("invalid LAN proxy port")
 	}
 	return request, nil
 }
@@ -73,17 +80,18 @@ func usableTarget(target string) bool {
 }
 
 func chooseProxy(cfg map[string]any, preferred string) routeSelection {
-	groups := profileNames(cfg["proxy-groups"])
-	names := append(append([]string(nil), groups...), profileNames(cfg["proxies"])...)
+	selection := routeSelection{groups: profileNames(cfg["proxy-groups"]), nodes: profileNames(cfg["proxies"])}
+	names := append(append([]string(nil), selection.groups...), selection.nodes...)
 	for _, name := range names {
 		if name == preferred {
-			return routeSelection{target: name, groups: groups}
+			selection.target = name
+			return selection
 		}
 	}
 	if len(names) > 0 {
-		return routeSelection{target: names[0], groups: groups}
+		selection.target = names[0]
 	}
-	return routeSelection{groups: groups}
+	return selection
 }
 
 func composeProfile(home string, request profileRequest) ([]byte, routeSelection, error) {
@@ -91,8 +99,8 @@ func composeProfile(home string, request profileRequest) ([]byte, routeSelection
 	if err := yaml.Unmarshal([]byte(request.SubscriptionYAML), &cfg); err != nil || cfg == nil {
 		return nil, routeSelection{}, errors.New("subscription is not a Clash/Mihomo YAML mapping")
 	}
-	// The OS-managed tunnel is the only system ingress. Never expose ports
-	// or the API controller requested in an imported subscription.
+	// Only RoyTools can enable its own explicit LAN or music listener.
+	// Imported subscriptions cannot open local ports or API controllers.
 	for _, key := range []string{
 		"port", "socks-port", "redir-port", "tproxy-port", "mixed-port",
 		"tuic-server", "ss-config", "vmess-config", "listeners", "tunnels", "iptables",
@@ -119,12 +127,14 @@ func composeProfile(home string, request profileRequest) ([]byte, routeSelection
 	delete(dns, "listen")
 	cfg["dns"] = dns
 	selection := chooseProxy(cfg, request.SelectedGroup)
-	if request.Mode != "default" && selection.target == "" {
+	if request.Mode != "default" && request.Mode != "direct" && selection.target == "" {
 		return nil, selection, errors.New("subscription has no usable proxy group or node")
 	}
 	switch request.Mode {
 	case "default":
 		// Preserve the provider's rules, subrules, providers and mode.
+	case "global", "direct":
+		cfg["mode"] = request.Mode
 	case "rule", "ai":
 		rules, err := overlayRules(home, cfg, request, selection.target)
 		if err != nil {

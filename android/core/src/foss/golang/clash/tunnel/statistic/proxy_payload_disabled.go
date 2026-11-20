@@ -2,4 +2,4 @@
 
 package statistic
 
-func trackProxyPayload(int64, bool) {}
+func trackProxyPayload(int64, bool, int32) {}

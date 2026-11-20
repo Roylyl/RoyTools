@@ -3,11 +3,15 @@ package com.github.kr328.clash.forward
 import android.app.*
 import android.content.*
 import android.os.*
+import android.text.TextUtils
+import android.view.View
 import android.widget.*
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.github.kr328.clash.common.util.NotificationGroups
 import com.github.kr328.clash.design.dialog.RoyToolsDialogBuilder
+import com.github.kr328.clash.design.util.resolveThemedColor
+import com.github.kr328.clash.design.R as DesignR
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.json.JSONObject
@@ -16,8 +20,13 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
 
+private const val DOWNLOAD_REQUEST_ID = "chat_download_request"
+private const val CANCEL_DOWNLOAD = "cancel"
+private const val CANCELING_DOWNLOAD = "正在取消…"
+private const val CANCELED_DOWNLOAD = "已取消"
+
 object ChatFileDownloads {
-    data class State(val id:String="",val name:String="",val active:Boolean=false,val bytes:Long=0,val total:Long=0,val speed:Double=0.0,val message:String=""){
+    data class State(val id:String="",val name:String="",val active:Boolean=false,val bytes:Long=0,val total:Long=0,val speed:Double=0.0,val message:String="",val requestId:Long=0){
         val percent:Int get()=if(!active&&message=="下载完成")100 else if(total>0)((bytes.toDouble()/total)*100).toInt().coerceIn(0,100) else 0
         fun detail()=String.format(Locale.ROOT,"%.2fMB/s · %.2fMB / %s",speed/1048576.0,bytes/1048576.0,if(total>0)String.format(Locale.ROOT,"%.2fMB · %d%%",total/1048576.0,percent) else "未知大小")
     }
@@ -31,8 +40,11 @@ object ChatFileDownloads {
     }
     fun begin(a:Activity,record:JSONObject){
         if(!state.value.active){
-            state.value=State(record.getString("file_id"),record.optString("file_name","文件"),true,message="正在连接…")
-            try{ContextCompat.startForegroundService(a,Intent(a,ChatFileDownloadService::class.java).putExtra("record",record.toString()))}
+            val requestId = SystemClock.elapsedRealtimeNanos()
+            state.value=State(record.getString("file_id"),record.optString("file_name","文件"),true,message="正在连接…",requestId=requestId)
+            val intent = Intent(a, ChatFileDownloadService::class.java)
+                .putExtra("record", record.toString()).putExtra(DOWNLOAD_REQUEST_ID, requestId)
+            try{ContextCompat.startForegroundService(a,intent)}
             catch(_:RuntimeException){state.value=state.value.copy(active=false,message="无法启动下载，请重试")}
         }
         show(a)
@@ -41,11 +53,24 @@ object ChatFileDownloads {
         if(a.isFinishing||a.isDestroyed||dialog?.isShowing==true)return
         val spacing=(20*a.resources.displayMetrics.density).toInt()
         val group=LinearLayout(a).apply{orientation=LinearLayout.VERTICAL;setPadding(spacing,spacing,spacing,spacing)}
-        val name=TextView(a).apply{textSize=16f};val progress=ProgressBar(a,null,android.R.attr.progressBarStyleHorizontal)
-        val details=TextView(a).apply{textSize=14f;setPadding(0,spacing/2,0,0)}
+        val name = TextView(a).apply {
+            textSize = 16f
+            maxLines = 3
+            ellipsize = TextUtils.TruncateAt.END
+            setTextColor(a.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface))
+        }
+        val progress = ProgressBar(a, null, android.R.attr.progressBarStyleHorizontal)
+        val details = TextView(a).apply {
+            textSize = 14f
+            setPadding(0, spacing / 2, 0, 0)
+            setTextColor(a.resolveThemedColor(DesignR.attr.glassTextSecondary))
+        }
         group.addView(name);group.addView(progress,LinearLayout.LayoutParams(-1,-2));group.addView(details)
         val window=RoyToolsDialogBuilder(a).setTitle("文件下载").setView(group).setCancelable(false)
-            .setNegativeButton("取消下载"){_,_->a.startService(Intent(a,ChatFileDownloadService::class.java).setAction("cancel"))}
+            .setNegativeButton("取消下载"){_,_->
+                a.startService(Intent(a,ChatFileDownloadService::class.java).setAction(CANCEL_DOWNLOAD)
+                    .putExtra(DOWNLOAD_REQUEST_ID,state.value.requestId))
+            }
             .setNeutralButton("后台下载"){_,_->}
             .setPositiveButton("完成",null).create()
         val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main)
@@ -53,12 +78,15 @@ object ChatFileDownloads {
         window.setOwnerActivity(a)
         dialog=window;window.show()
         scope.launch{state.collect{s->
-            name.text=s.name
+            name.text = s.name.ifBlank { "暂无下载" }
+            progress.visibility = if (s.name.isBlank()) View.GONE else View.VISIBLE
             progress.isIndeterminate=s.active&&s.total<=0;progress.progress=s.percent
-            details.text=s.message+"\n"+s.detail()
-            window.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE).isEnabled=s.active
-            window.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL).visibility=if(s.active)android.view.View.VISIBLE else android.view.View.GONE
-            window.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).visibility=if(s.active)android.view.View.GONE else android.view.View.VISIBLE
+            details.text = if (s.active) s.message + "\n" + s.detail() else s.message
+            val active = if (s.active) View.VISIBLE else View.GONE
+            window.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE).visibility = active
+            window.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE).isEnabled = s.message != CANCELING_DOWNLOAD
+            window.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL).visibility = active
+            window.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).visibility = if (s.active) View.GONE else View.VISIBLE
         }}
     }
     fun dismiss(a:Activity){if(dialog?.ownerActivity===a)dialog?.dismiss()}
@@ -68,22 +96,24 @@ class ChatFileDownloadService:Service(){
     companion object {
         private var instance:ChatFileDownloadService?=null
         suspend fun cancelAndAwait(){
-            val service=instance ?: return
-            ChatFileDownloads.state.value=ChatFileDownloads.state.value.copy(active=false,message="已取消")
-            service.connection?.disconnect()
-            service.job?.cancelAndJoin()
-            service.stopForeground(STOP_FOREGROUND_REMOVE);service.stopSelf()
-            com.github.kr328.clash.common.util.NotificationGroups.refresh(service,com.github.kr328.clash.common.util.NotificationGroups.RUNTIME)
+            val service=instance
+            if (service != null) {
+                service.cancelTransfer()?.join()
+            } else if (ChatFileDownloads.state.value.active) {
+                ChatFileDownloads.state.value = ChatFileDownloads.state.value.copy(active = false, message = CANCELED_DOWNLOAD)
+            }
         }
     }
     private val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main)
     private var job:Job?=null
+    private var runningRequestId = 0L
     @Volatile private var connection:HttpURLConnection?=null
     override fun onBind(i:Intent?)=null
     private fun notification():android.app.Notification {
         val s=ChatFileDownloads.state.value
         val open=PendingIntent.getActivity(this,8130,Intent(this,ForwardChatActivity::class.java).putExtra("show_chat_download",true),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val cancel=PendingIntent.getService(this,8131,Intent(this,ChatFileDownloadService::class.java).setAction("cancel"),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val cancel=PendingIntent.getService(this,8131,Intent(this,ChatFileDownloadService::class.java).setAction(CANCEL_DOWNLOAD)
+            .putExtra(DOWNLOAD_REQUEST_ID,s.requestId),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val builder=NotificationCompat.Builder(this,"chat_file_downloads").setSmallIcon(android.R.drawable.stat_sys_download)
             .setGroup(NotificationGroups.RUNTIME).setContentTitle(s.name.ifBlank{"Chat文件下载"}).setContentText(if(s.active)s.detail() else s.message)
             .setContentIntent(open).setOngoing(s.active).setOnlyAlertOnce(true).setAutoCancel(!s.active).setSilent(true)
@@ -91,21 +121,47 @@ class ChatFileDownloadService:Service(){
         return builder.build()
     }
     override fun onCreate(){super.onCreate();instance=this;getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel("chat_file_downloads","Chat文件下载",NotificationManager.IMPORTANCE_LOW));startForeground(8130,notification())}
+    private fun cancelTransfer(): Job? {
+        val current = ChatFileDownloads.state.value
+        if (!current.active) return null
+        val running = job?.takeUnless { it.isCompleted }
+        if (running == null) {
+            ChatFileDownloads.state.value = current.copy(active = false, message = CANCELED_DOWNLOAD)
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            NotificationGroups.refresh(this, NotificationGroups.RUNTIME)
+        } else {
+            ChatFileDownloads.state.value = current.copy(speed = 0.0, message = CANCELING_DOWNLOAD)
+            running.cancel()
+            connection?.disconnect()
+        }
+        return running
+    }
+
     override fun onStartCommand(i:Intent?,flags:Int,startId:Int):Int{
-        if(i?.action=="cancel"){
-            ChatFileDownloads.state.value=ChatFileDownloads.state.value.copy(active=false,message="已取消")
-            connection?.disconnect();job?.cancel();stopForeground(STOP_FOREGROUND_REMOVE);stopSelf();NotificationGroups.refresh(this,NotificationGroups.RUNTIME)
+        val requestId = i?.getLongExtra(DOWNLOAD_REQUEST_ID, 0L) ?: 0L
+        val current = ChatFileDownloads.state.value
+        if (!current.active || requestId != current.requestId) {
+            if (!current.active && job?.isCompleted != false) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf(startId)
+            }
             return START_NOT_STICKY
         }
-        if(job?.isActive==true)return START_NOT_STICKY
+        if(i?.action==CANCEL_DOWNLOAD){
+            cancelTransfer()
+            return START_NOT_STICKY
+        }
+        if(job?.isCompleted==false)return START_NOT_STICKY
         val record=runCatching{JSONObject(i?.getStringExtra("record").orEmpty())}.getOrNull()
-        if(record==null){stopForeground(STOP_FOREGROUND_REMOVE);stopSelf();return START_NOT_STICKY}
+        if(record==null){cancelTransfer();return START_NOT_STICKY}
         val generation=ChatMediaCache.generation()
         val destination=ChatFileDownloads.file(this,record)
-        job=scope.launch {
+        runningRequestId = requestId
+        job=scope.launch(start = CoroutineStart.UNDISPATCHED) {
             var temporary:File?=null
             try{
-                withContext(Dispatchers.IO){
+                val bytes = withContext(Dispatchers.IO){
                     val token=TelegramForward.prefs(this@ChatFileDownloadService).getString("token", "").orEmpty()
                     val meta=TelegramForward.call(token,"getFile",JSONObject().put("file_id",record.getString("file_id"))).getJSONObject("result")
                     currentCoroutineContext().ensureActive()
@@ -125,18 +181,40 @@ class ChatFileDownloadService:Service(){
                     }}
                     currentCoroutineContext().ensureActive()
                     check(total<=0||bytes==total){"下载未完成"};ChatMediaCache.commit(generation){check(temporary!!.renameTo(destination))}
-                    withContext(Dispatchers.Main){ChatFileDownloads.state.value=ChatFileDownloads.state.value.copy(bytes=bytes,total=bytes,active=false,speed=0.0,message="下载完成")}
+                    bytes
                 }
-            }catch(e:CancellationException){throw e}
+                ChatFileDownloads.state.value = ChatFileDownloads.state.value.copy(bytes=bytes,total=bytes,active=false,speed=0.0,message="下载完成")
+            }catch(e:CancellationException){
+                if (instance === this@ChatFileDownloadService) {
+                    ChatFileDownloads.state.value = ChatFileDownloads.state.value.copy(active=false,speed=0.0,message=CANCELED_DOWNLOAD)
+                }
+                throw e
+            }
             catch(e:Exception){ChatFileDownloads.state.value=ChatFileDownloads.state.value.copy(active=false,speed=0.0,message=if(e is TelegramForward.ApiError)e.message.orEmpty() else "下载失败，请重试")}
             finally{
                 connection?.disconnect();connection=null;temporary?.delete()
-                if(ChatFileDownloads.state.value.message!="已取消"){stopForeground(STOP_FOREGROUND_DETACH);publish()}
-                stopSelf()
+                if (instance === this@ChatFileDownloadService) {
+                    if (ChatFileDownloads.state.value.message == CANCELED_DOWNLOAD) {
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                        NotificationGroups.refresh(this@ChatFileDownloadService, NotificationGroups.RUNTIME)
+                    } else {
+                        stopForeground(STOP_FOREGROUND_DETACH)
+                        publish()
+                    }
+                    stopSelf()
+                }
             }
         }
         return START_NOT_STICKY
     }
     private fun publish(){getSystemService(NotificationManager::class.java).notify(8130,notification());NotificationGroups.refresh(this,NotificationGroups.RUNTIME)}
-    override fun onDestroy(){if(instance===this)instance=null;connection?.disconnect();scope.cancel();super.onDestroy()}
+    override fun onDestroy(){
+        if(instance===this) {
+            instance=null
+            if (ChatFileDownloads.state.value.active && ChatFileDownloads.state.value.requestId == runningRequestId) {
+                ChatFileDownloads.state.value = ChatFileDownloads.state.value.copy(active=false,speed=0.0,message=CANCELED_DOWNLOAD)
+            }
+        }
+        connection?.disconnect();scope.cancel();super.onDestroy()
+    }
 }

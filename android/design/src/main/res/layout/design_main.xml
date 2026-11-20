@@ -1,67 +1,139 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layout xmlns:android="http://schemas.android.com/apk/res/android">
-    <data>
-        <variable name="self" type="com.github.kr328.clash.design.MainDesign" />
-        <variable name="clashRunning" type="boolean" />
-        <variable name="forwarded" type="String" />
-        <variable name="uploadSpeed" type="String" />
-        <variable name="downloadSpeed" type="String" />
-        <variable name="mode" type="String" />
-        <variable name="profileName" type="String" />
-        <import type="android.view.View" />
-        <import type="com.github.kr328.clash.design.MainDesign.Request" />
-    </data>
-    <ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true" android:clipToPadding="false" android:background="?attr/glassCanvasStart">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingStart="16dp" android:paddingEnd="16dp" android:paddingTop="8dp" android:paddingBottom="12dp">
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?attr/glassCanvasStart"
+        android:clipToPadding="false"
+        android:fillViewport="true">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/roytools_page_margin"
+            android:paddingVertical="8dp">
+
             <LinearLayout style="@style/RoyTools.Card">
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:orientation="horizontal" android:gravity="center_vertical">
-                    <TextView style="@style/RoyTools.CardTitle" android:layout_width="0dp" android:layout_weight="1" android:layout_marginEnd="16dp" android:text="代理状态" />
-                    <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/proxy_enabled" style="@style/RoyTools.SettingSwitch" android:contentDescription="代理总开关" />
+                <TextView style="@style/RoyTools.ProxySectionHeading" android:text="代理状态" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+                        <TextView style="@style/RoyTools.ProxyLabel" android:text="VPN开关" />
+                        <TextView
+                            android:id="@+id/proxy_status"
+                            style="@style/RoyTools.Caption"
+                            android:accessibilityLiveRegion="polite"
+                            android:textColor="?attr/colorPrimary"
+                            android:text="未连接" />
+                    </LinearLayout>
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/proxy_enabled"
+                        style="@style/RoyTools.SettingSwitch"
+                        android:contentDescription="VPN开关"
+                        android:enabled="false" />
                 </LinearLayout>
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="@{clashRunning ? @string/roytools_proxy_running_mode(mode) : @string/stopped}" android:textSize="28sp" android:textStyle="bold" android:textColor="?attr/colorPrimary" />
-                <TextView style="@style/RoyTools.Caption" android:layout_marginTop="6dp" android:text="@{clashRunning ? @string/format_traffic_forwarded(forwarded) : @string/roytools_enable_proxy_hint}" />
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:orientation="horizontal">
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <View style="@style/RoyTools.ProxyDivider" android:layout_marginVertical="10dp" />
+                <LinearLayout
+                    android:id="@+id/proxy_traffic"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <LinearLayout style="@style/RoyTools.ProxyRateCell">
                         <TextView style="@style/RoyTools.Caption" android:text="↑上传速度" />
-                        <TextView style="@style/RoyTools.CardTitle" android:layout_marginTop="4dp" android:text="@{uploadSpeed}" android:textColor="?attr/colorPrimary" />
+                        <TextView android:id="@+id/proxy_upload_speed" style="@style/RoyTools.ProxyRate" />
                     </LinearLayout>
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                    <LinearLayout style="@style/RoyTools.ProxyRateCell">
                         <TextView style="@style/RoyTools.Caption" android:text="↓下载速度" />
-                        <TextView style="@style/RoyTools.CardTitle" android:layout_marginTop="4dp" android:text="@{downloadSpeed}" android:textColor="?attr/colorPrimary" />
+                        <TextView android:id="@+id/proxy_download_speed" style="@style/RoyTools.ProxyRate" />
                     </LinearLayout>
                 </LinearLayout>
+                <LinearLayout
+                    android:id="@+id/proxy_session_traffic"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone" />
+                <TextView
+                    android:id="@+id/proxy_profile_hint"
+                    style="@style/RoyTools.Caption"
+                    android:layout_marginTop="12dp"
+                    android:text="导入订阅或配置文件后即可开启VPN。"
+                    android:visibility="gone" />
+                <TextView
+                    android:id="@+id/proxy_issue"
+                    style="@style/RoyTools.Caption"
+                    android:layout_marginTop="8dp"
+                    android:accessibilityLiveRegion="polite"
+                    android:visibility="gone" />
             </LinearLayout>
+
             <LinearLayout style="@style/RoyTools.Card">
-                <TextView style="@style/RoyTools.CardTitle" android:text="代理模式" />
-                <com.github.kr328.clash.common.ui.FourStepSlider android:id="@+id/proxy_mode_slider" android:layout_width="match_parent" android:layout_height="56dp" android:contentDescription="代理模式，默认、规则、音乐、AI、全局、直连" />
-                <LinearLayout android:id="@+id/proxy_mode_labels" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                    <TextView style="@style/RoyTools.Caption" android:layout_width="0dp" android:layout_weight="1" android:gravity="center" android:text="默认" />
-                    <TextView style="@style/RoyTools.Caption" android:layout_width="0dp" android:layout_weight="1" android:gravity="center" android:text="规则" />
-                    <TextView style="@style/RoyTools.Caption" android:layout_width="0dp" android:layout_weight="1" android:gravity="center" android:text="音乐" />
-                    <TextView style="@style/RoyTools.Caption" android:layout_width="0dp" android:layout_weight="1" android:gravity="center" android:text="AI" />
-                    <TextView style="@style/RoyTools.Caption" android:layout_width="0dp" android:layout_weight="1" android:gravity="center" android:text="全局" />
-                    <TextView style="@style/RoyTools.Caption" android:layout_width="0dp" android:layout_weight="1" android:gravity="center" android:text="直连" />
+                <TextView style="@style/RoyTools.ProxySectionHeading" android:text="代理模式" />
+                <LinearLayout
+                    android:id="@+id/proxy_mode_scale"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+                    <com.github.kr328.clash.common.ui.FourStepSlider
+                        android:id="@+id/proxy_mode_slider"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:contentDescription="代理模式，默认、规则、音乐、AI、全局、直连" />
+                    <LinearLayout
+                        android:id="@+id/proxy_mode_labels"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                        <TextView style="@style/RoyTools.ProxyModeLabel" android:text="默认" />
+                        <TextView style="@style/RoyTools.ProxyModeLabel" android:text="规则" />
+                        <TextView style="@style/RoyTools.ProxyModeLabel" android:text="音乐" />
+                        <TextView style="@style/RoyTools.ProxyModeLabel" android:text="AI" />
+                        <TextView style="@style/RoyTools.ProxyModeLabel" android:text="全局" />
+                        <TextView style="@style/RoyTools.ProxyModeLabel" android:text="直连" />
+                    </LinearLayout>
                 </LinearLayout>
-                <TextView style="@style/RoyTools.Caption" android:layout_marginTop="10dp" android:text="启动代理后可切换模式" android:visibility="@{clashRunning ? View.GONE : View.VISIBLE}" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/proxy_mode_menu"
+                    style="@style/RoyTools.SecondaryButton"
+                    android:layout_marginTop="0dp"
+                    android:visibility="gone" />
+                <TextView
+                    android:id="@+id/proxy_mode_hint"
+                    style="@style/RoyTools.Caption"
+                    android:layout_marginTop="10dp" />
             </LinearLayout>
+
             <LinearLayout style="@style/RoyTools.Card">
-                <TextView style="@style/RoyTools.CardTitle" android:text="配置与连接" />
-                <TextView style="@style/RoyTools.Caption" android:layout_marginTop="10dp" android:text="@{profileName == null ? @string/not_selected : profileName}" />
-                <com.google.android.material.button.MaterialButton style="@style/RoyTools.SecondaryButton" android:text="@string/profiles" android:onClick="@{() -&gt; self.request(Request.OpenProfiles)}" />
-                <com.google.android.material.button.MaterialButton style="@style/RoyTools.SecondaryButton" android:text="@string/roytools_proxy_nodes" android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}" android:onClick="@{() -&gt; self.request(Request.OpenProxy)}" />
-                <com.google.android.material.button.MaterialButton style="@style/RoyTools.SecondaryButton" android:text="@string/lan_sharing" android:onClick="@{() -&gt; self.request(Request.OpenLanSharing)}" />
-                <com.google.android.material.button.MaterialButton android:id="@+id/check_routing_rules" style="@style/RoyTools.SecondaryButton" android:text="检查规则更新" android:onClick="@{() -&gt; self.request(Request.CheckRoutingRules)}" />
+                <TextView style="@style/RoyTools.ProxySectionHeading" android:text="配置与连接" />
+                <LinearLayout
+                    android:id="@+id/proxy_connections"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
             </LinearLayout>
+
             <LinearLayout style="@style/RoyTools.Card">
-                <TextView style="@style/RoyTools.CardTitle" android:text="代理设置" />
-                <com.google.android.material.button.MaterialButton style="@style/RoyTools.SecondaryButton" android:text="应用设置" android:onClick="@{() -&gt; self.request(Request.OpenAppSettings)}" />
-                <com.google.android.material.button.MaterialButton style="@style/RoyTools.SecondaryButton" android:text="网络设置" android:onClick="@{() -&gt; self.request(Request.OpenNetworkSettings)}" />
-                <com.google.android.material.button.MaterialButton style="@style/RoyTools.SecondaryButton" android:text="覆写设置" android:onClick="@{() -&gt; self.request(Request.OpenOverrideSettings)}" />
-                <com.google.android.material.button.MaterialButton style="@style/RoyTools.SecondaryButton" android:text="@string/providers" android:onClick="@{() -&gt; self.request(Request.OpenProviders)}" />
+                <TextView style="@style/RoyTools.ProxySectionHeading" android:text="规则更新" />
+                <LinearLayout
+                    android:id="@+id/proxy_rules"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/proxy_rule_message"
+                        style="@style/RoyTools.Caption"
+                        android:layout_marginTop="8dp"
+                        android:accessibilityLiveRegion="polite"
+                        android:visibility="gone" />
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
     </ScrollView>
 </layout>
-
-
-

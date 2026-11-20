@@ -1,5 +1,6 @@
 import Darwin
 import Foundation
+import Network
 import NetworkExtension
 import RoyToolsCore
 
@@ -9,6 +10,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     private static let geoDataFiles = ["geoip.metadb", "geoip.dat", "geosite.dat", "ASN.mmdb"]
     private let control = DispatchQueue(label: "com.roylyl.tools.vpn.control")
     private let output = DispatchQueue(label: "com.roylyl.tools.vpn.output", qos: .userInitiated)
+    private let latencyTests = DispatchQueue(label: "com.roylyl.tools.vpn.latency", qos: .userInitiated, attributes: .concurrent)
     private let packetSession = PacketSession()
 
     // Lifecycle callbacks and app messages are serialized on control.
@@ -17,6 +19,13 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     private var inputPending = false
     private var startReply: ((Error?) -> Void)?
     private var reloadReply: ((Data?) -> Void)?
+    private var pendingLatencyTests = 0
+    private var trafficTimer: DispatchSourceTimer?
+    private var trafficPath: NWPathMonitor?
+    private var previousPayloadSample: ProxyPayloadSample?
+    private var dailyProxyTraffic: DailyProxyTraffic?
+    private var dailyTrafficNeedsSave = false
+    private var lastDailyTrafficWrite: TimeInterval = 0
 
     override func startTunnel(options: [String: NSObject]?, completionHandler: @escaping (Error?) -> Void) {
         control.async {
@@ -25,6 +34,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
                 return
             }
             self.startReply = completionHandler
+            RoyToolsDiagnosticLog.record(.proxy, "启动VPN隧道", source: .tunnel, outcome: .started)
             let id = UUID()
             do {
                 let configuration: RoyToolsTunnelConfiguration
@@ -38,11 +48,18 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
                 let home = try RoyToolsTunnelStorage.engineDirectory()
                 try Self.seedGeoData(into: home)
                 let json = try JSONEncoder().encode(configuration)
+                self.startTrafficPathMonitor()
+                let startingPayload = Self.proxyPayloadSample()
                 let result = json.withUnsafeBytes { data in
                     RTCoreStart(home.path, data.bindMemory(to: UInt8.self).baseAddress, Int32(data.count), Self.mtu)
                 }
-                guard result == 0 else { throw ProviderError.core(Self.engineError()) }
+                guard result == 0 else {
+                    RoyToolsDiagnosticLog.record(.proxy, "启动Mihomo核心", level: .error, source: .tunnel,
+                                                 outcome: .failed, code: Int(result), mode: configuration.mode)
+                    throw ProviderError.core(Self.engineError())
+                }
                 self.sessionID = id
+                self.previousPayloadSample = startingPayload
                 self.applyNetworkSettings(configuration.mode) { error in
                     guard self.sessionID == id else { return }
                     do {
@@ -52,6 +69,8 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
                         self.packetSession.store(id)
                         self.readInput()
                         self.startOutput(id)
+                        self.startTrafficTimer(id)
+                        self.publishWidgetProxy(mode: configuration.mode)
                         self.finishStart(nil)
                     } catch {
                         self.stopCore()
@@ -59,6 +78,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
                     }
                 }
             } catch {
+                self.stopTrafficPathMonitor()
                 self.finishStart(error)
             }
         }
@@ -67,8 +87,10 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     override func stopTunnel(with reason: NEProviderStopReason, completionHandler: @escaping () -> Void) {
         control.async {
             self.stopCore()
+            RoyToolsDiagnosticLog.record(.proxy, "停止VPN隧道", source: .tunnel, outcome: .succeeded, code: reason.rawValue)
             self.finishStart(ProviderError.stopped)
             self.finishReload(.failure(ProviderError.stopped))
+            RoyToolsDiagnosticLog.flush()
             completionHandler()
         }
     }
@@ -76,6 +98,12 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     override func handleAppMessage(_ messageData: Data, completionHandler: ((Data?) -> Void)?) {
         control.async {
             let reply: (Data?) -> Void = completionHandler ?? { _ in }
+            if messageData.first == UInt8(ascii: "{"),
+               messageData.count <= RoyToolsProxyLatencyRequest.maximumBytes,
+               let request = try? JSONDecoder().decode(RoyToolsProxyLatencyRequest.self, from: messageData) {
+                self.testLatencies(request, data: messageData, reply: reply)
+                return
+            }
             guard messageData.count <= 128,
                   let command = try? JSONDecoder().decode(RoyToolsTunnelCommand.self, from: messageData) else {
                 reply(Self.encode(.failure(ProviderError.invalidCommand)))
@@ -100,9 +128,52 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
                     return
                 }
                 self.reloadReply = reply
+                RoyToolsDiagnosticLog.record(.proxy, "热重载配置", source: .tunnel, outcome: .started)
                 self.reload(id: id, previous: active)
             }
         }
+    }
+
+    private func testLatencies(_ request: RoyToolsProxyLatencyRequest, data: Data, reply: @escaping (Data?) -> Void) {
+        guard let active, let id = sessionID else {
+            reply(Self.encode(.failure(ProviderError.stopped)))
+            return
+        }
+        guard reloadReply == nil, pendingLatencyTests < 3 else {
+            reply(Self.encode(.failure(ProviderError.busy)))
+            return
+        }
+        guard (1...RoyToolsProxyLatencyRequest.maximumNodes).contains(request.nodes.count) else {
+            reply(Self.encode(.failure(ProviderError.invalidCommand)))
+            return
+        }
+        pendingLatencyTests += 1
+        latencyTests.async {
+            let results = Self.measureLatencies(request, data: data)
+            self.control.async {
+                self.pendingLatencyTests -= 1
+                guard self.sessionID == id, self.active == active, self.reloadReply == nil else {
+                    reply(Self.encode(.failure(ProviderError.busy)))
+                    return
+                }
+                reply(Self.encode(results))
+            }
+        }
+    }
+
+    private static func measureLatencies(_ request: RoyToolsProxyLatencyRequest, data: Data) -> Result<RoyToolsTunnelReply, Error> {
+        var delays = [Int32](repeating: -1, count: request.nodes.count)
+        let result = data.withUnsafeBytes { bytes in
+            delays.withUnsafeMutableBufferPointer { output in
+                RTCoreTestProxyLatencies(bytes.bindMemory(to: UInt8.self).baseAddress, Int32(bytes.count),
+                                         output.baseAddress, Int32(output.count))
+            }
+        }
+        guard Int(result) == request.nodes.count else { return .failure(ProviderError.invalidCommand) }
+        let results = zip(request.nodes, delays).map { node, delay in
+            RoyToolsProxyLatency(node: node, milliseconds: delay < 0 ? nil : Int(delay))
+        }
+        return .success(RoyToolsTunnelReply(ok: true, proxyLatencies: results))
     }
 
     private func reload(id: UUID, previous: RoyToolsTunnelConfiguration) {
@@ -113,10 +184,11 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
                 return
             }
             do {
+                checkpointProxyTraffic(Self.proxyPayloadSample(), flush: true)
                 try Self.reloadCore(requested)
             } catch {
-                // Restore the last configuration even if the engine failed after partially applying a reload.
-                rollback(previous: previous, needsNetworkSettings: false, id: id, originalError: error)
+                // The core stages validation and new listeners before committing a configuration.
+                finishReload(.failure(error))
                 return
             }
             let changesRoutes = (previous.mode == .music) != (requested.mode == .music)
@@ -126,6 +198,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
                     if let error { throw error }
                     try RoyToolsTunnelStorage.saveApplied(requested)
                     self.active = requested
+                    self.publishWidgetProxy(mode: requested.mode)
                     self.finishReload(.success(self.status(requested, details: true)))
                 } catch {
                     self.rollback(previous: previous, needsNetworkSettings: changesRoutes, id: id, originalError: error)
@@ -207,13 +280,14 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
                 var closed = false
                 for index in 0..<32 {
                     let count = buffer.withUnsafeMutableBufferPointer { pointer in
-                        RTCoreReadPacket(pointer.baseAddress, Int32(pointer.count), index == 0 ? 250 : 0)
+                        RTCoreReadPacket(pointer.baseAddress, Int32(pointer.count), index == 0 ? -1 : 0)
                     }
-                    if count <= 0 {
-                        closed = count < 0
+                    if count == -1 {
+                        closed = true
                         break
                     }
-                    guard Int(count) <= buffer.count else { continue }
+                    if count == 0 { break }
+                    guard (1...buffer.count).contains(Int(count)) else { continue }
                     let family: Int32
                     switch buffer[0] >> 4 {
                     case 4: family = AF_INET
@@ -247,36 +321,137 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             reply.musicProxyPort = state.musicProxy?.port
             reply.musicProxyUsername = state.musicProxy?.username
             reply.musicProxyPassword = state.musicProxy?.password
+            reply.lanProxyPort = state.lanProxy?.port
             reply.selectedGroup = state.selectedGroup
             reply.selectedNode = state.selectedNode
-            reply.groups = state.groups?.map { .init(name: $0.name, nodes: $0.nodes, selected: $0.current) }
+            reply.groups = state.groups?.map { .init(name: $0.name, nodes: $0.nodes, selected: $0.current,
+                                                    selectable: $0.selectable) }
+            reply.proxyNodes = state.proxyNodes
         }
         return reply
     }
 
     private func stopCore() {
+        let wasActive = active != nil
         packetSession.store(nil)
-        if sessionID != nil { _ = RTCoreStop() }
+        trafficTimer?.cancel()
+        trafficTimer = nil
+        if sessionID != nil {
+            checkpointProxyTraffic(Self.proxyPayloadSample(), flush: true)
+            _ = RTCoreStop()
+            // Stop wakes the reader. Wait for it to leave before a new session
+            // can make another packet device available to the C bridge.
+            output.sync {}
+            checkpointProxyTraffic(Self.proxyPayloadSample(), flush: true)
+        }
+        previousPayloadSample = nil
+        stopTrafficPathMonitor()
         sessionID = nil
         active = nil
+        if wasActive { publishWidgetProxy(mode: nil) }
+    }
+
+    private func publishWidgetProxy(mode: RoyToolsTunnelMode?) {
+        var state = RoyToolsWidgetData.loadProxy()
+        state.connected = mode != nil
+        if let mode {
+            let engine = Self.engineState()
+            state.node = mode == .direct ? "DIRECT" : engine?.selectedNode ?? engine?.selectedGroup
+            state.mode = mode
+            state.ready = true
+        } else {
+            state.ready = false
+        }
+        RoyToolsWidgetData.saveProxy(state)
+    }
+
+    private func startTrafficTimer(_ id: UUID) {
+        let timer = DispatchSource.makeTimerSource(queue: control)
+        timer.schedule(deadline: .now(), repeating: .seconds(1), leeway: .milliseconds(150))
+        timer.setEventHandler { [weak self] in
+            guard let self, self.sessionID == id else { return }
+            self.checkpointProxyTraffic(Self.proxyPayloadSample())
+        }
+        trafficTimer = timer
+        timer.resume()
+    }
+
+    private func checkpointProxyTraffic(_ sample: ProxyPayloadSample, flush: Bool = false) {
+        guard let previousPayloadSample else { return }
+        do {
+            let previousRecord = try dailyProxyTraffic ?? RoyToolsTunnelStorage.loadDailyProxyTraffic()
+            let currentRecord = (previousRecord ?? DailyProxyTraffic(date: previousPayloadSample.date))
+                .recording(sample, since: previousPayloadSample)
+            self.previousPayloadSample = sample
+            dailyProxyTraffic = currentRecord
+            dailyTrafficNeedsSave = dailyTrafficNeedsSave || previousRecord != currentRecord
+            let uptime = ProcessInfo.processInfo.systemUptime
+            if dailyTrafficNeedsSave, flush || uptime - lastDailyTrafficWrite >= 5 {
+                try RoyToolsTunnelStorage.saveDailyProxyTraffic(currentRecord)
+                dailyTrafficNeedsSave = false
+                lastDailyTrafficWrite = uptime
+            }
+        } catch {
+            // Retry on the next sample without dropping in-memory counters or interrupting the VPN.
+        }
+    }
+
+    private static func proxyPayloadSample() -> ProxyPayloadSample {
+        var wifi: Int64 = 0
+        var cellular: Int64 = 0
+        RTCoreProxyUsage(&wifi, &cellular)
+        return ProxyPayloadSample(uploaded: UInt64(max(0, RTCoreUploaded())),
+                                  downloaded: UInt64(max(0, RTCoreDownloaded())), date: Date(),
+                                  wifi: UInt64(max(0, wifi)), cellular: UInt64(max(0, cellular)))
+    }
+
+    private func startTrafficPathMonitor() {
+        let monitor = NWPathMonitor()
+        monitor.pathUpdateHandler = { [weak self, weak monitor] path in
+            guard let self, let monitor, self.trafficPath === monitor else { return }
+            let wifi = path.usesInterfaceType(.wifi)
+            let cellular = path.usesInterfaceType(.cellular)
+            let network: Int32 = path.status == .satisfied && wifi != cellular ? (wifi ? 1 : 2) : 0
+            RTCoreSetTrafficNetwork(network)
+        }
+        trafficPath = monitor
+        monitor.start(queue: control)
+    }
+
+    private func stopTrafficPathMonitor() {
+        trafficPath?.cancel()
+        trafficPath = nil
+        RTCoreSetTrafficNetwork(0)
     }
 
     private func stopAfterFailure(_ error: Error) {
+        RoyToolsDiagnosticLog.record(.proxy, "因故障关闭VPN隧道", level: .error, source: .tunnel, error: error)
         stopCore()
         finishReload(.failure(error))
         cancelTunnelWithError(error)
     }
 
     private func finishStart(_ error: Error?) {
-        let reply = startReply
+        guard let reply = startReply else { return }
         startReply = nil
-        reply?(error)
+        if let error {
+            RoyToolsDiagnosticLog.record(.proxy, "启动VPN隧道", level: .error, source: .tunnel, outcome: .failed, error: error)
+        } else {
+            RoyToolsDiagnosticLog.record(.proxy, "启动VPN隧道", source: .tunnel, outcome: .succeeded, mode: active?.mode)
+        }
+        reply(error)
     }
 
     private func finishReload(_ result: Result<RoyToolsTunnelReply, Error>) {
-        let reply = reloadReply
+        guard let reply = reloadReply else { return }
         reloadReply = nil
-        reply?(Self.encode(result))
+        switch result {
+        case .success(let value):
+            RoyToolsDiagnosticLog.record(.proxy, "热重载配置", source: .tunnel, outcome: .succeeded, mode: value.mode)
+        case .failure(let error):
+            RoyToolsDiagnosticLog.record(.proxy, "热重载配置", level: .error, source: .tunnel, outcome: .failed, error: error)
+        }
+        reply(Self.encode(result))
     }
 
     private static func encode(_ result: Result<RoyToolsTunnelReply, Error>) -> Data? {
@@ -293,7 +468,11 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         let result = json.withUnsafeBytes { data in
             RTCoreReload(data.bindMemory(to: UInt8.self).baseAddress, Int32(data.count))
         }
-        guard result == 0 else { throw ProviderError.core(engineError()) }
+        guard result == 0 else {
+            RoyToolsDiagnosticLog.record(.proxy, "重载Mihomo核心", level: .error, source: .tunnel,
+                                         outcome: .failed, code: Int(result), mode: configuration.mode)
+            throw ProviderError.core(engineError())
+        }
     }
 
     private static func seedGeoData(into engineDirectory: URL) throws {
@@ -343,6 +522,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             let name: String
             let nodes: [String]
             let current: String?
+            let selectable: Bool
         }
 
         struct MusicProxy: Decodable {
@@ -351,8 +531,14 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             let password: String
         }
 
+        struct LANProxy: Decodable {
+            let port: Int
+        }
+
         let groups: [Group]?
+        let proxyNodes: [String]?
         let musicProxy: MusicProxy?
+        let lanProxy: LANProxy?
         let selectedGroup: String?
         let selectedNode: String?
     }

@@ -33,8 +33,6 @@ class ProxyAdapter(
 
             isFocusable = isSelector
             isClickable = isSelector
-
-            current.update(true)
         }
     }
 

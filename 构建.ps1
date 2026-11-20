@@ -2,14 +2,14 @@
 .SYNOPSIS
 使用JDK21与Android SDK35构建RoyTools，不安装或操作手机。
 .EXAMPLE
-.\构建.ps1 -Version 2.2.0 -BuildType Release -OutputDirectory ([Environment]::GetFolderPath('Desktop'))
+.\构建.ps1 -Version 2.3.0 -BuildType Release -OutputDirectory ([Environment]::GetFolderPath('Desktop'))
 .NOTES
 Release需要仓库外密钥，使用signing.properties或ROYTOOLS_KEYSTORE_* / ROYTOOLS_KEY_*环境变量。
 Debug沿用本机Android调试密钥，请勿将其误认为新生成的正式发行密钥。
 #>
 [CmdletBinding()]
 param(
-    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '2.2.0',
+    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '2.3.0',
     [ValidateSet('Debug', 'Release')][string]$BuildType = 'Debug',
     [string]$OutputDirectory = $PSScriptRoot,
     [string]$JavaHome = $env:JAVA_HOME,
@@ -57,7 +57,8 @@ try {
     if ($apks.Count -ne 1) { throw '未找到唯一的arm64安装包，请检查构建输出。' }
     if ($BuildType -eq 'Release' -and $apks[0].Name -match 'unsigned') { throw 'Release没有成功签名，未导出unsigned安装包。' }
     New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
-    $destination = Join-Path ([IO.Path]::GetFullPath($OutputDirectory)) "RoyTools-$Version.apk"
+    $exportName = if ($BuildType -eq 'Release') { "RoyTools-$Version.apk" } else { "RoyTools-$Version-debug.apk" }
+    $destination = Join-Path ([IO.Path]::GetFullPath($OutputDirectory)) $exportName
     Copy-Item -LiteralPath $apks[0].FullName -Destination $destination -Force
     Write-Host "已生成${BuildType}安装包：$destination"
 } finally {

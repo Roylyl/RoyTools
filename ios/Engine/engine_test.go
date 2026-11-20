@@ -4,10 +4,12 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -23,6 +25,7 @@ import (
 	"github.com/metacubex/gvisor/pkg/tcpip/link/channel"
 	"github.com/metacubex/gvisor/pkg/tcpip/stack"
 	"github.com/metacubex/mihomo/component/profile/cachefile"
+	"github.com/metacubex/mihomo/tunnel"
 	"github.com/metacubex/mihomo/tunnel/statistic"
 	tun "github.com/metacubex/sing-tun"
 	"gopkg.in/yaml.v3"
@@ -69,6 +72,163 @@ rules:
   - DOMAIN,provider.example.com,My Group
   - MATCH,DIRECT
 `
+
+func TestNestedProxySelectionAndLatencyMembership(t *testing.T) {
+	yaml := strings.Replace(testProfile, "    proxies: [Node A, Node B]", `    proxies: [Node A, Child Group]
+  - name: Child Group
+    type: select
+    proxies: [Node A, Node B]`, 1)
+	request := profileRequest{
+		Mode: "default", SubscriptionYAML: yaml, SelectedGroup: "My Group", ProfileID: "example-profile",
+		GroupSelections: map[string]string{"My Group": "Child Group", "Child Group": "Node B"},
+	}
+	data, err := json.Marshal(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := startEngine(runtimeHome, data, 1500); err != nil {
+		t.Fatal(err)
+	}
+	defer stopEngine()
+	request.Mode = "global"
+	request.GroupSelections = nil // Preserve the manual selectors through a rule or mode reload.
+	data, err = json.Marshal(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := reloadEngine(data); err != nil {
+		t.Fatal(err)
+	}
+	var state engineState
+	if err := json.Unmarshal(engineStatus(), &state); err != nil {
+		t.Fatal(err)
+	}
+	if state.SelectedGroup != "My Group" || state.SelectedNode != "Child Group" || len(state.Groups) != 2 ||
+		state.Groups[1].Current != "Node B" || !state.Groups[1].Selectable || !reflect.DeepEqual(state.ProxyNodes, []string{"Node A", "Node B"}) {
+		t.Fatalf("unexpected runtime proxy state: %+v", state)
+	}
+	result := make([]int32, 1)
+	if count := measureProxyLatencies([]byte(`{"group":"My Group","nodes":["Node B"]}`), result); count != 1 || result[0] != -1 {
+		t.Fatalf("tested a non-member: length %d, results %v", count, result)
+	}
+	if count := measureProxyLatencies([]byte(`{"nodes":["Child Group"]}`), result); count != 1 || result[0] != -1 {
+		t.Fatalf("tested a group as a raw node: length %d, results %v", count, result)
+	}
+}
+
+func TestLANProxyFixedPortSurvivesRejectedReload(t *testing.T) {
+	target := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(writer, "LAN proxy")
+	}))
+	defer target.Close()
+
+	reserve := func() *net.TCPListener {
+		t.Helper()
+		listener, err := net.ListenTCP("tcp4", &net.TCPAddr{IP: net.IPv4zero})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return listener
+	}
+	fixed := reserve()
+	port := fixed.Addr().(*net.TCPAddr).Port
+	_ = fixed.Close()
+
+	config := func(port int) []byte {
+		data, err := json.Marshal(profileRequest{Mode: "default", SubscriptionYAML: testProfile, LANPort: port})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return data
+	}
+	if err := startEngine(runtimeHome, config(port), 1500); err != nil {
+		t.Fatal(err)
+	}
+	defer stopEngine()
+
+	proxyURL, err := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", port))
+	if err != nil {
+		t.Fatal(err)
+	}
+	transport := &http.Transport{Proxy: http.ProxyURL(proxyURL), DisableKeepAlives: true}
+	client := &http.Client{Transport: transport, Timeout: time.Second * 3}
+	checkForwarding := func(client *http.Client) {
+		t.Helper()
+		response, err := client.Get(target.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer response.Body.Close()
+		content, err := io.ReadAll(response.Body)
+		if err != nil || response.StatusCode != http.StatusOK || string(content) != "LAN proxy" {
+			t.Fatalf("unexpected response: status %d, body %q, error %v", response.StatusCode, content, err)
+		}
+	}
+	checkForwarding(client)
+	socksURL := *proxyURL
+	socksURL.Scheme = "socks5"
+	checkForwarding(&http.Client{
+		Transport: &http.Transport{Proxy: http.ProxyURL(&socksURL), DisableKeepAlives: true},
+		Timeout:   time.Second * 3,
+	})
+	occupied := reserve()
+	defer occupied.Close()
+	if err := reloadEngine(config(occupied.Addr().(*net.TCPAddr).Port)); err == nil {
+		t.Fatal("reload accepted an occupied LAN port")
+	}
+	checkForwarding(client)
+	if err := reloadEngine(config(0)); err != nil {
+		t.Fatal(err)
+	}
+	if response, err := client.Get(target.URL); err == nil {
+		response.Body.Close()
+		t.Fatal("LAN port still accepted a connection after it was disabled")
+	}
+}
+
+func TestGlobalAndDirectUseMihomoModes(t *testing.T) {
+	request := profileRequest{
+		Mode: "global", SubscriptionYAML: testProfile, SelectedGroup: "My Group", SelectedNode: "Node B",
+	}
+	encode := func(request profileRequest) []byte {
+		t.Helper()
+		data, err := json.Marshal(request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return data
+	}
+	if err := startEngine(runtimeHome, encode(request), 1500); err != nil {
+		t.Fatal(err)
+	}
+	defer stopEngine()
+
+	checkGlobal := func() {
+		t.Helper()
+		if tunnel.Mode() != tunnel.Global {
+			t.Fatalf("expected global mode, got %v", tunnel.Mode())
+		}
+		global := proxyGroup("GLOBAL")
+		if global == nil || global.Now() != "Node B" || tunnel.Proxies()["GLOBAL"] != tunnel.Proxies()["My Group"] {
+			t.Fatal("global mode did not use the selected group and node")
+		}
+	}
+	checkGlobal()
+
+	request.Mode = "direct"
+	request.SelectedNode = ""
+	if err := reloadEngine(encode(request)); err != nil {
+		t.Fatal(err)
+	}
+	if tunnel.Mode() != tunnel.Direct {
+		t.Fatalf("expected direct mode, got %v", tunnel.Mode())
+	}
+	request.Mode = "global"
+	if err := reloadEngine(encode(request)); err != nil {
+		t.Fatal(err)
+	}
+	checkGlobal()
+}
 
 func TestRepositoryModesUseSubscriptionSelection(t *testing.T) {
 	type rulesSection struct {
@@ -147,6 +307,30 @@ func TestRepositoryModesUseSubscriptionSelection(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestPacketDeviceBlockingReadUnblocksOnStop(t *testing.T) {
+	device := newPacketDevice(1500)
+	defer device.Close()
+	result := make(chan error, 1)
+	go func() {
+		_, err := device.Read(make([]byte, 1500))
+		result <- err
+	}()
+	select {
+	case err := <-result:
+		t.Fatalf("idle packet read returned before stop: %v", err)
+	case <-time.After(20 * time.Millisecond):
+	}
+	device.cancel()
+	select {
+	case err := <-result:
+		if !errors.Is(err, io.EOF) {
+			t.Fatalf("stopped packet read returned %v, want EOF", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("stopping the packet device did not wake the reader")
 	}
 }
 

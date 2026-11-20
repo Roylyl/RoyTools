@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:orientation="vertical" android:paddingHorizontal="@dimen/glass_page_margin"
+    android:paddingTop="4dp">
+    <LinearLayout style="@style/RoyTools.Card">
+        <TextView style="@style/RoyTools.CardTitle" android:text="@string/proxy_profiles_current" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:minHeight="@dimen/glass_touch_target" android:layout_marginTop="8dp"
+            android:gravity="center_vertical">
+            <TextView style="@style/RoyTools.ToggleLabel" android:text="@string/name" />
+            <TextView android:id="@+id/profile_current_name" style="@style/RoyTools.Caption"
+                android:layout_width="0dp" android:layout_weight="2" android:gravity="end"
+                android:maxLines="2" android:ellipsize="end" android:textSize="15sp" />
+        </LinearLayout>
+        <LinearLayout android:id="@+id/profile_current_source_row"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:minHeight="@dimen/glass_touch_target" android:gravity="center_vertical" android:visibility="gone">
+            <TextView style="@style/RoyTools.ToggleLabel" android:text="@string/proxy_profiles_source" />
+            <TextView android:id="@+id/profile_current_source" style="@style/RoyTools.Caption"
+                android:layout_width="wrap_content" android:textSize="15sp" />
+        </LinearLayout>
+    </LinearLayout>
+    <TextView android:id="@+id/saved_profiles_heading" style="@style/RoyTools.CardTitle"
+        android:paddingHorizontal="16dp" android:layout_marginBottom="4dp"
+        android:text="@string/proxy_profiles_saved" android:visibility="gone" />
+</LinearLayout>

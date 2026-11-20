@@ -27,6 +27,7 @@ android {
 }
 dependencies {
     implementation(project(":common"))
+    implementation(project(":design"))
     testImplementation("junit:junit:4.13.2")
     implementation("androidx.core:core-ktx:1.16.0")
     implementation("androidx.appcompat:appcompat:1.7.0")

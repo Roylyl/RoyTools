@@ -89,25 +89,21 @@ func (m *Manager) proxyUsageAt(now time.Time) ProxyUsage {
 	return ProxyUsage{Day: bucket.day, Wifi: bucket.totals.wifi.Load(), Mobile: bucket.totals.mobile.Load()}
 }
 
-func (m *Manager) pushProxyTraffic(size int64) {
-	m.pushProxyTrafficAt(size, time.Now())
-}
-
 func (m *Manager) pushProxyUploaded(size int64) {
-	trackProxyPayload(size, true)
-	m.pushProxyTraffic(size)
+	m.pushProxyTrafficAt(size, true, time.Now())
 }
 
 func (m *Manager) pushProxyDownloaded(size int64) {
-	trackProxyPayload(size, false)
-	m.pushProxyTraffic(size)
+	m.pushProxyTrafficAt(size, false, time.Now())
 }
 
-func (m *Manager) pushProxyTrafficAt(size int64, now time.Time) {
+func (m *Manager) pushProxyTrafficAt(size int64, upload bool, now time.Time) {
 	if size <= 0 {
 		return
 	}
-	switch m.trafficNetwork.Load() {
+	network := m.trafficNetwork.Load()
+	trackProxyPayload(size, upload, network)
+	switch network {
 	case TrafficNetworkWifi:
 		m.proxyBucketAt(now).totals.wifi.Add(size)
 	case TrafficNetworkMobile:

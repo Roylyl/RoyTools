@@ -18,7 +18,7 @@ function harness(network){
       async keys(){return [...entries.keys()].map(url=>new Request(url));}
     };
   };
-  const sandbox={URL,Request,Response,Headers,AbortController,ReadableStream,console,setTimeout,clearTimeout,setInterval,clearInterval,
+  const sandbox={URL,Request,Response,Headers,AbortController,ReadableStream,performance,console,setTimeout,clearTimeout,setInterval,clearInterval,
     Date:{now:()=>now},importScripts(){},
     self:{RoylylLyrics:parser,location:{origin:ORIGIN},addEventListener:(name,fn)=>handlers[name]=fn,clients:{async matchAll(){return [];}}},
     caches:{async open(name){return cache(name);},async keys(){return [...stores.keys()];},async delete(name){return stores.delete(name);}},
@@ -82,15 +82,18 @@ function harness(network){
   }
   {
     const app=fs.readFileSync(path.join(__dirname,'../../main/assets/music/app.js'),'utf8');
-    const start=app.indexOf('  async function cachedLyricCount()'),end=app.indexOf('  async function updateCacheStatus()',start);
+    const start=app.indexOf('  async function assetCacheStats(cache)'),end=app.indexOf('  const downloadRows=',start);
     assert.ok(start>=0&&end>start);
     let active=0,max=0;
     const keys=Array.from({length:100},(_,index)=>index),cache={async keys(){return keys;},async match(key){
-      active++;max=Math.max(max,active);await tick();active--;return {status:key<69?200:404};
+      active++;max=Math.max(max,active);await tick();active--;
+      return key<69?new Response('lyric',{headers:{'Content-Length':'5'}}):new Response(null,{status:404});
     }};
-    const context={LYRIC_CACHE:'lyrics',caches:{async open(){return cache;}}};vm.createContext(context);
-    vm.runInContext(app.slice(start,end)+'\nthis.count=cachedLyricCount;',context);
-    assert.equal(await context.count(),69,'Missing-file markers must not count as saved lyrics');
+    const context={};vm.createContext(context);
+    vm.runInContext(app.slice(start,end),context);
+    const {count,bytes}=await context.assetCacheStats(cache);
+    assert.equal(count,69,'Missing-file markers must not count as saved lyrics');
+    assert.equal(bytes,345,'Missing-file markers must not contribute to the cache size');
     assert.ok(max<=32,'Cache statistics must bound concurrent reads');
     console.log('PASS: saved-lyric statistics exclude missing records');
   }

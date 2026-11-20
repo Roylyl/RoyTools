@@ -1,12 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="lan_sharing">局域网共享</string>
-    <string name="lan_sharing_summary">连接设备需手动配置代理</string>
-    <string name="lan_sharing_help">使用说明</string>
-    <string name="lan_sharing_instructions">启用“允许来自局域网的连接”，设置固定共享端口（例如7890），监听地址填写0.0.0.0。首次进入时优先保留当前端口，没有可用端口时使用7890。返回上一页保存后，切换或更新订阅不会改变共享端口。在连接设备上，将HTTP或SOCKS代理地址设为本机的热点或局域网IP，端口使用上述固定端口。热点IP由手机系统分配，监听地址不能固定热点IP。启动Clash并选择规则或全局模式，发送到代理的流量会跟随该模式。身份验证使用用户名:密码格式。</string>
-    <string name="lan_fixed_port">固定共享端口（HTTP/SOCKS）</string>
+    <string name="lan_sharing_instructions">在另一台设备上手动设置HTTP或SOCKS5代理，使用同一Wi-Fi或热点对应的地址和端口。</string>
+    <string name="lan_fixed_port">固定共享端口</string>
     <string name="lan_invalid_port">请输入1至65535之间的端口号</string>
-    <string name="lan_connection_details">另一台设备应填写的代理信息</string>
-    <string name="lan_connection_values">IP地址：\n%1$s\nHTTP端口：%2$s\nSOCKS端口：%3$s\n请选择与另一台设备处于同一网络的IP。返回上一页保存后，端口不再跟随订阅变化。</string>
-    <string name="lan_no_address">未检测到局域网IP，请开启热点或连接Wi-Fi后重新进入此页。</string>
+    <string name="lan_port_persists">切换配置和更新订阅后，共享端口保持原值。</string>
+    <string name="lan_connection_details">连接信息</string>
+    <string name="lan_listening_state">监听状态</string>
+    <string name="lan_status_off">已关闭</string>
+    <string name="lan_status_waiting">代理启动后开始监听</string>
+    <string name="lan_status_listening">正在监听</string>
+    <string name="lan_status_no_listener">暂无监听端口</string>
+    <string name="lan_status_restricted">仅监听配置指定的地址</string>
+    <string name="lan_applying">正在应用…</string>
+    <string name="lan_save_failed">无法应用共享设置，请重试。</string>
+    <string name="lan_no_address">请连接Wi-Fi，或开启个人热点并让另一台设备连入。</string>
+    <string name="lan_wifi_address">Wi-Fi地址</string>
+    <string name="lan_hotspot_address">个人热点地址</string>
+    <string name="lan_local_address">局域网地址</string>
+    <string name="lan_endpoint_heading">%1$s · %2$s</string>
+    <string name="lan_copy_endpoint">复制%1$s地址</string>
+    <string name="lan_save">保存</string>
 </resources>
