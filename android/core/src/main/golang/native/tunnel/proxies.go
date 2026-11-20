@@ -155,8 +155,15 @@ func PatchSelector(selector, name string) bool {
 		return false
 	}
 
-	if err := s.Set(name); err != nil {
+	if name == "" {
+		if selector, ok := s.(*outboundgroup.Selector); ok {
+			selector.ResetSelection()
+		} else {
+			s.ForceSet("")
+		}
+	} else if err := s.Set(name); err != nil {
 		log.Warnln("Patch selector `%s`: %s", selector, err.Error())
+		return false
 	}
 
 	log.Infoln("Patch selector %s -> %s", selector, name)

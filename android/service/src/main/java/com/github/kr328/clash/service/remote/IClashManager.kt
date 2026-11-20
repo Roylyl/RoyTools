@@ -14,6 +14,8 @@ interface IClashManager {
     fun queryProviders(): ProviderList
 
     fun patchSelector(group: String, name: String): Boolean
+    fun querySelectedProxyNames(): List<String>
+    fun resetProxySelections(): Boolean
 
     suspend fun healthCheck(group: String)
     suspend fun updateProvider(type: Provider.Type, name: String)

@@ -17,6 +17,7 @@ struct MusicLyricsView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let track: MusicTrack
     let player: MusicPlayer
+    var compactStatus = false
     @State private var result = Result.loading
     @State private var attempt = 0
     @State private var followsPlayback = true
@@ -30,13 +31,23 @@ struct MusicLyricsView: View {
             case .loading:
                 ProgressView("正在加载歌词")
             case .missing:
-                ContentUnavailableView("暂无歌词", systemImage: "quote.bubble")
+                if compactStatus {
+                    statusLabel("暂无歌词", systemImage: "quote.bubble")
+                } else {
+                    ContentUnavailableView("暂无歌词", systemImage: "quote.bubble")
+                }
             case .failure:
-                ContentUnavailableView {
-                    Label("歌词加载失败", systemImage: "quote.bubble")
-                } actions: {
-                    Button("重试") { attempt += 1 }
-                        .buttonStyle(.bordered)
+                if compactStatus {
+                    VStack(spacing: 10) {
+                        statusLabel("歌词加载失败", systemImage: "quote.bubble")
+                        retry
+                    }
+                } else {
+                    ContentUnavailableView {
+                        Label("歌词加载失败", systemImage: "quote.bubble")
+                    } actions: {
+                        retry
+                    }
                 }
             case .lines(let lines):
                 lyricSheet(lines)
@@ -47,6 +58,17 @@ struct MusicLyricsView: View {
                           routingGeneration: network.generation, attempt: attempt)) {
             await loadLyrics()
         }
+    }
+
+    private func statusLabel(_ title: LocalizedStringKey, systemImage: String) -> some View {
+        Label(title, systemImage: systemImage)
+            .font(.callout)
+            .foregroundStyle(.secondary)
+    }
+
+    private var retry: some View {
+        Button("重试") { attempt += 1 }
+            .buttonStyle(.bordered)
     }
 
     private func lyricSheet(_ lines: [MusicLyricLine]) -> some View {

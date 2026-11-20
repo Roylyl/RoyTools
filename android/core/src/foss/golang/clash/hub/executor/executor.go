@@ -98,7 +98,7 @@ func ApplyConfig(cfg *config.Config, force bool) {
 	updateExperimental(cfg.Experimental)
 	updateUsers(cfg.Users)
 	updateProxies(cfg.Proxies, cfg.Providers)
-	updateRules(cfg.Rules, cfg.SubRules, cfg.RuleProviders)
+	tunnel.UpdateRules(cfg.Rules, cfg.SubRules, cfg.RuleProviders, cfg.RoyToolsProxyRules, cfg.RoyToolsFallback, cfg.RoyToolsForceGlobal)
 	updateSniffer(cfg.Sniffer)
 	updateHosts(cfg.Hosts)
 	updateGeneral(cfg.General, true)
@@ -309,10 +309,6 @@ func updateHosts(tree *trie.DomainTrie[resolver.HostValue]) {
 
 func updateProxies(proxies map[string]C.Proxy, providers map[string]P.ProxyProvider) {
 	tunnel.UpdateProxies(proxies, providers)
-}
-
-func updateRules(rules []C.Rule, subRules map[string][]C.Rule, ruleProviders map[string]P.RuleProvider) {
-	tunnel.UpdateRules(rules, subRules, ruleProviders)
 }
 
 func loadProvider[T P.Provider](providers map[string]T) {

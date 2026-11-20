@@ -9,12 +9,12 @@ interface SelectionDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun setSelected(selection: Selection)
 
-    @Query("DELETE FROM selections WHERE uuid = :uuid AND proxy = :proxy")
-    fun removeSelected(uuid: UUID, proxy: String)
+    @Query("DELETE FROM selections WHERE uuid = :uuid")
+    fun clearSelections(uuid: UUID)
 
     @Query("SELECT * FROM selections WHERE uuid = :uuid")
-    suspend fun querySelections(uuid: UUID): List<Selection>
+    fun querySelections(uuid: UUID): List<Selection>
 
     @Query("DELETE FROM selections WHERE uuid = :uuid AND proxy in (:proxies)")
-    suspend fun removeSelections(uuid: UUID, proxies: List<String>)
+    fun removeSelections(uuid: UUID, proxies: List<String>)
 }

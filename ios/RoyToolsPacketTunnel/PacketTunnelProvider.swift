@@ -327,6 +327,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             reply.groups = state.groups?.map { .init(name: $0.name, nodes: $0.nodes, selected: $0.current,
                                                     selectable: $0.selectable) }
             reply.proxyNodes = state.proxyNodes
+            reply.globalChoices = state.globalChoices
         }
         return reply
     }
@@ -356,7 +357,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         state.connected = mode != nil
         if let mode {
             let engine = Self.engineState()
-            state.node = mode == .direct ? "DIRECT" : engine?.selectedNode ?? engine?.selectedGroup
+            state.node = mode.routingSummary(selected: engine?.selectedNode ?? engine?.selectedGroup)
             state.mode = mode
             state.ready = true
         } else {
@@ -537,6 +538,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
 
         let groups: [Group]?
         let proxyNodes: [String]?
+        let globalChoices: [String]?
         let musicProxy: MusicProxy?
         let lanProxy: LANProxy?
         let selectedGroup: String?

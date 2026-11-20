@@ -10,7 +10,21 @@ struct ProxyNodesView: View {
         List {
             if vpn.isRunning {
                 Section("代理选择") {
-                    LabeledContent("当前选择", value: vpn.selectedGroup ?? "等待节点")
+                    switch vpn.mode {
+                    case .subscription:
+                        let manual = vpn.defaultManualSelections
+                        let selection = manual.count > 1 ? "已手动选择\(manual.count)项" : manual.first ?? "服务商默认"
+                        LabeledContent("当前选择", value: selection)
+                        Button("恢复服务商默认") { Task { await vpn.restoreSubscriptionSelections() } }
+                            .disabled(!vpn.hasSavedGroupSelections || vpn.busy || vpn.isTransitioning)
+                    case .rule, .music, .ai:
+                        LabeledContent("节点选择", value: "按订阅规则")
+                        LabeledContent("备用出口", value: vpn.selectedGroup ?? "自动")
+                    case .global:
+                        LabeledContent("全局出口", value: vpn.selectedGroup ?? "自动")
+                    case .direct:
+                        LabeledContent("当前模式", value: "直连")
+                    }
                 }
                 if !vpn.groups.isEmpty {
                     Section("代理组") {
@@ -26,8 +40,8 @@ struct ProxyNodesView: View {
                                         }
                                     }
                                     Spacer()
-                                    if vpn.selectedGroup == group.name {
-                                        Image(systemName: "checkmark").accessibilityLabel("当前代理组")
+                                    if chosenOutbound(vpn) == group.name {
+                                        Image(systemName: "checkmark").accessibilityLabel("所选出口")
                                     }
                                 }
                             }
@@ -67,11 +81,13 @@ private struct ProxyGroupView: View {
         List {
             if vpn.isRunning, let group {
                 Section("代理选择") {
-                    if vpn.selectedGroup == name {
-                        Label("当前选用的代理组", systemImage: "checkmark")
-                    } else {
-                        Button("选用此代理组") { Task { await vpn.selectGroup(name) } }
+                    if canChooseOutbound(name, vpn: vpn), chosenOutbound(vpn) != name {
+                        Button(vpn.mode.usesRepositoryRules ? "选作备用出口" : "选作全局出口") {
+                            Task { await vpn.selectGroup(name) }
+                        }
                             .disabled(vpn.busy || vpn.isTransitioning)
+                    } else if chosenOutbound(vpn) == name {
+                        Label(vpn.mode.usesRepositoryRules ? "所选备用出口" : "所选全局出口", systemImage: "checkmark")
                     }
                     if !group.selectable {
                         Text("此组由配置自动选择节点。")
@@ -120,9 +136,9 @@ private struct ProxyNodeSection: View {
     }
 
     private func row(_ node: String) -> some View {
-        let selected = group.map { $0.selected == node } ?? (vpn.selectedGroup == node)
+        let selected = group.map { $0.selected == node } ?? (chosenOutbound(vpn) == node)
         return Group {
-            if group?.selectable != false {
+            if group?.selectable ?? canChooseOutbound(node, vpn: vpn) {
                 Button {
                     guard !selected else { return }
                     Task {
@@ -168,6 +184,24 @@ private struct ProxyNodeSection: View {
 
     private func measure(_ nodes: [String]) {
         Task { await tests.measure(nodes, in: group?.name, vpn: vpn) }
+    }
+}
+
+@MainActor
+private func canChooseOutbound(_ name: String, vpn: VPNController) -> Bool {
+    switch vpn.mode {
+    case .subscription: vpn.globalChoices.contains(name)
+    case .direct: false
+    case .rule, .music, .ai, .global: true
+    }
+}
+
+@MainActor
+private func chosenOutbound(_ vpn: VPNController) -> String? {
+    switch vpn.mode {
+    case .subscription: vpn.defaultGlobalChoice
+    case .direct: nil
+    case .rule, .music, .ai, .global: vpn.selectedGroup
     }
 }
 

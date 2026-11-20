@@ -25,10 +25,10 @@ import (
 	"github.com/metacubex/gvisor/pkg/tcpip/link/channel"
 	"github.com/metacubex/gvisor/pkg/tcpip/stack"
 	"github.com/metacubex/mihomo/component/profile/cachefile"
+	"github.com/metacubex/mihomo/transport/socks5"
 	"github.com/metacubex/mihomo/tunnel"
 	"github.com/metacubex/mihomo/tunnel/statistic"
 	tun "github.com/metacubex/sing-tun"
-	"gopkg.in/yaml.v3"
 )
 
 var runtimeHome string
@@ -209,8 +209,12 @@ func TestGlobalAndDirectUseMihomoModes(t *testing.T) {
 			t.Fatalf("expected global mode, got %v", tunnel.Mode())
 		}
 		global := proxyGroup("GLOBAL")
-		if global == nil || global.Now() != "Node B" || tunnel.Proxies()["GLOBAL"] != tunnel.Proxies()["My Group"] {
-			t.Fatal("global mode did not use the selected group and node")
+		group := proxyGroup("My Group")
+		if global == nil || global.Now() != "DIRECT" || tunnel.Proxies()["GLOBAL"] == tunnel.Proxies()["My Group"] {
+			t.Fatal("app global mode changed the subscription GLOBAL group")
+		}
+		if group == nil || group.Now() != "Node B" {
+			t.Fatal("selected group did not retain Node B")
 		}
 	}
 	checkGlobal()
@@ -230,7 +234,55 @@ func TestGlobalAndDirectUseMihomoModes(t *testing.T) {
 	checkGlobal()
 }
 
-func TestRepositoryModesUseSubscriptionSelection(t *testing.T) {
+func TestAppGlobalUsesProxyWhenSubscriptionGlobalIsDirect(t *testing.T) {
+	origin := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(writer, "direct")
+	}))
+	defer origin.Close()
+	relayPort, relayResult := startTestSOCKSRelay(t, "relayed", origin.Listener.Addr().String())
+	request := profileRequest{
+		Mode: "default", ProfileID: "global-direct", SelectedGroup: "Preferred",
+		SubscriptionYAML: fmt.Sprintf(`
+mode: global
+proxies:
+  - {name: Local relay, type: socks5, server: 127.0.0.1, port: %d}
+proxy-groups:
+  - {name: GLOBAL, type: select, proxies: [DIRECT, Preferred]}
+  - {name: Preferred, type: select, proxies: [DIRECT, Local relay]}
+rules:
+  - MATCH,DIRECT
+`, relayPort),
+	}
+	encode := func() []byte {
+		t.Helper()
+		data, err := json.Marshal(request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return data
+	}
+	if err := startEngine(runtimeHome, encode(), 1500); err != nil {
+		t.Fatal(err)
+	}
+	defer stopEngine()
+	client := testRoutingHTTPClient(t)
+	requireRoutingResponse(t, client, origin.URL, "direct")
+	request.Mode = "global"
+	if err := reloadEngine(encode()); err != nil {
+		t.Fatal(err)
+	}
+	requireRoutingResponse(t, client, origin.URL, "relayed")
+	if err := <-relayResult; err != nil {
+		t.Fatal(err)
+	}
+	request.Mode = "default"
+	if err := reloadEngine(encode()); err != nil {
+		t.Fatal(err)
+	}
+	requireRoutingResponse(t, client, origin.URL, "direct")
+}
+
+func TestRepositoryModesKeepSubscriptionRulesAndGroups(t *testing.T) {
 	type rulesSection struct {
 		Rules     []string          `json:"rules"`
 		Providers map[string]string `json:"providers"`
@@ -247,10 +299,20 @@ func TestRepositoryModesUseSubscriptionSelection(t *testing.T) {
 	if err := json.Unmarshal(data, &repository); err != nil {
 		t.Fatal(err)
 	}
+	subscription := testProfile + `
+sub-rules:
+  provider-sub-rules:
+    - DOMAIN,custom.example.com,My Group
+rule-providers:
+  subscription-domains:
+    type: file
+    behavior: domain
+    path: ./provider-domains.yaml
+`
 	home := t.TempDir()
 	for _, mode := range []string{"default", "rule", "ai", "music"} {
 		t.Run(mode, func(t *testing.T) {
-			request := profileRequest{Mode: mode, SubscriptionYAML: testProfile, SelectedGroup: "My Group",
+			request := profileRequest{Mode: mode, SubscriptionYAML: subscription, SelectedGroup: "My Group",
 				SelectedNode: "Node B", RulesVersion: repository.Version,
 				MusicDomains: []string{"roylyl.github.io"},
 			}
@@ -260,53 +322,159 @@ func TestRepositoryModesUseSubscriptionSelection(t *testing.T) {
 			case "rule":
 				request.Rules, request.Providers = repository.Rule.Rules, repository.Rule.Providers
 			}
-			yamlConfig, selected, err := composeProfile(home, request)
+			config, selected, err := composeProfile(home, request)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if selected.target != "My Group" {
 				t.Fatalf("selected target: %q", selected.target)
 			}
-			var config struct {
-				Port             int      `yaml:"port"`
-				ExternalControl  string   `yaml:"external-controller"`
-				Rules            []string `yaml:"rules"`
-				ProviderMappings map[string]struct {
-					Path string `yaml:"path"`
-				} `yaml:"rule-providers"`
-			}
-			if err = yaml.Unmarshal(yamlConfig, &config); err != nil {
-				t.Fatal(err)
-			}
-			if config.Port != 0 || config.ExternalControl != "" {
+			if config.Port != 0 || config.ExternalController != "" {
 				t.Fatal("subscription configured an external port")
+			}
+			if !reflect.DeepEqual(config.Rule, []string{"DOMAIN,provider.example.com,My Group", "MATCH,DIRECT"}) {
+				t.Fatalf("subscription rules changed: %v", config.Rule)
+			}
+			if !reflect.DeepEqual(config.SubRules["provider-sub-rules"], []string{"DOMAIN,custom.example.com,My Group"}) {
+				t.Fatalf("subscription sub-rules changed: %v", config.SubRules)
+			}
+			if config.RuleProvider["subscription-domains"]["path"] != "./provider-domains.yaml" {
+				t.Fatalf("subscription rule provider changed: %v", config.RuleProvider)
 			}
 			switch mode {
 			case "default":
-				if !reflect.DeepEqual(config.Rules, []string{"DOMAIN,provider.example.com,My Group", "MATCH,DIRECT"}) {
-					t.Fatal("subscription rules did not survive default mode")
+				if len(config.RoyToolsProxyRules) != 0 || config.RoyToolsFallback != "" {
+					t.Fatal("default mode unexpectedly applied a RoyTools preset")
 				}
 			case "music":
-				if !reflect.DeepEqual(config.Rules, []string{
-					"AND,((IN-NAME,roytools-music),(DOMAIN-SUFFIX,roylyl.github.io)),My Group",
+				if !reflect.DeepEqual(config.RoyToolsProxyRules, []string{
+					"AND,((IN-NAME,roytools-music),(DOMAIN-SUFFIX,roylyl.github.io)),GLOBAL",
 					"MATCH,DIRECT",
 				}) {
 					t.Fatal("music routing was not scoped")
 				}
 			case "ai", "rule":
-				if len(config.Rules) != len(request.Rules) || len(request.Providers) != len(config.ProviderMappings) {
-					t.Fatal("repository rules or providers were discarded")
+				if len(config.RoyToolsProxyRules) != len(request.Rules) || len(config.RuleProvider) != len(request.Providers)+1 {
+					t.Fatal("repository rules or providers were discarded or replaced subscription providers")
 				}
-				for _, provider := range config.ProviderMappings {
-					if _, err := os.Stat(filepath.Join(home, provider.Path)); err != nil {
+				for name, provider := range config.RuleProvider {
+					if name == "subscription-domains" {
+						continue
+					}
+					path, ok := provider["path"].(string)
+					if !ok {
+						t.Fatalf("rule provider %q is missing a path", name)
+					}
+					if _, err := os.Stat(filepath.Join(home, path)); err != nil {
 						t.Fatal(err)
 					}
 				}
-				if mode == "ai" && config.Rules[len(config.Rules)-1] != "MATCH,DIRECT" {
-					t.Fatal("AI fallback changed")
+				wantFallback := "MATCH,GLOBAL"
+				if mode == "ai" {
+					wantFallback = "MATCH,DIRECT"
+				}
+				if config.RoyToolsProxyRules[len(config.RoyToolsProxyRules)-1] != wantFallback {
+					t.Fatalf("wrong preset fallback, expected %s", wantFallback)
 				}
 			}
 		})
+	}
+}
+
+func TestPresetRoutingUsesSubscriptionGroups(t *testing.T) {
+	const audio = "audio.preset.example.test"
+	const video = "video.preset.example.test"
+	portA, resultA := startTestSOCKSRelay(t, "relay A", video+":80", audio+":80")
+	portB, resultB := startTestSOCKSRelay(t, "relay B", audio+":80", video+":80")
+	request := profileRequest{
+		Mode: "ai", ProfileID: "multi-group", RulesVersion: "1.0.0",
+		GroupSelections: map[string]string{"Audio Group": "Relay B", "Video Group": "Relay A"},
+		Rules:           []string{"DOMAIN-SUFFIX,preset.example.test,PROXY", "MATCH,DIRECT"},
+		SubscriptionYAML: fmt.Sprintf(`
+mode: rule
+dns:
+  enable: true
+  nameserver: ["127.0.0.1:9"]
+proxies:
+  - {name: Relay A, type: socks5, server: 127.0.0.1, port: %d}
+  - {name: Relay B, type: socks5, server: 127.0.0.1, port: %d}
+proxy-groups:
+  - {name: Audio Group, type: select, proxies: [Relay A, Relay B]}
+  - {name: Video Group, type: select, proxies: [Relay B, Relay A]}
+sub-rules:
+  services:
+    - DOMAIN,%s,Audio Group
+    - DOMAIN,%s,Video Group
+rules:
+  - SUB-RULE,(DOMAIN-SUFFIX,preset.example.test),services
+  - IP-CIDR,127.0.0.1/32,Audio Group,no-resolve
+  - MATCH,DIRECT
+`, portA, portB, audio, video),
+	}
+	encode := func() []byte {
+		t.Helper()
+		data, err := json.Marshal(request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return data
+	}
+	if err := startEngine(runtimeHome, encode(), 1500); err != nil {
+		t.Fatal(err)
+	}
+	defer stopEngine()
+
+	client := testRoutingHTTPClient(t)
+	requireRoutingResponse(t, client, "http://"+audio+"/", "relay B")
+	requireRoutingResponse(t, client, "http://"+video+"/", "relay A")
+
+	direct := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(writer, "direct")
+	}))
+	defer direct.Close()
+	requireRoutingResponse(t, client, direct.URL, "direct")
+
+	request.GroupSelections = map[string]string{}
+	if err := reloadEngine(encode()); err != nil {
+		t.Fatal(err)
+	}
+	requireRoutingResponse(t, client, "http://"+audio+"/", "relay A")
+	requireRoutingResponse(t, client, "http://"+video+"/", "relay B")
+	for _, result := range []<-chan error{resultA, resultB} {
+		if err := <-result; err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func testRoutingHTTPClient(t *testing.T) *http.Client {
+	t.Helper()
+	ingress, err := makeMusicListener()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = ingress.listener.Close() })
+	endpoint := ingress.endpoint
+	proxyURL := &url.URL{
+		Scheme: "http", Host: net.JoinHostPort(endpoint.Host, fmt.Sprint(endpoint.Port)),
+		User: url.UserPassword(endpoint.Username, endpoint.Password),
+	}
+	return &http.Client{
+		Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL), DisableKeepAlives: true},
+		Timeout:   3 * time.Second,
+	}
+}
+
+func requireRoutingResponse(t *testing.T, client *http.Client, address, want string) {
+	t.Helper()
+	response, err := client.Get(address)
+	if err != nil {
+		t.Fatalf("request to %s: %v", address, err)
+	}
+	defer response.Body.Close()
+	body, err := io.ReadAll(response.Body)
+	if err != nil || response.StatusCode != http.StatusOK || string(body) != want {
+		t.Fatalf("request to %s: status %d, body %q, error %v, want %q", address, response.StatusCode, body, err, want)
 	}
 }
 
@@ -444,22 +612,7 @@ func localTestAddress(t *testing.T) net.IP {
 }
 
 func TestAuthenticatedMusicCONNECTReachesSelectedProxy(t *testing.T) {
-	relay, err := net.Listen("tcp4", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer relay.Close()
-	relayResult := make(chan error, 1)
-	go func() {
-		conn, err := relay.Accept()
-		if err != nil {
-			relayResult <- err
-			return
-		}
-		defer conn.Close()
-		_ = conn.SetDeadline(time.Now().Add(5 * time.Second))
-		relayResult <- serveMusicTestRelay(conn)
-	}()
+	port, relayResult := startTestSOCKSRelay(t, "roytools-music-test", "music.example.test:80")
 	profile := fmt.Sprintf(`
 proxies:
   - name: Local relay
@@ -470,7 +623,7 @@ proxy-groups:
   - name: Preferred
     type: select
     proxies: [Local relay]
-`, relay.Addr().(*net.TCPAddr).Port)
+`, port)
 	request, _ := json.Marshal(profileRequest{
 		Mode: "music", SubscriptionYAML: profile, SelectedGroup: "Preferred", SelectedNode: "Local relay",
 		MusicDomains: []string{"music.example.test"},
@@ -555,49 +708,50 @@ func musicCONNECT(ingress *musicEndpoint, authenticated bool) (net.Conn, error) 
 	return conn, nil
 }
 
-func serveMusicTestRelay(conn net.Conn) error {
-	head := make([]byte, 4)
-	if _, err := io.ReadFull(conn, head[:2]); err != nil {
+func startTestSOCKSRelay(t *testing.T, body string, addresses ...string) (int, <-chan error) {
+	t.Helper()
+	listener, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = listener.Close() })
+	result := make(chan error, 1)
+	go func() {
+		for _, address := range addresses {
+			conn, err := listener.Accept()
+			if err != nil {
+				result <- err
+				return
+			}
+			_ = conn.SetDeadline(time.Now().Add(5 * time.Second))
+			err = serveTestSOCKSRelay(conn, address, body)
+			_ = conn.Close()
+			if err != nil {
+				result <- err
+				return
+			}
+		}
+		result <- nil
+	}()
+	return listener.Addr().(*net.TCPAddr).Port, result
+}
+
+func serveTestSOCKSRelay(conn net.Conn, address, body string) error {
+	target, command, _, err := socks5.ServerHandshake(conn, nil)
+	if err != nil {
 		return err
 	}
-	methods := make([]byte, int(head[1]))
-	if _, err := io.ReadFull(conn, methods); err != nil {
-		return err
-	}
-	if _, err := conn.Write([]byte{5, 0}); err != nil {
-		return err
-	}
-	if _, err := io.ReadFull(conn, head); err != nil {
-		return err
-	}
-	if head[0] != 5 || head[1] != 1 || head[3] != 3 {
-		return fmt.Errorf("unexpected SOCKS CONNECT header %v", head)
-	}
-	if _, err := io.ReadFull(conn, head[:1]); err != nil {
-		return err
-	}
-	target := make([]byte, int(head[0])+2)
-	if _, err := io.ReadFull(conn, target); err != nil {
-		return err
-	}
-	if string(target[:len(target)-2]) != "music.example.test" {
-		return errorsForTarget(target)
-	}
-	if _, err := conn.Write([]byte{5, 0, 0, 1, 127, 0, 0, 1, 0, 0}); err != nil {
-		return err
+	if command != socks5.CmdConnect || target.String() != address {
+		return fmt.Errorf("SOCKS command %d for %q, want CONNECT to %q", command, target.String(), address)
 	}
 	req, err := http.ReadRequest(bufio.NewReader(conn))
 	if err != nil {
 		return err
 	}
 	req.Body.Close()
-	if !strings.EqualFold(req.Host, "music.example.test") {
-		return fmt.Errorf("wrong music HTTP host %s", req.Host)
+	if host, _, _ := net.SplitHostPort(address); !strings.EqualFold((&url.URL{Host: req.Host}).Hostname(), host) {
+		return fmt.Errorf("HTTP host %q, want %q", req.Host, host)
 	}
-	_, err = io.WriteString(conn, "HTTP/1.1 200 OK\r\nContent-Length: 19\r\nConnection: close\r\n\r\nroytools-music-test")
+	_, err = fmt.Fprintf(conn, "HTTP/1.1 200 OK\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s", len(body), body)
 	return err
-}
-
-func errorsForTarget(target []byte) error {
-	return fmt.Errorf("wrong music SOCKS target %q", target[:len(target)-2])
 }

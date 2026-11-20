@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 
+	coreconfig "github.com/metacubex/mihomo/config"
 	"gopkg.in/yaml.v3"
 )
 
@@ -94,7 +95,7 @@ func chooseProxy(cfg map[string]any, preferred string) routeSelection {
 	return selection
 }
 
-func composeProfile(home string, request profileRequest) ([]byte, routeSelection, error) {
+func composeProfile(home string, request profileRequest) (*coreconfig.RawConfig, routeSelection, error) {
 	var cfg map[string]any
 	if err := yaml.Unmarshal([]byte(request.SubscriptionYAML), &cfg); err != nil || cfg == nil {
 		return nil, routeSelection{}, errors.New("subscription is not a Clash/Mihomo YAML mapping")
@@ -113,6 +114,7 @@ func composeProfile(home string, request profileRequest) ([]byte, routeSelection
 	cfg["allow-lan"] = false
 	cfg["find-process-mode"] = "off"
 	cfg["log-level"] = "silent"
+	cfg["profile"] = map[string]any{"store-selected": false}
 	if _, ok := cfg["ipv6"]; !ok {
 		cfg["ipv6"] = true
 	}
@@ -127,20 +129,21 @@ func composeProfile(home string, request profileRequest) ([]byte, routeSelection
 	delete(dns, "listen")
 	cfg["dns"] = dns
 	selection := chooseProxy(cfg, request.SelectedGroup)
-	if request.Mode != "default" && request.Mode != "direct" && selection.target == "" {
+	if request.Mode == "global" && selection.target == "" {
 		return nil, selection, errors.New("subscription has no usable proxy group or node")
 	}
+	var proxyRules []string
 	switch request.Mode {
 	case "default":
 		// Preserve the provider's rules, subrules, providers and mode.
 	case "global", "direct":
 		cfg["mode"] = request.Mode
 	case "rule", "ai":
-		rules, err := overlayRules(home, cfg, request, selection.target)
+		rules, err := overlayRules(home, cfg, request)
 		if err != nil {
 			return nil, selection, err
 		}
-		cfg["rules"] = rules
+		proxyRules = rules
 		cfg["mode"] = "rule"
 	case "music":
 		if len(request.MusicDomains) == 0 || len(request.MusicDomains) > 32 {
@@ -151,18 +154,30 @@ func composeProfile(home string, request profileRequest) ([]byte, routeSelection
 			if len(domain) > 253 || !domainPattern.MatchString(domain) {
 				return nil, selection, errors.New("music routing policy contains an invalid domain")
 			}
-			rules = append(rules, "AND,((IN-NAME,"+musicInbound+"),(DOMAIN-SUFFIX,"+domain+")),"+selection.target)
+			rules = append(rules, "AND,((IN-NAME,"+musicInbound+"),(DOMAIN-SUFFIX,"+domain+")),GLOBAL")
 		}
-		cfg["rules"] = append(rules, "MATCH,DIRECT")
+		proxyRules = append(rules, "MATCH,DIRECT")
 		cfg["mode"] = "rule"
 	default:
 		return nil, selection, errors.New("unknown proxy mode")
 	}
 	result, err := yaml.Marshal(cfg)
-	return result, selection, err
+	if err != nil {
+		return nil, selection, err
+	}
+	raw, err := coreconfig.UnmarshalRawConfig(result)
+	if err != nil {
+		return nil, selection, errors.New("Mihomo could not read the subscription configuration")
+	}
+	raw.RoyToolsProxyRules = proxyRules
+	raw.RoyToolsForceGlobal = request.Mode == "global"
+	if (len(proxyRules) > 0 || raw.RoyToolsForceGlobal) && request.SelectedGroup == selection.target {
+		raw.RoyToolsFallback = selection.target
+	}
+	return raw, selection, nil
 }
 
-func overlayRules(home string, cfg map[string]any, request profileRequest, target string) ([]string, error) {
+func overlayRules(home string, cfg map[string]any, request profileRequest) ([]string, error) {
 	if len(request.Rules) == 0 || len(request.Rules) > 10000 || !versionPattern.MatchString(request.RulesVersion) {
 		return nil, errors.New("repository rules are missing or invalid")
 	}
@@ -210,7 +225,7 @@ func overlayRules(home string, cfg map[string]any, request profileRequest, targe
 		switch fields[policy] {
 		case "DIRECT", "REJECT", "REJECT-DROP", "PASS", "PASS-RULE":
 		default:
-			fields[policy] = target
+			fields[policy] = "GLOBAL"
 		}
 		result = append(result, strings.Join(fields, ","))
 	}

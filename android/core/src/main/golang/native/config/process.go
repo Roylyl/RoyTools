@@ -11,6 +11,7 @@ import (
 	"cfa/native/common"
 
 	"github.com/metacubex/mihomo/common/utils"
+	processMode "github.com/metacubex/mihomo/component/process"
 	"github.com/metacubex/mihomo/config"
 	C "github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/log"
@@ -34,8 +35,32 @@ func patchOverride(cfg *config.RawConfig, _ string) error {
 	if err := json.NewDecoder(strings.NewReader(ReadOverride(OverrideSlotPersist))).Decode(cfg); err != nil {
 		log.Warnln("Apply persist override: %s", err.Error())
 	}
-	if err := json.NewDecoder(strings.NewReader(ReadOverride(OverrideSlotSession))).Decode(cfg); err != nil {
+	session := ReadOverride(OverrideSlotSession)
+	if err := json.NewDecoder(strings.NewReader(session)).Decode(cfg); err != nil {
 		log.Warnln("Apply session override: %s", err.Error())
+	}
+
+	var preset struct {
+		Mode      string                    `json:"mode"`
+		Preset    string                    `json:"roytools-preset"`
+		Rules     []string                  `json:"roytools-proxy-rules"`
+		Providers map[string]map[string]any `json:"roytools-proxy-rule-providers"`
+	}
+	if err := json.Unmarshal([]byte(session), &preset); err != nil {
+		return fmt.Errorf("read session routing preset: %w", err)
+	}
+	cfg.RoyToolsForceGlobal = preset.Mode == "global"
+	if len(preset.Rules) > 0 {
+		cfg.RoyToolsProxyRules = preset.Rules
+		if cfg.RuleProvider == nil {
+			cfg.RuleProvider = make(map[string]map[string]any)
+		}
+		for name, provider := range preset.Providers {
+			cfg.RuleProvider[name] = provider
+		}
+		if preset.Preset == "music" {
+			cfg.FindProcessMode = processMode.FindProcessStrict
+		}
 	}
 
 	return nil

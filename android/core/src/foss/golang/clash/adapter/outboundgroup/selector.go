@@ -15,9 +15,10 @@ type SelectorOption struct {
 
 type Selector struct {
 	*GroupBase
-	disableUDP bool
-	selected   string
-	testUrl    string
+	disableUDP      bool
+	defaultSelected string
+	selected        string
+	testUrl         string
 }
 
 // DialContext implements C.ProxyAdapter
@@ -95,6 +96,10 @@ func (s *Selector) ForceSet(name string) {
 	s.selected = name
 }
 
+func (s *Selector) ResetSelection() {
+	s.ForceSet(s.defaultSelected)
+}
+
 // Unwrap implements C.ProxyAdapter
 func (s *Selector) Unwrap(metadata *C.Metadata, touch bool) C.Proxy {
 	return s.selectedProxy(touch)
@@ -134,8 +139,9 @@ func NewSelector(option GroupCommonOption, selectorOption SelectorOption, emptyF
 			EmptyFallback:  emptyFallback,
 			Providers:      providers,
 		}),
-		selected:   selectorOption.DefaultSelected,
-		disableUDP: option.DisableUDP,
-		testUrl:    option.URL,
+		defaultSelected: selectorOption.DefaultSelected,
+		selected:        selectorOption.DefaultSelected,
+		disableUDP:      option.DisableUDP,
+		testUrl:         option.URL,
 	}, nil
 }

@@ -8,6 +8,8 @@ import (
 	"github.com/metacubex/mihomo/constant"
 )
 
+const DefaultProxyProviderName = "default"
+
 // Vehicle Type
 const (
 	File VehicleType = iota

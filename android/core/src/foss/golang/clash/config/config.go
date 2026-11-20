@@ -211,6 +211,10 @@ type Config struct {
 	Tunnels       []LC.Tunnel
 	Sniffer       *sniffer.Config
 	TLS           *TLS
+
+	RoyToolsProxyRules  []C.Rule
+	RoyToolsFallback    string
+	RoyToolsForceGlobal bool
 }
 
 type RawCors struct {
@@ -464,6 +468,10 @@ type RawConfig struct {
 	TLS           RawTLS                    `yaml:"tls" json:"tls"`
 
 	ClashForAndroid RawClashForAndroid `yaml:"clash-for-android" json:"clash-for-android"`
+
+	RoyToolsProxyRules  []string `yaml:"-" json:"-"`
+	RoyToolsFallback    string   `yaml:"-" json:"-"`
+	RoyToolsForceGlobal bool     `yaml:"-" json:"-"`
 }
 
 // Parse config
@@ -701,6 +709,14 @@ func ParseRawConfig(rawCfg *RawConfig) (*Config, error) {
 		return nil, err
 	}
 	config.Rules = rules
+
+	presetRules, err := parseRules(rawCfg.RoyToolsProxyRules, proxies, ruleProviders, nil, "RoyTools proxy rules")
+	if err != nil {
+		return nil, err
+	}
+	config.RoyToolsProxyRules = presetRules
+	config.RoyToolsFallback = rawCfg.RoyToolsFallback
+	config.RoyToolsForceGlobal = rawCfg.RoyToolsForceGlobal
 
 	hosts, err := parseHosts(rawCfg)
 	if err != nil {

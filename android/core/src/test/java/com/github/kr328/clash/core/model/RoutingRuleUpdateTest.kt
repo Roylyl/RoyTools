@@ -16,7 +16,7 @@ class RoutingRuleUpdateTest {
         val bundle = RoutingRuleBundle.parse(File(root, "routing-rules.json").readText())
         assertTrue(RoutingRuleBundle.compareVersions(bundle.version, "3.0.1") >= 0)
         assertEquals("MATCH,DIRECT", bundle.ai.rules.last())
-        assertEquals("MATCH,selected-node", BundledRoutingRules.mapRules(bundle.rule.rules, emptySet(), "selected-node").last())
+        assertEquals("MATCH,GLOBAL", RoutingPresets.rules("roylyl", bundle.rule.rules).last())
         for ((section, prefix) in listOf(bundle.ai to "roytools-ai", bundle.rule to "roytools-rule")) {
             val transformed = bundle.rules(section, prefix)
             assertEquals(section.rules.size, transformed.size)

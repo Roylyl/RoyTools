@@ -13,6 +13,8 @@ import com.github.kr328.clash.service.util.sendOverrideChanged
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ReceiveChannel
 
+internal val selectorLock = Any()
+
 class ClashManager(private val context: Context) : IClashManager,
     CoroutineScope by CoroutineScope(Dispatchers.IO) {
     private val store = ServiceStore(context)
@@ -49,28 +51,26 @@ class ClashManager(private val context: Context) : IClashManager,
         return Clash.queryOverride(slot)
     }
 
-    override fun patchSelector(group: String, name: String): Boolean {
-        return Clash.patchSelector(group, name).also {
-            val current = store.activeProfile ?: return@also
+    override fun patchSelector(group: String, name: String): Boolean = synchronized(selectorLock) {
+        val current = store.activeProfile ?: return@synchronized false
+        if (name.isEmpty() || !Clash.patchSelector(group, name)) return@synchronized false
+        SelectionDao().setSelected(Selection(current, group, name))
+        true
+    }
 
-            if (it) {
-                SelectionDao().setSelected(Selection(current, group, name))
-                val target=if(group=="GLOBAL")name else group
-                if(target !in setOf("GLOBAL","DIRECT","REJECT")) {
-                    context.getSharedPreferences("proxy_mode",Context.MODE_PRIVATE).edit().putString("target_"+current,target).apply()
-                    val config=Clash.queryOverride(Clash.OverrideSlot.Session)
-                    config.routingTarget=target
-                    when(val preset=config.routingPreset) {
-                        "roylyl" -> BundledRoutingRules.apply(context,config,target,queryProxyGroupNames(false))
-                        "music","ai" -> RoutingPresets.apply(context, config, preset, target)
-                    }
-                    if(config.routingPreset!=null)patchOverride(Clash.OverrideSlot.Session,config)
-                    else Clash.patchOverride(Clash.OverrideSlot.Session,config)
-                }
-            } else {
-                SelectionDao().removeSelected(current, group)
-            }
+    override fun querySelectedProxyNames(): List<String> = synchronized(selectorLock) {
+        store.activeProfile?.let { id -> SelectionDao().querySelections(id).map { it.selected } }.orEmpty()
+    }
+
+    override fun resetProxySelections(): Boolean = synchronized(selectorLock) {
+        val current = store.activeProfile ?: return@synchronized false
+        val selections = SelectionDao()
+        val groups = selections.querySelections(current).map { it.proxy }
+        selections.clearSelections(current)
+        for (group in groups) {
+            Clash.patchSelector(group, "")
         }
+        true
     }
 
     override fun patchOverride(slot: Clash.OverrideSlot, configuration: ConfigurationOverride) {

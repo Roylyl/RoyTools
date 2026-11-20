@@ -22,6 +22,7 @@ final class VPNController {
     private(set) var proxyNodes: [String] = []
     private(set) var mode = RoyToolsTunnelMode.subscription
     private(set) var selectedGroup: String?
+    private(set) var globalChoices: [String] = []
     private(set) var selectedNode: String?
     private(set) var runtimeVersion: String?
     private(set) var lanSharingEnabled = false
@@ -33,6 +34,7 @@ final class VPNController {
     private(set) var serviceIssue: String?
     private(set) var ruleMessage: String?
     private(set) var warning = false
+    private(set) var checkingRules = false
 
     @ObservationIgnored private let rules = RoutingRuleStore()
     @ObservationIgnored private var manager: NETunnelProviderManager?
@@ -55,9 +57,36 @@ final class VPNController {
     var canToggle: Bool { !busy && status != .disconnecting && (profile != nil || isEnabled) }
     var canEditLANSharing: Bool { !busy && !isTransitioning }
     var widgetState: WidgetProxyState {
-        let node = isRunning && mode == .direct ? "DIRECT" : selectedNode ?? selectedGroup
-        return WidgetProxyState(node: node, profile: profile?.name, mode: mode,
+        WidgetProxyState(node: routingSummary, profile: profile?.name, mode: mode,
                                 connected: isEnabled, ready: isRunning)
+    }
+
+    var routingSummary: String? {
+        mode.routingSummary(selected: selectedNode ?? selectedGroup)
+    }
+
+    var defaultManualSelections: [String] {
+        let selections = savedGroupSelections
+        var summary = groups.compactMap { group -> String? in
+            guard group.selectable, let node = selections[group.name], group.selected == node else { return nil }
+            return "\(group.name) · \(node)"
+        }
+        if let outbound = selections["GLOBAL"], globalChoices.contains(outbound) {
+            summary.insert(outbound, at: 0)
+        }
+        return summary
+    }
+
+    var hasSavedGroupSelections: Bool { !savedGroupSelections.isEmpty }
+
+    var defaultGlobalChoice: String? {
+        guard let choice = savedGroupSelections["GLOBAL"], globalChoices.contains(choice) else { return nil }
+        return choice
+    }
+
+    private var savedGroupSelections: [String: String] {
+        guard let profile else { return [:] }
+        return UserDefaults.standard.dictionary(forKey: Self.groupSelectionsKey(profile.id)) as? [String: String] ?? [:]
     }
 
     func publishWidgetState() {
@@ -408,7 +437,17 @@ final class VPNController {
     }
 
     func selectGroup(_ group: String?) async {
+        if mode == .subscription {
+            guard let group, globalChoices.contains(group), defaultGlobalChoice != group else { return }
+            await updateGroupSelections("选择订阅全局出口") { $0["GLOBAL"] = group }
+            return
+        }
         await changeSelection(group: group, node: nil)
+    }
+
+    func restoreSubscriptionSelections() async {
+        guard mode == .subscription else { return }
+        await updateGroupSelections("恢复服务商默认") { $0.removeAll() }
     }
 
     func selectNode(_ node: String?) async {
@@ -422,12 +461,16 @@ final class VPNController {
     func selectGroupMember(_ node: String, in group: String) async {
         guard isRunning, let candidate = groups.first(where: { $0.name == group }),
               candidate.selectable, candidate.nodes.contains(node), candidate.selected != node else { return }
-        await perform("选择代理组内节点") {
+        await updateGroupSelections("选择代理组内节点") { $0[group] = node }
+    }
+
+    private func updateGroupSelections(_ event: StaticString, change: (inout [String: String]) -> Void) async {
+        await perform(event) {
             guard let profile else { throw VPNError.missingProfile }
             guard isRunning else { throw VPNError.sessionUnavailable }
             var config = try configuration(profile: profile, mode: mode, group: selectedGroup, node: selectedNode)
             var selections = config.groupSelections ?? [:]
-            selections[group] = node
+            change(&selections)
             config.groupSelections = selections
             try await applyIfRunning(config)
             UserDefaults.standard.set(selections, forKey: Self.groupSelectionsKey(profile.id))
@@ -497,6 +540,8 @@ final class VPNController {
 
     func checkRules() async {
         guard !busy else { return }
+        checkingRules = true
+        defer { checkingRules = false }
         ruleMessage = nil
         await perform {
             RoyToolsDiagnosticLog.record(.proxy, "检查规则更新", outcome: .started)
@@ -645,7 +690,7 @@ final class VPNController {
             rulesVersion: mode.usesRepositoryRules ? snapshot?.version : nil, rules: section?.rules ?? [],
             providers: section?.providers ?? [:], musicDomains: mode == .music ? snapshot?.music.domainSuffixes ?? [] : [],
             lanPort: lanSharingEnabled ? lanPort : nil, profileID: profile.id,
-            groupSelections: UserDefaults.standard.dictionary(forKey: Self.groupSelectionsKey(profile.id)) as? [String: String]
+            groupSelections: UserDefaults.standard.dictionary(forKey: Self.groupSelectionsKey(profile.id)) as? [String: String] ?? [:]
         )
     }
 
@@ -781,6 +826,7 @@ final class VPNController {
         if let groups = reply.groups {
             self.groups = groups
             proxyNodes = reply.proxyNodes ?? []
+            globalChoices = reply.globalChoices ?? []
             selectedGroup = reply.selectedGroup
             selectedNode = reply.selectedNode
             didSynchronizeSession = true

@@ -7,6 +7,15 @@ enum RoyToolsTunnelMode: String, Codable, CaseIterable, Sendable {
     var usesRepositoryRules: Bool {
         self == .rule || self == .music || self == .ai
     }
+
+    func routingSummary(selected: String?) -> String? {
+        switch self {
+        case .subscription: "按订阅规则"
+        case .rule, .music, .ai: "按规则分流"
+        case .global: selected ?? "自动选择节点"
+        case .direct: "DIRECT"
+        }
+    }
 }
 
 struct RoyToolsTunnelConfiguration: Codable, Equatable, Sendable {
@@ -62,6 +71,7 @@ struct RoyToolsTunnelReply: Codable, Sendable {
     var selectedNode: String?
     var groups: [RoyToolsProxyGroup]?
     var proxyNodes: [String]?
+    var globalChoices: [String]?
     var proxyLatencies: [RoyToolsProxyLatency]?
 }
 

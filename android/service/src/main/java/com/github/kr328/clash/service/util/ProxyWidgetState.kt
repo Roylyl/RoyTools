@@ -8,6 +8,7 @@ import android.os.Bundle
 import com.github.kr328.clash.common.Global
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.core.Clash
+import com.github.kr328.clash.core.model.Proxy
 import com.github.kr328.clash.core.model.ProxySort
 import com.github.kr328.clash.core.model.TunnelState
 import com.github.kr328.clash.service.StatusProvider
@@ -57,7 +58,7 @@ object ProxyWidgetState {
         val effective = runCatching { Clash.queryTunnelState().mode }.getOrNull() ?: return snapshot
         snapshot.putString(KEY_EFFECTIVE_MODE, effective.name.lowercase())
         snapshot.putBoolean(KEY_READY, true)
-        runCatching { selectedNode(effective) }.getOrNull()?.let { (group, node) ->
+        runCatching { selectedNode(effective, override?.mode == TunnelState.Mode.Global) }.getOrNull()?.let { (group, node) ->
             snapshot.putString(KEY_NODE_GROUP, group)
             snapshot.putString(KEY_NODE, node)
         }
@@ -73,7 +74,7 @@ object ProxyWidgetState {
             // Preserve the other session overrides and all persisted selector choices.
             val override = Clash.queryOverride(Clash.OverrideSlot.Session)
             if (ProxyModePreferences.choice(override) != choice || choice == "rule") {
-                ProxyModePreferences.apply(context, override, choice, override.routingTarget)
+                ProxyModePreferences.apply(context, override, choice)
                 Clash.patchOverride(Clash.OverrideSlot.Session, override)
                 ProxyModePreferences.save(context, choice)
                 context.sendOverrideChanged()
@@ -103,13 +104,11 @@ object ProxyWidgetState {
         runBlocking(Dispatchers.IO) { ImportedDao().queryByUUID(uuid)?.name }
     }.getOrNull()
 
-    private fun selectedNode(mode: TunnelState.Mode): Pair<String?, String>? {
+    private fun selectedNode(mode: TunnelState.Mode, proxyOnly: Boolean): Pair<String?, String>? {
         if (mode == TunnelState.Mode.Direct) return null to "DIRECT"
-        val groups = Clash.queryGroupNames(false)
-        val root = if (mode == TunnelState.Mode.Global) groups.firstOrNull { it == "GLOBAL" }
-            else groups.firstOrNull { it != "GLOBAL" }
-        if (root == null) return null
-        val known = groups.toHashSet()
+        if (mode != TunnelState.Mode.Global) return null to "按规则分流"
+        val root = "GLOBAL"
+        val known = Clash.queryGroupNames(false).toHashSet()
         val visited = hashSetOf(root)
         var node = Clash.queryGroup(root, ProxySort.Default).now
         while (node in known && visited.size < 16 && visited.add(node)) {
@@ -117,6 +116,8 @@ object ProxyWidgetState {
             if (next.isBlank()) break
             node = next
         }
-        return node.takeIf { it.isNotBlank() && it !in known }?.let { root to it }
+        val usableName = node.isNotBlank() && node != "?" && node !in known
+        if (proxyOnly && (!usableName || node in Proxy.nonProxyRoutes)) return root to "自动"
+        return node.takeIf { usableName }?.let { root to it }
     }
 }

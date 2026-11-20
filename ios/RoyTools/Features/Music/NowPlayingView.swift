@@ -135,6 +135,13 @@ struct NowPlayingView: View {
         return catalog.catalog?.favoriteTrackIDs.contains(id) == true
     }
 
+    private var usesAdaptiveLayout: Bool {
+        #if targetEnvironment(macCatalyst)
+        if pane == .lyrics { return true }
+        #endif
+        return UIDevice.current.userInterfaceIdiom == .pad
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) { playerContent }
@@ -188,12 +195,56 @@ struct NowPlayingView: View {
     @ViewBuilder
     private var playerContent: some View {
         if let track = player.track {
-            if UIDevice.current.userInterfaceIdiom == .pad {
+            if usesAdaptiveLayout {
                 GeometryReader { geometry in
-                    playerLayout(for: track, availableSize: geometry.size)
+                    let size = geometry.size
+                    if pane == .lyrics, size.width >= 680, size.height >= 390,
+                       !dynamicTypeSize.isAccessibilitySize {
+                        wideLyricsLayout(for: track, availableSize: size)
+                    } else {
+                        playerLayout(for: track, availableSize: size)
+                    }
                 }
             } else {
                 playerLayout(for: track)
+            }
+        }
+    }
+
+    private func wideLyricsLayout(for track: MusicTrack, availableSize: CGSize) -> some View {
+        let inset: CGFloat = availableSize.width >= 900 ? 40 : 28
+        let contentWidth = min(920, availableSize.width - inset * 2)
+
+        return VStack(spacing: 12) {
+            paneSelector.padding(.top, 6)
+
+            GeometryReader { canvas in
+                let compact = canvas.size.height < 450
+                let edge = min(336, contentWidth * 0.38, max(0, canvas.size.height - 154))
+
+                HStack(alignment: .top, spacing: compact ? 20 : 28) {
+                    VStack(alignment: .leading, spacing: 14) {
+                        MusicCover(url: track.coverURL, edge: nil)
+                            .frame(width: edge, height: edge)
+                        trackDetails(track, albumFirst: true)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(width: edge)
+                    .modifier(MusicFavoriteNotice(trigger: favoriteNotice))
+
+                    VStack(spacing: 12) {
+                        MusicLyricsView(track: track, player: player, compactStatus: true)
+                            .padding(.horizontal, 16)
+                            .frame(height: edge)
+                            .background(Color(uiColor: .tertiarySystemFill), in: RoundedRectangle(cornerRadius: 20))
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                        controlPanel(for: track, compact: compact, bottomClearance: compact ? 12 : 18)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .frame(width: contentWidth)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }
@@ -273,8 +324,8 @@ struct NowPlayingView: View {
         }
     }
 
-    private func trackDetails(_ track: MusicTrack, showsThumbnail: Bool = false) -> some View {
-        HStack(spacing: 12) {
+    private func trackDetails(_ track: MusicTrack, showsThumbnail: Bool = false, albumFirst: Bool = false) -> some View {
+        HStack(alignment: albumFirst ? .top : .center, spacing: 12) {
             if showsThumbnail {
                 MusicCover(url: track.coverURL, edge: 56)
                     .accessibilityHidden(true)
@@ -283,13 +334,10 @@ struct NowPlayingView: View {
                 Text(track.title)
                     .font(showsThumbnail ? .headline : .title2.bold())
                     .lineLimit(showsThumbnail ? 1 : 2)
+                if albumFirst { trackAlbum(track, small: showsThumbnail) }
                 Text(track.artist)
                     .font(showsThumbnail ? .subheadline : .body).foregroundStyle(.secondary).lineLimit(1)
-                if !track.album.isEmpty {
-                    Button(track.album) { destination = .album(track.albumID) }
-                        .font(showsThumbnail ? .caption : .subheadline)
-                        .lineLimit(1).buttonStyle(.plain).foregroundStyle(.secondary)
-                }
+                if !albumFirst { trackAlbum(track, small: showsThumbnail) }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Button { favoriteNotice += 1 } label: {
@@ -298,6 +346,15 @@ struct NowPlayingView: View {
             }
             .buttonStyle(.plain)
             .accessibilityValue(favorite ? "已喜欢" : "未喜欢")
+        }
+    }
+
+    @ViewBuilder
+    private func trackAlbum(_ track: MusicTrack, small: Bool) -> some View {
+        if !track.album.isEmpty {
+            Button(track.album) { destination = .album(track.albumID) }
+                .font(small ? .caption : .subheadline)
+                .lineLimit(1).buttonStyle(.plain).foregroundStyle(.secondary)
         }
     }
 

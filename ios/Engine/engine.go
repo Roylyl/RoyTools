@@ -18,6 +18,7 @@ import (
 	"github.com/metacubex/mihomo/adapter/outboundgroup"
 	coreauth "github.com/metacubex/mihomo/component/auth"
 	"github.com/metacubex/mihomo/component/resolver"
+	coreconfig "github.com/metacubex/mihomo/config"
 	C "github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/hub/executor"
 	listenerauth "github.com/metacubex/mihomo/listener/auth"
@@ -73,6 +74,7 @@ type groupState struct {
 type engineState struct {
 	Groups        []groupState   `json:"groups"`
 	ProxyNodes    []string       `json:"proxyNodes"`
+	GlobalChoices []string       `json:"globalChoices,omitempty"`
 	SelectedGroup string         `json:"selectedGroup,omitempty"`
 	SelectedNode  string         `json:"selectedNode,omitempty"`
 	MusicProxy    *musicEndpoint `json:"musicProxy,omitempty"`
@@ -153,23 +155,14 @@ func applyProfile(input []byte) error {
 	if err != nil {
 		return err
 	}
-	yaml, selection, err := composeProfile(machine.home, request)
+	raw, selection, err := composeProfile(machine.home, request)
 	if err != nil {
 		return err
 	}
-	cfg, err := executor.ParseWithBytes(yaml)
+	cfg, err := coreconfig.ParseRawConfig(raw)
 	if err != nil {
 		// Preserve context without returning subscription secrets, URLs or node auth.
 		return errors.New("Mihomo could not load the subscription or generated rules")
-	}
-	if request.Mode == "global" {
-		// Mihomo's global mode routes to GLOBAL. Keep the active RoyTools group
-		// as that destination, including its selected node.
-		target := cfg.Proxies[selection.target]
-		if target == nil {
-			return errors.New("the selected global proxy is unavailable")
-		}
-		cfg.Proxies["GLOBAL"] = target
 	}
 	for name, provider := range cfg.RuleProviders {
 		if len(name) >= len("roytools-") && name[:len("roytools-")] == "roytools-" {
@@ -197,9 +190,9 @@ func applyProfile(input []byte) error {
 			return err
 		}
 	}
-	// Keep the manual selectors through a refresh without pinning automatic groups.
+	// A provided map is authoritative. An empty map restores the subscription choices.
 	previous := make(map[string]string)
-	if machine.profileID == request.ProfileID {
+	if request.GroupSelections == nil && machine.profileID == request.ProfileID {
 		for _, name := range machine.groupOrder {
 			if proxy := tunnel.Proxies()[name]; proxy != nil && proxy.Type() == C.Selector {
 				previous[name] = proxyGroup(name).Now()
@@ -207,11 +200,14 @@ func applyProfile(input []byte) error {
 		}
 	}
 	if target := cfg.Proxies[selection.target]; target != nil && target.Type() == C.Selector &&
-		request.SelectedNode != "" && request.SelectedGroup == selection.target {
+		request.SelectedNode != "" && request.SelectedGroup == selection.target &&
+		(request.Mode != "default" || request.GroupSelections == nil) {
 		previous[request.SelectedGroup] = request.SelectedNode
 	}
 	for name, node := range request.GroupSelections {
-		previous[name] = node
+		if name != "GLOBAL" || request.Mode == "default" {
+			previous[name] = node
+		}
 	}
 	executor.ApplyConfig(cfg, true)
 	for name, node := range previous {
@@ -231,7 +227,10 @@ func applyProfile(input []byte) error {
 	machine.groupOrder = selection.groups
 	machine.proxyNodes = selection.nodes
 	machine.profileID = request.ProfileID
-	machine.selected = selection.target
+	machine.selected = ""
+	if request.SelectedGroup == selection.target {
+		machine.selected = selection.target
+	}
 	return nil
 }
 
@@ -276,6 +275,14 @@ func engineStatus() []byte {
 	machine.Lock()
 	defer machine.Unlock()
 	status := engineState{Groups: make([]groupState, 0, len(machine.groupOrder)), ProxyNodes: machine.proxyNodes, SelectedGroup: machine.selected}
+	global := proxyGroup("GLOBAL")
+	if _, selectable := global.(outboundgroup.SelectAble); selectable {
+		for _, member := range global.Proxies() {
+			if usableTarget(member.Name()) {
+				status.GlobalChoices = append(status.GlobalChoices, member.Name())
+			}
+		}
+	}
 	for _, name := range machine.groupOrder {
 		if group := proxyGroup(name); group != nil {
 			members := group.Proxies()

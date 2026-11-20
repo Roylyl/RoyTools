@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.github.kr328.clash.core.model.Proxy
+import com.github.kr328.clash.core.model.TunnelState
 import com.github.kr328.clash.design.databinding.DesignProxyBinding
 import com.github.kr328.clash.design.model.ProxyState
 import com.github.kr328.clash.design.util.applyFrom
@@ -33,6 +34,7 @@ class ProxyDesign(
 ) : Design<ProxyDesign.Request>(context) {
     sealed class Request {
         object ReloadAll : Request()
+        object RestoreProviderDefaults : Request()
         data class Select(val index: Int, val name: String) : Request()
         data class UrlTest(val index: Int, val node: String? = null) : Request()
     }
@@ -61,7 +63,10 @@ class ProxyDesign(
     private var rootSearch = ""
     private var editingSearch = false
     private var running = false
-    private var currentSelection: String? = null
+    private var tunnelMode: TunnelState.Mode? = null
+    private var hasPreset = false
+    private var manualSelections: List<String>? = null
+    private var restoringProviderDefaults = false
     private val globalIndex = groupNames.indexOf("GLOBAL")
     private val accent = context.resolveThemedColor(androidx.appcompat.R.attr.colorPrimary)
     private val textColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
@@ -91,7 +96,9 @@ class ProxyDesign(
         running = value
         if (!value) {
             knownGroups.clear()
-            currentSelection = null
+            tunnelMode = null
+            hasPreset = false
+            manualSelections = null
             tests.clear()
             tested.clear()
             openedGroup = null
@@ -99,8 +106,21 @@ class ProxyDesign(
         updatePage()
     }
 
-    fun setCurrentSelection(name: String?) {
-        currentSelection = name
+    fun setRoutingMode(mode: TunnelState.Mode, usesPreset: Boolean, selections: List<String>?) {
+        tunnelMode = mode
+        hasPreset = usesPreset
+        manualSelections = selections
+        render()
+    }
+
+    fun updateManualSelections(selections: List<String>) {
+        if (manualSelections == null) return
+        manualSelections = selections
+        render()
+    }
+
+    fun setRestoringProviderDefaults(value: Boolean) {
+        restoringProviderDefaults = value
         render()
     }
 
@@ -178,13 +198,41 @@ class ProxyDesign(
         val query = if (openIndex == null) rootSearch else selections[openIndex].orEmpty()
         val search = query.trim()
         val global = knownGroups[globalIndex]
-        val selection = currentSelection.takeUnless { it.isNullOrBlank() } ?: global?.state?.now?.takeUnless { it == "?" }
+        val selection = global?.state?.now?.takeUnless { it.isBlank() || it == "?" }
+        val explicitSelections = manualSelections
+        val proxyOnlyOutlet = hasPreset || (tunnelMode == TunnelState.Mode.Global && explicitSelections == null)
+        val displayedOutlet = if (proxyOnlyOutlet && selection in Proxy.nonProxyRoutes) "自动" else selection
+        val markedSelection = selection.takeIf { explicitSelections == null }
+        val outletLabel = when {
+            hasPreset -> "备用出口"
+            tunnelMode == TunnelState.Mode.Global || explicitSelections != null -> "全局出口"
+            else -> null
+        }
         val result = buildList {
             if (!running) {
                 add(Row("offline", "连接VPN后可选择代理节点和测试延迟。"))
             } else if (openIndex == null) {
-                add(Row("selection-header", "代理选择", section = true))
-                add(Row("selection", "当前选择", trailing = selection ?: "等待节点"))
+                if (explicitSelections != null) {
+                    val selected = when (explicitSelections.size) {
+                        0 -> "服务商默认"
+                        1 -> explicitSelections.single()
+                        else -> "已手动选择${explicitSelections.size}项"
+                    }
+                    add(Row("selection-header", "代理选择", section = true))
+                    add(Row("selection", "当前选择", trailing = selected))
+                    add(Row("reset-selection", if (restoringProviderDefaults) "正在恢复…" else "恢复服务商默认",
+                        action = true, request = Request.RestoreProviderDefaults.takeIf {
+                            explicitSelections.isNotEmpty() && !restoringProviderDefaults
+                        }))
+                } else if (outletLabel != null) {
+                    add(Row("selection-header", "代理选择", section = true))
+                    add(Row("selection", outletLabel, trailing = displayedOutlet ?: "等待节点"))
+                }
+                if (hasPreset) {
+                    add(Row("routing", "代理流量按订阅规则选择代理组", subtitle = "未匹配到代理时使用备用出口"))
+                } else if (tunnelMode in listOf(TunnelState.Mode.Rule, TunnelState.Mode.Script)) {
+                    add(Row("routing", "按订阅规则分流"))
+                }
                 val groups = groupNames.indices.filter { it != globalIndex }
                 if (groups.isNotEmpty()) {
                     add(Row("groups-header", "代理组", section = true))
@@ -192,22 +240,25 @@ class ProxyDesign(
                         val name = groupNames[index]
                         val picked = knownGroups[index]?.state?.now?.takeUnless { it.isBlank() || it == "?" }
                         if (name.contains(search, true) || picked?.contains(search, true) == true) {
-                            add(Row("group:$index", name, subtitle = picked, selected = selection == name, openGroup = index))
+                            add(Row("group:$index", name, subtitle = picked, selected = outletLabel != null && markedSelection == name, openGroup = index))
                         }
                     }
                     if (none { it.openGroup != null }) add(Row("groups-empty", "没有匹配的代理组"))
                 }
-                val nodes = global?.nodes.orEmpty().filter { !it.isGroup && it.name !in builtInRoutes }
-                if (nodes.isNotEmpty()) appendNodes(globalIndex, nodes, global?.selectable == true, selection, search, "节点")
+                val nodes = global?.nodes.orEmpty().filter { !it.isGroup && it.name !in Proxy.nonProxyRoutes }
+                if (nodes.isNotEmpty()) appendNodes(globalIndex, nodes, outletLabel != null && global?.selectable == true,
+                    markedSelection.takeIf { outletLabel != null }, search,
+                    if (explicitSelections != null) "全局出口节点" else "节点")
                 else if (groups.isEmpty()) add(Row("empty", if (global == null) "正在读取代理节点…" else "当前配置没有可用的代理节点。"))
             } else {
                 val group = knownGroups[openIndex]
                 val groupName = groupNames[openIndex]
-                add(Row("group-selection-header", "代理选择", section = true))
-                if (selection == groupName) {
-                    add(Row("group-selection", "当前选用的代理组", selected = true))
-                } else if (globalIndex >= 0) {
-                    add(Row("group-selection", "选用此代理组", action = true, request = Request.Select(globalIndex, groupName)))
+                if (outletLabel != null) {
+                    if (markedSelection == groupName) {
+                        add(Row("group-selection", "已设为${outletLabel}", selected = true))
+                    } else if (global?.selectable == true && global.nodes.any { it.name == groupName }) {
+                        add(Row("group-selection", "设为${outletLabel}", action = true, request = Request.Select(globalIndex, groupName)))
+                    }
                 }
                 if (group?.selectable == false) add(Row("automatic", "此组由配置自动选择节点。"))
                 if (group == null) add(Row("loading", "正在读取组内节点…"))
@@ -354,7 +405,4 @@ class ProxyDesign(
         }
     }
 
-    private companion object {
-        val builtInRoutes = setOf("DIRECT", "REJECT", "REJECT-DROP", "PASS", "COMPATIBLE")
-    }
 }

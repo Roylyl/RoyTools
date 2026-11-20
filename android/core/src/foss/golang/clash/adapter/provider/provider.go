@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	ReservedName = "default"
+	ReservedName = P.DefaultProxyProviderName
 )
 
 type ProxySchema struct {

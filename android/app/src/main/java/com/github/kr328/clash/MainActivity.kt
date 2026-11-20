@@ -18,8 +18,7 @@ import com.github.kr328.clash.util.withClash
 import com.github.kr328.clash.util.withProfile
 import com.github.kr328.clash.core.bridge.*
 import com.github.kr328.clash.core.Clash
-import com.github.kr328.clash.core.model.BundledRoutingRules
-import com.github.kr328.clash.core.model.ConfigurationOverride
+import com.github.kr328.clash.core.model.Proxy
 import com.github.kr328.clash.core.model.ProxySort
 import com.github.kr328.clash.core.model.RoutingPresets
 import com.github.kr328.clash.core.model.RoutingRuleStore
@@ -73,10 +72,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                     val config = queryOverride(Clash.OverrideSlot.Session)
                     val preset = config.routingPreset ?: return@withClash
                     if (preset !in setOf("ai", "music", "roylyl")) return@withClash
-                    val groups = queryProxyGroupNames(false)
-                    val target = RoutingPresets.target(config, groups, queryProxyGroup("GLOBAL", ProxySort.Default))
-                    if (preset == "roylyl") BundledRoutingRules.apply(this@MainActivity, config, target, groups)
-                    else RoutingPresets.apply(this@MainActivity, config, preset, target)
+                    RoutingPresets.apply(this@MainActivity, config, preset)
                     patchOverride(Clash.OverrideSlot.Session, config)
                 }
             }
@@ -343,19 +339,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                         }
                         withClash {
                             val override = queryOverride(Clash.OverrideSlot.Session)
-                            val preset = if (choice == "rule") "roylyl" else choice.takeIf { it == "music" || it == "ai" }
-                            if (preset != null) {
-                                val groups=queryProxyGroupNames(false)
-                                val target = RoutingPresets.target(override, groups, queryProxyGroup("GLOBAL", ProxySort.Default))
-                                if (preset == "roylyl") BundledRoutingRules.apply(this@MainActivity, override, target, groups)
-                                else RoutingPresets.apply(this@MainActivity, override, preset, target)
-                            } else RoutingPresets.clear(override)
-                            override.mode = when (choice) {
-                                "rule", "music", "ai" -> TunnelState.Mode.Rule
-                                "global" -> TunnelState.Mode.Global
-                                "direct" -> TunnelState.Mode.Direct
-                                else -> null
-                            }
+                            ProxyModePreferences.apply(this@MainActivity, override, choice)
                             patchOverride(Clash.OverrideSlot.Session, override)
                         }
                     }
@@ -491,9 +475,9 @@ class MainActivity : BaseActivity<MainDesign>() {
             val override = if (running) queryOverride(Clash.OverrideSlot.Session) else null
             ProxyOverview(
                 override?.let(ProxyModePreferences::choice) ?: StatusClient(this@MainActivity).proxyMode(),
-                override?.let { selectedProxy(it, queryTunnelState().mode) },
+                override?.let { selectedProxy(queryTunnelState().mode, it.mode == TunnelState.Mode.Global) },
                 lan,
-                override?.ruleProviders.orEmpty().keys.firstNotNullOfOrNull { key ->
+                override?.routingRuleProviders.orEmpty().keys.firstNotNullOfOrNull { key ->
                     runtimeRuleVersion.matchEntire(key)?.groupValues?.drop(1)?.joinToString(".")
                 },
             )
@@ -504,17 +488,20 @@ class MainActivity : BaseActivity<MainDesign>() {
         setRuleVersions(local, overview.ruleVersion)
     }
 
-    private fun IClashManager.selectedProxy(config: ConfigurationOverride, mode: TunnelState.Mode): String? {
+    private fun IClashManager.selectedProxy(mode: TunnelState.Mode, proxyOnly: Boolean): String? {
         if (mode == TunnelState.Mode.Direct) return "直连"
+        if (mode != TunnelState.Mode.Global) return "按规则分流"
         val groups = queryProxyGroupNames(false).toSet()
-        var selected = config.routingTarget?.takeIf { it.isNotBlank() }
-            ?: queryProxyGroup("GLOBAL", ProxySort.Default).now.takeIf { it.isNotBlank() }
-            ?: return null
+        var selected = queryProxyGroup("GLOBAL", ProxySort.Default).now
         val visited = hashSetOf<String>()
         while (selected in groups && visited.add(selected) && visited.size <= 16) {
-            selected = queryProxyGroup(selected, ProxySort.Default).now.takeIf { it.isNotBlank() } ?: return selected
+            val next = queryProxyGroup(selected, ProxySort.Default).now
+            if (next.isBlank()) break
+            selected = next
         }
-        return selected
+        val usableName = selected.isNotBlank() && selected != "?"
+        if (proxyOnly && (!usableName || selected in Proxy.nonProxyRoutes || selected in groups)) return "自动"
+        return selected.takeIf { usableName }
     }
 
     private suspend fun MainDesign.fetchTraffic() {

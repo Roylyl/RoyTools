@@ -7,6 +7,7 @@ import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.service.StatusProvider
 import com.github.kr328.clash.service.data.ImportedDao
 import com.github.kr328.clash.service.data.SelectionDao
+import com.github.kr328.clash.service.selectorLock
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.importedDir
 import com.github.kr328.clash.service.util.sendProfileLoaded
@@ -63,21 +64,19 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
                 if(newProfile){
                     val saved=com.github.kr328.clash.service.util.ProxyModePreferences.read(service)
                     val session=Clash.queryOverride(Clash.OverrideSlot.Session)
-                    com.github.kr328.clash.core.model.RoutingPresets.clear(session)
-                    session.mode=null
-                    Clash.patchOverride(Clash.OverrideSlot.Session,session)
-                    Clash.load(profileDirectory).await()
                     com.github.kr328.clash.service.util.ProxyModePreferences.apply(service,session,saved)
                     Clash.patchOverride(Clash.OverrideSlot.Session,session)
                 }
 
-                Clash.load(service.importedDir.resolve(active.uuid.toString())).await()
+                Clash.load(profileDirectory).await()
 
-                val remove = SelectionDao().querySelections(active.uuid)
-                    .filterNot { Clash.patchSelector(it.proxy, it.selected) }
-                    .map { it.proxy }
-
-                SelectionDao().removeSelections(active.uuid, remove)
+                synchronized(selectorLock) {
+                    val selections = SelectionDao()
+                    val remove = selections.querySelections(active.uuid)
+                        .filterNot { Clash.patchSelector(it.proxy, it.selected) }
+                        .map { it.proxy }
+                    selections.removeSelections(active.uuid, remove)
+                }
 
                 StatusProvider.currentProfile = active.name
 

@@ -50,6 +50,10 @@ var (
 	ruleProviders map[string]P.RuleProvider
 	configMux     sync.RWMutex
 
+	royToolsProxyRules   []C.Rule
+	royToolsFallbackName string
+	royToolsForceGlobal  bool
+
 	// for compatibility, lazy init
 	tcpQueue  chan C.ConnContext
 	tcpInOnce sync.Once
@@ -203,11 +207,14 @@ func Listeners() map[string]C.InboundListener {
 }
 
 // UpdateRules handle update rules
-func UpdateRules(newRules []C.Rule, newSubRule map[string][]C.Rule, rp map[string]P.RuleProvider) {
+func UpdateRules(newRules []C.Rule, newSubRule map[string][]C.Rule, rp map[string]P.RuleProvider, preset []C.Rule, fallback string, forceGlobal bool) {
 	configMux.Lock()
 	rules = newRules
 	ruleProviders = rp
 	subRules = newSubRule
+	royToolsProxyRules = preset
+	royToolsFallbackName = fallback
+	royToolsForceGlobal = forceGlobal
 	configMux.Unlock()
 }
 
@@ -402,7 +409,13 @@ func resolveMetadata(metadata *C.Metadata) (proxy C.Proxy, rule C.Rule, err erro
 	case Direct:
 		proxy = proxies["DIRECT"]
 	case Global:
-		proxy = proxies["GLOBAL"]
+		configMux.RLock()
+		if royToolsForceGlobal {
+			proxy = royToolsFallbackProxy(metadata)
+		} else {
+			proxy = proxies["GLOBAL"]
+		}
+		configMux.RUnlock()
 	// Rule
 	default:
 		proxy, rule, err = match(metadata, helper)
@@ -655,6 +668,29 @@ func match(metadata *C.Metadata, helper C.RuleMatchHelper) (C.Proxy, C.Rule, err
 	configMux.RLock()
 	defer configMux.RUnlock()
 
+	var presetRule C.Rule
+	if len(royToolsProxyRules) > 0 {
+		for _, rule := range royToolsProxyRules {
+			matched, action := rule.Match(metadata, helper)
+			if !matched {
+				continue
+			}
+			switch action {
+			case "GLOBAL":
+				// The preset delegates outbound selection to the subscription.
+				presetRule = rule
+			case "DIRECT", "REJECT", "REJECT-DROP":
+				return proxies[action], rule, nil
+			default:
+				continue
+			}
+			break
+		}
+		if presetRule == nil {
+			return proxies["DIRECT"], nil, nil
+		}
+	}
+
 	var rematchChain []string
 	for {
 		var rematchProxy C.Proxy
@@ -668,12 +704,14 @@ func match(metadata *C.Metadata, helper C.RuleMatchHelper) (C.Proxy, C.Rule, err
 				}
 
 				// parse multi-layer nesting
+				leafType := adapter.Type()
 				for adapter := adapter; adapter != nil; adapter = adapter.Unwrap(metadata, false) {
-					if adapter.Type() == C.Pass {
+					leafType = adapter.Type()
+					if leafType == C.Pass {
 						log.Debugln("%s match Pass rule", adapter.Name())
 						continue GetRules
 					}
-					if adapter.Type() == C.Rematch {
+					if leafType == C.Rematch {
 						log.Debugln("%s match Rematch rule", adapter.Name())
 						rematchProxy = adapter
 						rematchRule = rule
@@ -686,6 +724,9 @@ func match(metadata *C.Metadata, helper C.RuleMatchHelper) (C.Proxy, C.Rule, err
 					continue
 				}
 
+				if presetRule != nil && (leafType == C.Direct || leafType == C.Compatible || leafType == C.Dns) {
+					return royToolsFallbackProxy(metadata), rule, nil
+				}
 				return adapter, rule, nil
 			}
 		}
@@ -706,7 +747,53 @@ func match(metadata *C.Metadata, helper C.RuleMatchHelper) (C.Proxy, C.Rule, err
 			log.Debugln("[Rule] rematch proxy %s update metadata to rematch-name=%q sub-rule=%q", rematchProxy.Name(), metadata.InName, metadata.SpecialRules)
 			continue
 		}
+		if presetRule != nil {
+			return royToolsFallbackProxy(metadata), presetRule, nil
+		}
 		return proxies["DIRECT"], nil, nil
+	}
+}
+
+func royToolsFallbackProxy(metadata *C.Metadata) C.Proxy {
+	for _, name := range []string{royToolsFallbackName, "GLOBAL"} {
+		if candidate := proxies[name]; isUsableRoyToolsProxy(candidate, metadata) {
+			return candidate
+		}
+	}
+	var firstNode C.Proxy
+	if configured := providers[P.DefaultProxyProviderName]; configured != nil {
+		for _, candidate := range configured.Proxies() {
+			if candidate.Name() == "GLOBAL" || !isUsableRoyToolsProxy(candidate, metadata) {
+				continue
+			}
+			// Prefer the subscription's group policy over a standalone node.
+			if _, ok := candidate.Adapter().(interface{ Proxies() []C.Proxy }); ok {
+				return candidate
+			}
+			if firstNode == nil {
+				firstNode = candidate
+			}
+		}
+	}
+	if firstNode != nil {
+		return firstNode
+	}
+	return proxies["REJECT"]
+}
+
+func isUsableRoyToolsProxy(candidate C.Proxy, metadata *C.Metadata) bool {
+	if candidate == nil || (metadata.NetWork == C.UDP && !candidate.SupportUDP()) {
+		return false
+	}
+	leaf := candidate
+	for next := leaf.Unwrap(metadata, false); next != nil; next = next.Unwrap(metadata, false) {
+		leaf = next
+	}
+	switch leaf.Type() {
+	case C.Direct, C.Compatible, C.Reject, C.RejectDrop, C.Pass, C.PassRule, C.Rematch, C.Dns:
+		return false
+	default:
+		return true
 	}
 }
 

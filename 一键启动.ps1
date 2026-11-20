@@ -2,7 +2,7 @@
 .SYNOPSIS
 通过ADB安装本机生成的RoyTools，并按需激活刷新率后台。
 .EXAMPLE
-.\一键启动.ps1 -Apk 'D:\Downloads\RoyTools-2.3.0.apk' -Serial 'YOUR_DEVICE_SERIAL' -InstallOnly
+.\一键启动.ps1 -Apk 'D:\Downloads\RoyTools-2.3.1.apk' -Serial 'YOUR_DEVICE_SERIAL' -InstallOnly
 .NOTES
 不卸载旧版、不清除数据，签名不匹配时安装失败并保留手机原应用。
 #>
@@ -14,9 +14,9 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 if (-not $Apk) {
-    $Apk = Join-Path $PSScriptRoot 'RoyTools-2.3.0.apk'
+    $Apk = Join-Path $PSScriptRoot 'RoyTools-2.3.1.apk'
     if (-not (Test-Path -LiteralPath $Apk -PathType Leaf)) {
-        $Apk = Join-Path $PSScriptRoot 'RoyTools-2.3.0-debug.apk'
+        $Apk = Join-Path $PSScriptRoot 'RoyTools-2.3.1-debug.apk'
     }
 }
 $adb = Get-Command adb -ErrorAction SilentlyContinue

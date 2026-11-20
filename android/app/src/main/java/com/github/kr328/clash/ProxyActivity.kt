@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.OnBackPressedCallback
 import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.core.model.ProxySort
+import com.github.kr328.clash.core.model.TunnelState
 import com.github.kr328.clash.design.ProxyDesign
 import com.github.kr328.clash.design.model.ProxyState
 import com.github.kr328.clash.design.ui.ToastDuration
@@ -31,6 +32,13 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 
 class ProxyActivity : BaseActivity<ProxyDesign>() {
+    private data class RoutingViewState(
+        val groups: List<String>,
+        val mode: TunnelState.Mode,
+        val hasPreset: Boolean,
+        val manualSelections: List<String>?,
+    )
+
     private val groupBack = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() { design?.closeGroup() }
     }
@@ -56,6 +64,7 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
         var namesJob: Job? = null
         var namesGeneration = 0L
         var readFailureReported = false
+        var restoringProviderDefaults = false
 
         suspend fun report(target: ProxyDesign, error: Exception) {
             if (target !== panel || !activityStarted || readFailureReported) return
@@ -109,10 +118,16 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
             }
             namesJob = launch {
                 try {
-                    val (next, selected) = withTimeout(8_000L) {
+                    val (next, mode, hasPreset, selections) = withTimeout(8_000L) {
                         withClash {
-                            val next = (listOf("GLOBAL") + queryProxyGroupNames(false)).distinct()
-                            next to queryOverride(Clash.OverrideSlot.Session).routingTarget
+                            val configuration = queryOverride(Clash.OverrideSlot.Session)
+                            val hasPreset = configuration.routingPreset != null
+                            RoutingViewState(
+                                groups = (listOf("GLOBAL") + queryProxyGroupNames(false)).distinct(),
+                                mode = queryTunnelState().mode,
+                                hasPreset = hasPreset,
+                                manualSelections = if (!hasPreset && configuration.mode == null) querySelectedProxyNames() else null,
+                            )
                         }
                     }
                     if (generation != namesGeneration || !activityStarted || !clashRunning) return@launch
@@ -131,7 +146,7 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
                         this@ProxyActivity.design = replacement
                         panelChanged.trySend(Unit)
                     }
-                    panel.setCurrentSelection(selected)
+                    panel.setRoutingMode(mode, hasPreset, selections)
                     names.indices.forEach { reload(it) }
                 } catch (error: TimeoutCancellationException) {
                     if (generation == namesGeneration) report(panel, error)
@@ -144,6 +159,7 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
         }
 
         fun selectNode(index: Int, node: String) {
+            if (restoringProviderDefaults) return
             val name = names.getOrNull(index) ?: return
             val request = name to node
             if (pendingSelections.lastOrNull() == request) return
@@ -156,15 +172,18 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
             reloads.remove(name)?.cancel()
             launch {
                 try {
-                    writes.withLock {
+                    val selections = writes.withLock {
                         withTimeout(10_000L) {
-                            check(writeSelector(name, node)) { "所选节点或代理组已不可用" }
+                            writeProxySelection {
+                                check(patchSelector(name, node)) { "所选节点或代理组已不可用" }
+                                querySelectedProxyNames()
+                            }
                         }
                     }
                     val position = names.indexOf(name)
                     if (position >= 0 && activityStarted) {
                         states[position].now = node
-                        panel.setCurrentSelection(if (name == "GLOBAL") node else name)
+                        panel.updateManualSelections(selections)
                         reload(position)
                     }
                 } catch (error: TimeoutCancellationException) {
@@ -174,6 +193,31 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
                 } catch (error: Exception) {
                     if (activityStarted) panel.showExceptionToast(error)
                 } finally { pendingSelections.remove(request) }
+            }
+        }
+
+        fun restoreProviderDefaults() {
+            if (restoringProviderDefaults) return
+            restoringProviderDefaults = true
+            panel.setRestoringProviderDefaults(true)
+            launch {
+                try {
+                    writes.withLock {
+                        withTimeout(10_000L) {
+                            check(writeProxySelection { resetProxySelections() }) { "没有可恢复的配置" }
+                        }
+                    }
+                    refresh()
+                } catch (error: TimeoutCancellationException) {
+                    if (activityStarted) panel.showToast("恢复服务商默认超时，请稍后重试", ToastDuration.Long)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    if (activityStarted) panel.showExceptionToast(error)
+                } finally {
+                    restoringProviderDefaults = false
+                    panel.setRestoringProviderDefaults(false)
+                }
             }
         }
 
@@ -220,6 +264,7 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
                         readFailureReported = false
                         when (request) {
                             ProxyDesign.Request.ReloadAll -> { if (names.isEmpty()) refresh() else names.indices.forEach { reload(it) } }
+                            ProxyDesign.Request.RestoreProviderDefaults -> restoreProviderDefaults()
                             is ProxyDesign.Request.Select -> selectNode(request.index, request.name)
                             is ProxyDesign.Request.UrlTest -> test(request.index, request.node)
                         }
@@ -230,9 +275,9 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
     }
 
     /** Setting a selector is a single ordered write, never an implicit replay after binder death. */
-    private suspend fun writeSelector(group: String, node: String): Boolean = withContext(Dispatchers.IO) {
+    private suspend fun <T> writeProxySelection(action: IClashManager.() -> T): T = withContext(Dispatchers.IO) {
         val remote = Remote.service.remote.get()
-        try { remote.clash().patchSelector(group, node) }
+        try { remote.clash().action() }
         catch (error: DeadObjectException) { Remote.service.remote.reset(remote); throw error }
     }
 }

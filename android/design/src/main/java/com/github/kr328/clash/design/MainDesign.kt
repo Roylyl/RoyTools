@@ -71,10 +71,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     private data class ProxyModeOption(val key: String, val title: String, val detail: String)
     private val proxyModes = listOf(
         ProxyModeOption("default", "默认", "按当前订阅或配置的原规则分流。"),
-        ProxyModeOption("rule", "规则", "使用仓库发布的分流规则和所选节点。"),
+        ProxyModeOption("rule", "规则", "使用仓库规则分流，代理出口按订阅规则选择。"),
         ProxyModeOption("music", "音乐", "仅代理RoyTools中匹配音乐域名的请求。"),
         ProxyModeOption("ai", "AI", "使用仓库发布的AI规则，未匹配流量直连。"),
-        ProxyModeOption("global", "全局", "进入隧道的流量统一走所选代理节点。"),
+        ProxyModeOption("global", "全局", "进入隧道的流量全部走代理，出口在代理节点页选择。"),
         ProxyModeOption("direct", "直连", "进入隧道的流量直接连接目的地址。"),
     )
     var onProxyModeSelected: ((String) -> Unit)? = null

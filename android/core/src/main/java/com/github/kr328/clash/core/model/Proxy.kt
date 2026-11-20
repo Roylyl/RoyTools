@@ -23,6 +23,8 @@ data class Proxy(
     }
 
     companion object CREATOR : Parcelable.Creator<Proxy> {
+        val nonProxyRoutes = setOf("DIRECT", "REJECT", "REJECT-DROP", "PASS", "PASS-RULE", "COMPATIBLE")
+
         override fun createFromParcel(parcel: Parcel): Proxy {
             return Parcelizer.decodeFromParcel(serializer(), parcel)
         }

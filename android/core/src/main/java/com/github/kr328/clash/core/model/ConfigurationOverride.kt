@@ -41,20 +41,14 @@ data class ConfigurationOverride(
     @SerialName("rule-providers")
     var ruleProviders: Map<String,RuleProviderOverride>? = null,
 
-    @SerialName("roytools-original-rule-providers")
-    var originalRuleProviders: Map<String,RuleProviderOverride>? = null,
-
     @SerialName("roytools-preset")
     var routingPreset: String? = null,
 
-    @SerialName("roytools-routing-target")
-    var routingTarget: String? = null,
+    @SerialName("roytools-proxy-rules")
+    var routingRules: List<String>? = null,
 
-    @SerialName("roytools-original-find-process-mode")
-    var originalFindProcessMode: FindProcessMode? = null,
-
-    @SerialName("roytools-original-rules")
-    var originalRules: List<String>? = null,
+    @SerialName("roytools-proxy-rule-providers")
+    var routingRuleProviders: Map<String, RuleProviderOverride>? = null,
 
     @SerialName("log-level")
     var logLevel: LogMessage.Level? = null,

@@ -31,7 +31,7 @@ struct ProxyView: View {
                         Double(traffic.uploaded) + Double(traffic.downloaded)
                     ))
                 }
-                if vpn.busy || vpn.isTransitioning {
+                if vpn.isTransitioning || (vpn.busy && !vpn.checkingRules) {
                     ProgressView(vpn.isTransitioning ? vpn.statusText : "正在处理…")
                 }
                 if let message = vpn.errorMessage ?? vpn.serviceIssue {
@@ -63,10 +63,10 @@ struct ProxyView: View {
             } footer: {
                 switch vpn.mode {
                 case .subscription: Text("按当前订阅或配置的原规则分流。")
-                case .rule: Text("使用仓库发布的分流规则和所选节点。")
+                case .rule: Text("使用仓库规则分流，代理出口按订阅规则选择。")
                 case .music: Text("仅代理RoyTools中匹配音乐域名的请求。")
                 case .ai: Text("使用仓库发布的AI规则，未匹配流量直连。")
-                case .global: Text("进入隧道的流量统一走所选代理节点。")
+                case .global: Text("进入隧道的流量全部走代理，出口在代理节点页选择。")
                 case .direct: Text("进入隧道的流量直接连接目的地址。")
                 }
             }
@@ -87,7 +87,7 @@ struct ProxyView: View {
                     ProxyNodesView(vpn: vpn)
                 } label: {
                     LabeledContent {
-                        Text(vpn.isRunning ? vpn.selectedNode ?? vpn.selectedGroup ?? "等待连接返回节点" : "连接后可选")
+                        Text(vpn.isRunning ? vpn.routingSummary ?? "等待连接返回节点" : "连接后可选")
                             .lineLimit(1)
                     } label: {
                         Label("代理节点", systemImage: "network")
@@ -112,7 +112,15 @@ struct ProxyView: View {
                 Button {
                     Task { await vpn.checkRules() }
                 } label: {
-                    Label("检查规则更新", systemImage: "arrow.clockwise")
+                    HStack {
+                        Label("检查规则更新", systemImage: "arrow.clockwise")
+                        Spacer()
+                        if vpn.checkingRules {
+                            ProgressView()
+                                .controlSize(.small)
+                                .accessibilityLabel("正在检查规则更新")
+                        }
+                    }
                 }
                 .disabled(vpn.busy || vpn.isTransitioning)
                 if let message = vpn.ruleMessage {

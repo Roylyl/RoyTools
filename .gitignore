@@ -26,6 +26,7 @@ __pycache__/
 .venv/
 /android/core/src/*/golang/**/*.test
 /android/core/src/*/golang/**/*.test.exe
+/ios/Engine/*.test
 
 # IDE and local machine configuration
 .idea/
@@ -68,14 +69,20 @@ google-services.json
 /android/fastlane/report.xml
 /android/fastlane/Preview.html
 
-# Packages, archives and diagnostic outputs
+# Android, iOS and macOS packages
 *.apk
 *.aab
 *.apks
 *.idsig
 *.ipa
+*.dmg
+*.app/
+*.app.zip
+*.appex/
 *.xcarchive/
 *.xcarchive.zip
+
+# Diagnostic and distribution outputs
 *.dSYM/
 *.dSYM.zip
 *.xcresult/
@@ -85,8 +92,6 @@ google-services.json
 *.trace/
 *.profraw
 *.profdata
-/ios/**/*.app/
-/ios/**/*.appex/
 *.hprof
 *.log
 /output/
@@ -188,6 +193,6 @@ Desktop.ini
 !/android/core/src/main/jniLibs/arm64-v8a/libbridge.so
 !/android/core/src/main/jniLibs/arm64-v8a/libclash.so
 !/android/refresh/src/main/jniLibs/*/libadb.so
-# These inherited example.org TLS files are public test fixtures, not user keys.
+# Public example.org TLS fixtures used by the Mihomo tests
 !/android/core/src/foss/golang/clash/test/config/example.org-key.pem
 !/android/core/src/foss/golang/clash/test/config/example.org.pem

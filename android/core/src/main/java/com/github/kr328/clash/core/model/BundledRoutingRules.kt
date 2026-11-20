@@ -7,31 +7,6 @@ import java.io.File
 
 object BundledRoutingRules {
     private const val ASSET="roylyl-rules-3.0.1"
-    fun apply(c:Context,override:ConfigurationOverride,target:String,groups:List<String>) {
-        require(target !in listOf("DIRECT","REJECT","GLOBAL") && target.isNotBlank() && !target.contains(','))
-        val bundle=RoutingRuleStore.current(c)
-        val rules=bundle.rules(bundle.rule,"roytools-rule")
-        if(override.routingPreset==null){override.originalRules=override.rules;override.originalRuleProviders=override.ruleProviders;override.originalFindProcessMode=override.findProcessMode}
-        override.findProcessMode=override.originalFindProcessMode
-        override.rules=mapRules(rules,groups.toSet(),target)
-        val providers=(override.originalRuleProviders ?: emptyMap()).toMutableMap()
-        for(rule in rules) if(rule.startsWith("RULE-SET,roytools-rule-direct-")) {
-            val name=rule.split(',')[1]
-            providers[name]=ConfigurationOverride.RuleProviderOverride(type="file",behavior="domain",format="text",path="$ASSET/${name.removePrefix("roytools-rule-")}.txt")
-        }
-
-
-        override.ruleProviders=providers
-        override.routingPreset="roylyl"
-        override.routingTarget=target
-    }
-    fun mapRules(rules:List<String>,groups:Set<String>,target:String):List<String> = rules.map{rule->
-        val parts=rule.split(',').toMutableList()
-        val index=if(parts.last()=="no-resolve")parts.lastIndex-1 else parts.lastIndex
-        val policy=parts[index]
-        if(policy !in setOf("DIRECT","REJECT","REJECT-DROP","PASS"))parts[index]=target
-        parts.joinToString(",")
-    }
 
     fun install(c:Context,profile:File) {
         RoutingRuleStore.installAll(c,profile)
